@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "626415932806",
+    "project_id": "albbizmap",
+    "storage_bucket": "albbizmap.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:626415932806:android:9b913fe8979613e5698807",
+        "android_client_info": {
+          "package_name": "com.albbiz.map"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "626415932806-jfk7i16odsfg6pj4u2fd9ou568jpbqdb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVrKM2dcn47eEpJOd-zqnLFGgsPzbbnzM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "626415932806-jfk7i16odsfg6pj4u2fd9ou568jpbqdb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
