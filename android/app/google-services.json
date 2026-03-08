@@ -12,12 +12,7 @@
           "package_name": "com.albbiz.map"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "626415932806-jfk7i16odsfg6pj4u2fd9ou568jpbqdb.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyAVrKM2dcn47eEpJOd-zqnLFGgsPzbbnzM"
@@ -25,12 +20,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "626415932806-jfk7i16odsfg6pj4u2fd9ou568jpbqdb.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
