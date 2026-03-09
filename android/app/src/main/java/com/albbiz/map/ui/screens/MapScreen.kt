@@ -90,10 +90,15 @@ fun loadMarkerFromAssets(context: android.content.Context, fileName: String): Bi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(
+/*fun MapScreen(
     onListClick: () -> Unit = {},
     viewModel: MapViewModel = viewModel()
-) {
+)*/
+fun MapScreen(
+    onListClick: () -> Unit = {},
+    onAddBusinessClick: () -> Unit = {},
+    viewModel: MapViewModel = viewModel()
+){
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -227,9 +232,7 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FloatingActionButton(
-                    onClick = {
-                        viewModel.addTestBusinessToFirestore(context)
-                    },
+                    onClick = { onAddBusinessClick() },
                     modifier = Modifier.size(56.dp)
                 ) {
                     Text("+", style = MaterialTheme.typography.titleLarge)
