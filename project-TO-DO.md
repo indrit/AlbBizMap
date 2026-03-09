@@ -188,3 +188,11 @@ Example filters:
 - [ ] Web platform
 - [ ] Shared backend database
 - [ ] Business dashboard (web)
+
+
+Add notes here, whats done and what is not finished yet and needs still work.
+-----------------------------------------------------------------------------
+
+
+
+
