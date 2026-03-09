@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.LocationOn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +94,18 @@ fun BusinessListScreen(
                     )
                 }
             }
+
+            Button(
+                onClick = { viewModel.sortByNearMe() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Near Me")
+            }
+
             if (businesses.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -187,7 +200,7 @@ fun BusinessListItem(business: Business) {
             if (business.address.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "📍 ${business.address}",
+                    text = "${business.address}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

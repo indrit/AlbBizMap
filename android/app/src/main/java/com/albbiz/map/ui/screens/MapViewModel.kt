@@ -157,6 +157,29 @@ class MapViewModel : ViewModel() {
         filterBusinesses()
     }
 
+    fun sortByNearMe() {
+        val location = _userLocation.value
+        if (location == null) {
+            android.util.Log.d("AlbBizMap", "No user location available")
+            return
+        }
+
+        val userGeoPoint = com.google.firebase.firestore.GeoPoint(
+            location.latitude,
+            location.longitude
+        )
+
+        _filteredBusinesses.value = _filteredBusinesses.value.sortedBy { business ->
+            business.location?.let { businessLocation ->
+                val businessGeoPoint = com.google.firebase.firestore.GeoPoint(
+                    businessLocation.latitude,
+                    businessLocation.longitude
+                )
+                repository.calculateDistance(userGeoPoint, businessGeoPoint)
+            } ?: Double.MAX_VALUE
+        }
+    }
+
     private fun filterBusinesses() {
         val query = _searchQuery.value.lowercase()
         val category = _selectedCategory.value.lowercase()
