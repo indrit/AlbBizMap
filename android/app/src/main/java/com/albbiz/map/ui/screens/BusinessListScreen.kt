@@ -19,6 +19,8 @@ import com.albbiz.map.data.Business
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +67,32 @@ fun BusinessListScreen(
                 singleLine = true
             )
 
+            // Category filter chips
+            val categories = listOf("All", "Restaurant", "Cafe", "Shop", "Hotel", "Pharmacy", "Bank", "Hospital", "Other")
+            var selectedCategory by remember { mutableStateOf("All") }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = {
+                            selectedCategory = category
+                            if (category == "All") {
+                                viewModel.onCategoryChange("")
+                            } else {
+                                viewModel.onCategoryChange(category)
+                            }
+                        },
+                        label = { Text(category) }
+                    )
+                }
+            }
             if (businesses.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

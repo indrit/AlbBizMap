@@ -44,6 +44,9 @@ class MapViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _selectedCategory = MutableStateFlow("")
+    val selectedCategory: StateFlow<String> = _selectedCategory
+
     private var locationCallback: LocationCallback? = null
 
     init {
@@ -149,17 +152,26 @@ class MapViewModel : ViewModel() {
         filterBusinesses()
     }
 
+    fun onCategoryChange(category: String) {
+        _selectedCategory.value = category
+        filterBusinesses()
+    }
+
     private fun filterBusinesses() {
         val query = _searchQuery.value.lowercase()
-        _filteredBusinesses.value = if (query.isEmpty()) {
-            _businesses.value
-        } else {
-            _businesses.value.filter { business ->
-                business.name.lowercase().contains(query) ||
-                        business.category.lowercase().contains(query) ||
-                        business.address.lowercase().contains(query) ||
-                        business.description.lowercase().contains(query)
-            }
+        val category = _selectedCategory.value.lowercase()
+
+        _filteredBusinesses.value = _businesses.value.filter { business ->
+            val matchesSearch = query.isEmpty() ||
+                    business.name.lowercase().contains(query) ||
+                    business.category.lowercase().contains(query) ||
+                    business.address.lowercase().contains(query) ||
+                    business.description.lowercase().contains(query)
+
+            val matchesCategory = category.isEmpty() ||
+                    business.category.lowercase().contains(category)
+
+            matchesSearch && matchesCategory
         }
     }
 
