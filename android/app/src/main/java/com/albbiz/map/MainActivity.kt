@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.albbiz.map.ui.screens.AddBusinessScreen
+import com.albbiz.map.ui.screens.BusinessListScreen
 import com.albbiz.map.ui.screens.MapScreen
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
                         composable("map") {
                             MapScreen(
                                 onListClick = {
-                                    // TODO: list screen later
+                                    navController.navigate("business_list")
                                 },
                                 onAddBusinessClick = {
                                     navController.navigate("add_business")
@@ -50,6 +51,13 @@ class MainActivity : ComponentActivity() {
                                     navController.popBackStack()
                                 },
                                 onBusinessAdded = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("business_list") {
+                            BusinessListScreen(
+                                onBackClick = {
                                     navController.popBackStack()
                                 }
                             )
