@@ -79,7 +79,7 @@ fun AddBusinessScreen(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         uris?.let {
-            selectedImageUris = (selectedImageUris + it).take(5)
+            selectedImageUris = (selectedImageUris + it).take(1)
         }
     }
 
@@ -89,7 +89,7 @@ fun AddBusinessScreen(
     ) { success ->
         if (success) {
             cameraImageUri.value?.let { uri ->
-                selectedImageUris = (selectedImageUris + uri).take(5)
+                selectedImageUris = (selectedImageUris + uri).take(1)
             }
         }
     }
@@ -330,16 +330,16 @@ fun AddBusinessScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            SectionTitle("Photos (Max 5)")
+            SectionTitle("Photos (Max 1)")
 
             Button(
                 onClick = { showImageSourceDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedImageUris.size < 5
+                enabled = selectedImageUris.size < 1
             ) {
                 Icon(Icons.Default.AddAPhoto, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Photos (${selectedImageUris.size}/5)")
+                Text("Add Photos (${selectedImageUris.size}/1)")
             }
 
             if (selectedImageUris.isNotEmpty()) {
