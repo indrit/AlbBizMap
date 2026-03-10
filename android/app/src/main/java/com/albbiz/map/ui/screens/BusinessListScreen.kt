@@ -1,27 +1,30 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.data.Business
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.filled.LocationOn
+import com.albbiz.map.data.BusinessRepository
+import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.GeoPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +34,7 @@ fun BusinessListScreen(
 ) {
     val businesses by viewModel.filteredBusinesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val userLocation by viewModel.userLocation.collectAsState()
 
     Scaffold(
         topBar = {
@@ -56,7 +60,6 @@ fun BusinessListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChange(it) },
@@ -68,7 +71,6 @@ fun BusinessListScreen(
                 singleLine = true
             )
 
-            // Category filter chips
             val categories = listOf("All", "Restaurant", "Cafe", "Shop", "Hotel", "Pharmacy", "Bank", "Hospital", "Other")
             var selectedCategory by remember { mutableStateOf("All") }
 
@@ -124,7 +126,10 @@ fun BusinessListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(businesses) { business ->
-                        BusinessListItem(business = business)
+                        BusinessListItem(
+                            business = business,
+                            userLocation = userLocation
+                        )
                     }
                 }
             }
@@ -133,7 +138,10 @@ fun BusinessListScreen(
 }
 
 @Composable
-fun BusinessListItem(business: Business) {
+fun BusinessListItem(
+    business: Business,
+    userLocation: LatLng?
+) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -155,7 +163,7 @@ fun BusinessListItem(business: Business) {
                 )
                 if (business.isSponsored) {
                     Text(
-                        text = "⭐ SPONSORED",
+                        text = "SPONSORED",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -203,6 +211,25 @@ fun BusinessListItem(business: Business) {
                     text = "${business.address}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Distance display
+            val location = business.location
+            if (userLocation != null && location != null) {
+                val businessGeoPoint = GeoPoint(location.latitude, location.longitude)
+                val userGeoPoint = GeoPoint(userLocation.latitude, userLocation.longitude)
+                val distance = BusinessRepository().calculateDistance(userGeoPoint, businessGeoPoint)
+                val distanceText = if (distance < 1.0) {
+                    "${(distance * 1000).toInt()} m away"
+                } else {
+                    "${"%.1f".format(distance)} km away"
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "📏 $distanceText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
 

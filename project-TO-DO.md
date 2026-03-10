@@ -4,13 +4,13 @@
 
 # 1. Core App Foundation
 
-- [ ] Functional map with business pins
-- [ ] Business directory list view
-- [ ] Search businesses by name
-- [ ] Search businesses by category
-- [ ] “Near Me” discovery feature
-- [ ] Distance display (example: 1.2 km away)
-- [ ] Open business location in external navigation (Google Maps)
+- [X] Functional map with business pins
+- [X] Business directory list view
+- [X] Search businesses by name
+- [X] Search businesses by category
+- [X] “Near Me” discovery feature
+- [X] Distance display (example: 1.2 km away)
+- [X] Open business location in external navigation (Google Maps)
 
 ---
 
