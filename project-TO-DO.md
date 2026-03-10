@@ -18,11 +18,11 @@
 
 ## Free Listing
 
-- [ ] Business name
-- [ ] Category
-- [ ] Location (free)
-- [ ] 100 character description
-- [ ] 1 photo
+- [X] Business name
+- [X] Category
+- [X] Location (free)
+- [X] 100 character description
+- [X] 1 photo
 
 ## Premium Listing ($2.99/month)
 
