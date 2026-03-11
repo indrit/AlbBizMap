@@ -1,6 +1,7 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map
 
+import com.albbiz.map.ui.screens.UserProfileScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -56,6 +57,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAddBusinessClick = {
                                     navController.navigate("add_business")
+                                },
+                                onProfileClick = {
+                                    navController.navigate("profile")
                                 }
                             )
                         }
@@ -73,6 +77,18 @@ class MainActivity : ComponentActivity() {
                             BusinessListScreen(
                                 onBackClick = {
                                     navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("profile") {
+                            UserProfileScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onLogout = {
+                                    navController.navigate("auth") {
+                                        popUpTo("map") { inclusive = true }
+                                    }
                                 }
                             )
                         }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
@@ -90,13 +91,11 @@ fun loadMarkerFromAssets(context: android.content.Context, fileName: String): Bi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-/*fun MapScreen(
-    onListClick: () -> Unit = {},
-    viewModel: MapViewModel = viewModel()
-)*/
+
 fun MapScreen(
     onListClick: () -> Unit = {},
     onAddBusinessClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     viewModel: MapViewModel = viewModel()
 ){
     val context = LocalContext.current
@@ -181,6 +180,9 @@ fun MapScreen(
                     }
                     IconButton(onClick = onListClick) {
                         Icon(Icons.Default.List, contentDescription = "List View")
+                    }
+                    IconButton(onClick = onProfileClick) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
                     }
                 }
             )

@@ -39,7 +39,7 @@
 
 - [X] User registration
 - [X] User login
-- [ ] User profile
+- [X] User profile
 - [ ] Reviews allowed only for logged-in users
 - [ ] Ability to bookmark businesses
 - [ ] “My Favorites” saved list
