@@ -37,8 +37,8 @@
 
 # 3. User System
 
-- [ ] User registration
-- [ ] User login
+- [X] User registration
+- [X] User login
 - [ ] User profile
 - [ ] Reviews allowed only for logged-in users
 - [ ] Ability to bookmark businesses
