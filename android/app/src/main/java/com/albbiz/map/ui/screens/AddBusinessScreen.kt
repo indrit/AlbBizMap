@@ -34,13 +34,8 @@ import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
 import com.albbiz.map.viewmodel.AddBusinessUiState
 import com.albbiz.map.viewmodel.AddBusinessViewModel
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
 import java.io.File
 import java.util.*
 
@@ -582,43 +577,20 @@ fun LocationPickerDialog(
     onDismiss: () -> Unit
 ) {
     var selectedLocation by remember { mutableStateOf(initialLocation) }
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(initialLocation, 14f)
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tap on map to select location") },
+        title = { Text("Select Location") },
         text = {
             Column {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                ) {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        onMapClick = { latLng ->
-                            selectedLocation = latLng
-                        }
-                    ) {
-                        Marker(
-                            state = remember(selectedLocation) { MarkerState(position = selectedLocation) },
-                            title = "Business Location"
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "📍 Lat: ${"%.5f".format(selectedLocation.latitude)}, Lng: ${"%.5f".format(selectedLocation.longitude)}",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text("Tap on map to select location")
+                Text("Lat: ${selectedLocation.latitude}")
+                Text("Lng: ${selectedLocation.longitude}")
             }
         },
         confirmButton = {
             Button(onClick = { onLocationSelected(selectedLocation) }) {
-                Text("Confirm Location")
+                Text("Confirm")
             }
         },
         dismissButton = {

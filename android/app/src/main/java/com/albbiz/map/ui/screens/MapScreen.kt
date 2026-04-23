@@ -2,51 +2,35 @@
 package com.albbiz.map.ui.screens
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -54,52 +38,48 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.model.*
+import com.google.maps.android.compose.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 val TIRANA_LOCATION = LatLng(41.3275, 19.8187)
 
-// Load bitmap from assets
-fun loadMarkerFromAssets(context: android.content.Context, fileName: String): BitmapDescriptor? {
+/**
+ * Robustly loads the Albanian flag pin from assets.
+ */
+fun loadMarkerFromAssets(context: Context, fileName: String): BitmapDescriptor? {
     return try {
+        // Ensure Maps SDK is ready before descriptor creation
+        MapsInitializer.initialize(context)
         val inputStream = context.assets.open(fileName)
         val bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream.close()
 
         if (bitmap != null) {
-            // Resize to marker size (120x120 for better visibility)
-            val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, 120, 120, false)
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 120, 120, false)
             BitmapDescriptorFactory.fromBitmap(scaledBitmap)
-        } else {
-            android.util.Log.e("AlbBizMap", "Failed to decode bitmap from assets")
-            null
-        }
+        } else null
     } catch (e: Exception) {
-        android.util.Log.e("AlbBizMap", "Error loading from assets: ${e.message}")
+        Log.e("AlbBizMap", "Error loading pin: ${e.message}")
         null
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
 fun MapScreen(
     onListClick: () -> Unit = {},
     onAddBusinessClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {},
     viewModel: MapViewModel = viewModel()
-){
+) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val businesses by viewModel.filteredBusinesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -108,13 +88,22 @@ fun MapScreen(
 
     var selectedBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
+    var markerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    // Fix Albanian Pin showing
+    LaunchedEffect(Unit) {
+        MapsInitializer.initialize(context, MapsInitializer.Renderer.LATEST) {
+            scope.launch {
+                // Short safety delay
+                delay(400)
+                markerIcon = loadMarkerFromAssets(context, "albanian_pin.png")
+            }
+        }
+    }
 
     var hasLocationPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -127,12 +116,7 @@ fun MapScreen(
 
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
 
@@ -142,230 +126,331 @@ fun MapScreen(
         }
     }
 
-    var initialCameraSet by remember { mutableStateOf(false) }
-
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
     }
 
-    LaunchedEffect(businesses) {
-        if (!initialCameraSet && businesses.isNotEmpty()) {
-            initialCameraSet = true
-        }
-    }
-
-    var hasMovedToUserLocation by remember { mutableStateOf(false) }
-
+    // Fix Google HQ snapping issue
+    var hasMovedToInitialLocation by remember { mutableStateOf(false) }
     LaunchedEffect(userLocation) {
-        val location = userLocation
-        if (!hasMovedToUserLocation && !initialCameraSet && location != null) {
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(location, 14f)
-            hasMovedToUserLocation = true
-            initialCameraSet = true
+        if (!hasMovedToInitialLocation) {
+            userLocation?.let { location ->
+                // Check if it's NOT the default Google HQ location (37.42, -122.08)
+                val isGoogleHQ = (location.latitude in 37.42..37.43) && (location.longitude in -122.09..-122.07)
+                if (!isGoogleHQ) {
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(location, 14f)
+                    hasMovedToInitialLocation = true
+                }
+            }
         }
     }
 
-    // Load the custom Albanian pin from assets
-    val markerIcon: BitmapDescriptor? = remember(context) {
-        loadMarkerFromAssets(context, "albanian_pin.png")
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AlbBizMap") },
-                actions = {
-                    IconButton(onClick = { showSearch = !showSearch }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = onListClick) {
-                        Icon(Icons.Default.List, contentDescription = "List View")
-                    }
-                    IconButton(onClick = onProfileClick) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(
-                    isMyLocationEnabled = hasLocationPermission
-                ),
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = true,
-                    myLocationButtonEnabled = false
-                ),
-                onMapClick = {
-                    selectedBusiness = null
-                    keyboardController?.hide()
-                }
-            ) {
-                businesses.forEach { business ->
-                    business.location?.let { geoPoint ->
-                        val position = LatLng(geoPoint.latitude, geoPoint.longitude)
-                        Marker(
-                            state = MarkerState(position = position),
-                            title = business.name,
-                            snippet = "${business.category} ⭐ ${business.rating}",
-                            // Use custom pin for all businesses
-                            icon = markerIcon,
-                            onClick = {
-                                selectedBusiness = business
-                                true
-                            }
-                        )
-                    }
-                }
-            }
-
-            // FABs at BOTTOM LEFT
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = { onAddBusinessClick() },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
-
-                FloatingActionButton(
-                    onClick = {
-                        val target = userLocation ?: TIRANA_LOCATION
-                        cameraPositionState.position = CameraPosition.fromLatLngZoom(target, 15f)
-                    },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = "My Location",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-            // Search Bar
-            if (showSearch) {
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.onSearchQueryChange(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        placeholder = { Text("Search businesses...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(
-                            onSearch = { keyboardController?.hide() }
-                        )
-                    )
-                }
-            }
-
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(Modifier.height(12.dp))
+                Text("AlbBizMap", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("Add My Business") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onAddBusinessClick() },
+                    icon = { Icon(Icons.Default.AddBusiness, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("List View") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onListClick() },
+                    icon = { Icon(Icons.Default.List, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
             }
-
-            // Business Details Card
-            selectedBusiness?.let { business ->
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("AlbBizMap") },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) { Icon(Icons.Default.Menu, null) }
+                    },
+                    actions = {
+                        IconButton(onClick = { 
+                            showSearch = !showSearch
+                            if (!showSearch) viewModel.onSearchQueryChange("")
+                        }) {
+                            Icon(if (showSearch) Icons.Default.Close else Icons.Default.Search, null)
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+                    uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false),
+                    onMapClick = { selectedBusiness = null; keyboardController?.hide() }
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = business.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = business.category,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Rating",
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Text(
-                                text = "${business.rating} (${business.reviewCount} reviews)",
-                                style = MaterialTheme.typography.bodyMedium
+                    businesses.forEach { business ->
+                        business.location?.let { geo ->
+                            Marker(
+                                state = MarkerState(position = LatLng(geo.latitude, geo.longitude)),
+                                title = business.name,
+                                snippet = "${business.category} ⭐ ${business.rating}",
+                                icon = markerIcon,
+                                onClick = { selectedBusiness = business; true }
                             )
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                // Action Buttons
+                Column(
+                    modifier = Modifier.align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FloatingActionButton(onClick = { onAddBusinessClick() }) { Icon(Icons.Default.Add, null) }
+                    FloatingActionButton(onClick = {
+                        val target = userLocation ?: TIRANA_LOCATION
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(target, 15f)
+                    }) { Icon(Icons.Default.LocationOn, null) }
+                }
 
-                        Text(
-                            text = business.description,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                // Search Results Dropdown
+                if (showSearch) {
+                    Card(
+                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChange(it) },
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                placeholder = { Text("Search businesses...") },
+                                leadingIcon = { Icon(Icons.Default.Search, null) },
+                                singleLine = true,
+                                keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() })
+                            )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                            if (searchQuery.isNotEmpty()) {
+                                if (businesses.isNotEmpty()) {
+                                    HorizontalDivider()
+                                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 250.dp)) {
+                                        items(businesses) { business ->
+                                            ListItem(
+                                                headlineContent = { Text(business.name) },
+                                                supportingContent = { Text(business.category) },
+                                                leadingContent = { Icon(Icons.Default.Business, null, tint = MaterialTheme.colorScheme.primary) },
+                                                modifier = Modifier.clickable {
+                                                    selectedBusiness = business
+                                                    business.location?.let { geoPoint ->
+                                                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(geoPoint.latitude, geoPoint.longitude), 15f)
+                                                    }
+                                                    keyboardController?.hide()
+                                                }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Text("No results for \"$searchQuery\"", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+                }
 
-                        Text(
-                            text = business.address,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
-                        if (business.isSponsored) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                selectedBusiness?.let { biz ->
+                    BusinessDetailCard(
+                        business = biz,
+                        onClose = { selectedBusiness = null }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BusinessDetailCard(
+    business: Business,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .heightIn(max = 500.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = business.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (business.isPremium) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
                             Text(
-                                text = "⭐ SPONSORED",
+                                text = "PREMIUM",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = business.category,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.secondary)
+                Text(
+                    "${business.rating} (${business.reviewCount} reviews)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(text = business.description, style = MaterialTheme.typography.bodySmall)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = business.address, style = MaterialTheme.typography.bodySmall)
+            }
+
+            if (business.isPremium) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                
+                // Contact Buttons
+                if (business.phone.isNotEmpty()) {
+                    DetailRow(icon = Icons.Default.Phone, text = business.phone) {
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${business.phone}"))
+                        context.startActivity(intent)
+                    }
+                }
+
+                if (business.email.isNotEmpty()) {
+                    DetailRow(icon = Icons.Default.Email, text = business.email) {
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${business.email}"))
+                        context.startActivity(intent)
+                    }
+                }
+
+                if (business.website.isNotEmpty()) {
+                    DetailRow(icon = Icons.Default.Language, text = business.website) {
+                        val url = if (!business.website.startsWith("http")) "https://${business.website}" else business.website
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(intent)
+                    }
+                }
+
+                // Premium Photos Gallery
+                if (business.photos.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Photos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(business.photos) { photoUrl ->
+                            AsyncImage(
+                                model = photoUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+
+                // Premium Hours
+                if (business.workingHours.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Hours", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    business.workingHours.forEach { (day, hours) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(day, style = MaterialTheme.typography.bodySmall)
+                            Text(hours, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Upgrade to Premium to see phone, website, and photos!",
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+fun DetailRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
     }
 }

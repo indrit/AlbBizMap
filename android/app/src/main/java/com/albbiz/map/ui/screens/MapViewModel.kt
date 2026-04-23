@@ -45,7 +45,6 @@ class MapViewModel : ViewModel() {
     val error: StateFlow<String?> = _error
 
     private val _selectedCategory = MutableStateFlow("")
-    val selectedCategory: StateFlow<String> = _selectedCategory
 
     private var locationCallback: LocationCallback? = null
 
@@ -132,7 +131,7 @@ class MapViewModel : ViewModel() {
                 if (firestoreBusinesses.isNotEmpty()) {
                     // Replace hardcoded with real data
                     _businesses.value = firestoreBusinesses
-                    _filteredBusinesses.value = firestoreBusinesses
+                    filterBusinesses()
                     Log.d("AlbBizMap", "Replaced with real Firestore data")
                 } else {
                     Log.d("AlbBizMap", "Firestore empty, keeping hardcoded businesses")
@@ -157,44 +156,32 @@ class MapViewModel : ViewModel() {
         filterBusinesses()
     }
 
-    fun sortByNearMe() {
-        val location = _userLocation.value
-        if (location == null) {
-            android.util.Log.d("AlbBizMap", "No user location available")
-            return
-        }
-
-        val userGeoPoint = com.google.firebase.firestore.GeoPoint(
-            location.latitude,
-            location.longitude
-        )
-
-        _filteredBusinesses.value = _filteredBusinesses.value.sortedBy { business ->
-            business.location?.let { businessLocation ->
-                val businessGeoPoint = com.google.firebase.firestore.GeoPoint(
-                    businessLocation.latitude,
-                    businessLocation.longitude
-                )
-                repository.calculateDistance(userGeoPoint, businessGeoPoint)
-            } ?: Double.MAX_VALUE
+    private fun filterBusinesses() {
+        val query = _searchQuery.value.trim().lowercase()
+        val category = _selectedCategory.value.lowercase()
+        
+        _filteredBusinesses.value = _businesses.value.filter { business ->
+            val matchesQuery = if (query.isEmpty()) true else {
+                val searchTerms = query.split(" ").filter { it.isNotEmpty() }
+                val searchableText = (business.name + " " + 
+                                    business.category + " " + 
+                                    business.address + " " + 
+                                    business.description).lowercase()
+                searchTerms.all { term -> searchableText.contains(term) }
+            }
+            
+            val matchesCategory = if (category.isEmpty()) true else business.category.lowercase().contains(category)
+            
+            matchesQuery && matchesCategory
         }
     }
 
-    private fun filterBusinesses() {
-        val query = _searchQuery.value.lowercase()
-        val category = _selectedCategory.value.lowercase()
-
-        _filteredBusinesses.value = _businesses.value.filter { business ->
-            val matchesSearch = query.isEmpty() ||
-                    business.name.lowercase().contains(query) ||
-                    business.category.lowercase().contains(query) ||
-                    business.address.lowercase().contains(query) ||
-                    business.description.lowercase().contains(query)
-
-            val matchesCategory = category.isEmpty() ||
-                    business.category.lowercase().contains(category)
-
-            matchesSearch && matchesCategory
+    fun sortByNearMe() {
+        val location = _userLocation.value ?: return
+        val userGeoPoint = GeoPoint(location.latitude, location.longitude)
+        
+        _filteredBusinesses.value = _filteredBusinesses.value.sortedBy { business ->
+            business.location?.let { repository.calculateDistance(userGeoPoint, it) } ?: Double.MAX_VALUE
         }
     }
 

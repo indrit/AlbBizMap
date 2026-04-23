@@ -3,7 +3,9 @@ package com.albbiz.map.data
 
 import android.net.Uri
 import android.util.Log
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -71,15 +73,35 @@ class FirestoreService {
 
     suspend fun addBusiness(business: Business): Result<String> {
         return try {
-            Log.d(TAG, "Firestore: Adding business ${business.name}")
+            val auth = Firebase.auth
+            var currentUser = auth.currentUser
+            
+            // Critical check: Ensure we are logged in before writing
+            if (currentUser == null) {
+                Log.d(TAG, "Firestore: No user found, attempting silent sign-in...")
+                auth.signInAnonymously().await()
+                currentUser = auth.currentUser
+            }
+
+            if (currentUser == null) {
+                return Result.failure(Exception("Authentication failed"))
+            }
+
+            Log.d(TAG, "Firestore: Adding business ${business.name} for user ${currentUser.uid}")
+            
             val docRef = if (business.id.isEmpty()) {
                 businessesRef.document()
             } else {
                 businessesRef.document(business.id)
             }
 
-            val data = business.copy(id = docRef.id).toMap()
-            docRef.set(data).await()
+            // Ensure the business document has the correct ownerId
+            val finalBusiness = business.copy(
+                id = docRef.id,
+                ownerId = currentUser.uid
+            )
+
+            docRef.set(finalBusiness.toMap()).await()
             Log.d(TAG, "Firestore: Business added with ID ${docRef.id}")
             Result.success(docRef.id)
         } catch (e: Exception) {
