@@ -243,4 +243,9 @@ class MapViewModel : ViewModel() {
                 .removeLocationUpdates(it)
         }
     }
+
+    fun getBusinessById(id: String): Business? {
+        // This looks through your list of businesses and returns the one matching the ID
+        return filteredBusinesses.value.find { it.id == id }
+    }
 }

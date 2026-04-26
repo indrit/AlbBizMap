@@ -32,62 +32,62 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
-import com.albbiz.map.viewmodel.AddBusinessUiState
-import com.albbiz.map.viewmodel.AddBusinessViewModel
+import com.albbiz.map.viewmodel.EditBusinessUiState
+import com.albbiz.map.viewmodel.EditBusinessViewModel
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
 import java.io.File
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBusinessScreen(
-    initialLocation: LatLng? = null,
+fun EditBusinessScreen(
+    business: Business,
     onBackClick: () -> Unit,
-    onBusinessAdded: () -> Unit,
-    viewModel: AddBusinessViewModel = viewModel()
+    onBusinessUpdated: () -> Unit,
+    viewModel: EditBusinessViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Form fields
-    var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var website by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf<BusinessCategory?>(null) }
+    // Pre-fill all fields with existing business data
+    var name by remember { mutableStateOf(business.name) }
+    var description by remember { mutableStateOf(business.description) }
+    var phone by remember { mutableStateOf(business.phone) }
+    var email by remember { mutableStateOf(business.email) }
+    var website by remember { mutableStateOf(business.website) }
+    var address by remember { mutableStateOf(business.address) }
+    var selectedCategory by remember {
+        mutableStateOf(
+            BusinessCategory.entries.find { it.name == business.category }
+        )
+    }
     var showCategoryDropdown by remember { mutableStateOf(false) }
+    var latitude by remember {
+        mutableStateOf(business.location?.latitude?.toString() ?: "")
+    }
+    var longitude by remember {
+        mutableStateOf(business.location?.longitude?.toString() ?: "")
+    }
+    var isOpen24Hours by remember { mutableStateOf(business.isOpen24Hours) }
+    var workingHours by remember { mutableStateOf(business.workingHours) }
 
-    var latitude by remember { mutableStateOf(initialLocation?.latitude?.toString() ?: "") }
-    var longitude by remember { mutableStateOf(initialLocation?.longitude?.toString() ?: "") }
-    var showMapPicker by remember { mutableStateOf(false) }
-
-    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    // Photo state — start with existing photo
+    var newPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
-
-    var isOpen24Hours by remember { mutableStateOf(false) }
-    var workingHours by remember { mutableStateOf(mapOf<String, String>()) }
+    var showMapPicker by remember { mutableStateOf(false) }
 
     // Gallery picker
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        uris?.let { selectedImageUris = (selectedImageUris + it).take(1) }
-    }
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { newPhotoUri = it } }
 
     // Camera
     val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            cameraImageUri.value?.let { uri ->
-                selectedImageUris = (selectedImageUris + uri).take(1)
-            }
-        }
+        if (success) cameraImageUri.value?.let { newPhotoUri = it }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -96,9 +96,7 @@ fun AddBusinessScreen(
         if (isGranted) {
             val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
             val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
+                context, "${context.packageName}.fileprovider", file
             )
             cameraImageUri.value = uri
             cameraLauncher.launch(uri)
@@ -110,15 +108,15 @@ fun AddBusinessScreen(
     // Handle state changes
     LaunchedEffect(uiState) {
         when (uiState) {
-            is AddBusinessUiState.Success -> {
-                Toast.makeText(context, "Business registered successfully!", Toast.LENGTH_LONG).show()
-                onBusinessAdded()
+            is EditBusinessUiState.Success -> {
+                Toast.makeText(context, "Business updated successfully!", Toast.LENGTH_LONG).show()
+                onBusinessUpdated()
                 viewModel.resetState()
             }
-            is AddBusinessUiState.Error -> {
+            is EditBusinessUiState.Error -> {
                 Toast.makeText(
                     context,
-                    (uiState as AddBusinessUiState.Error).message,
+                    (uiState as EditBusinessUiState.Error).message,
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -129,7 +127,7 @@ fun AddBusinessScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Register Business") },
+                title = { Text("Edit Business") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -150,8 +148,8 @@ fun AddBusinessScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ── REQUIRED INFO ─────────────────────────────────────────
-            SectionTitle("Required Information")
+            // ── BASIC INFO ────────────────────────────────────────────
+            SectionTitle("Basic Information")
 
             OutlinedTextField(
                 value = name,
@@ -166,7 +164,7 @@ fun AddBusinessScreen(
                 )
             )
 
-            // ── CATEGORY DROPDOWN ─────────────────────────────────────
+            // ── CATEGORY ──────────────────────────────────────────────
             ExposedDropdownMenuBox(
                 expanded = showCategoryDropdown,
                 onExpandedChange = { showCategoryDropdown = it },
@@ -185,7 +183,6 @@ fun AddBusinessScreen(
                         .fillMaxWidth()
                         .menuAnchor()
                 )
-
                 ExposedDropdownMenu(
                     expanded = showCategoryDropdown,
                     onDismissRequest = { showCategoryDropdown = false }
@@ -195,8 +192,7 @@ fun AddBusinessScreen(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        category.icon,
-                                        null,
+                                        category.icon, null,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -228,7 +224,7 @@ fun AddBusinessScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── LOCATION ──────────────────────────────────────────────
-            SectionTitle("Location *")
+            SectionTitle("Location")
 
             OutlinedTextField(
                 value = address,
@@ -344,44 +340,46 @@ fun AddBusinessScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── PHOTO ─────────────────────────────────────────────────
-            SectionTitle("Photo (Optional)")
+            SectionTitle("Photo")
 
-            Button(
-                onClick = { showImageSourceDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = selectedImageUris.isEmpty()
-            ) {
-                Icon(Icons.Default.AddAPhoto, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (selectedImageUris.isEmpty()) "Add Photo" else "Photo Added (1/1)")
-            }
+            // Show current photo or new picked photo
+            val displayPhotoUrl = newPhotoUri?.toString()
+                ?: business.photos.firstOrNull()
 
-            if (selectedImageUris.isNotEmpty()) {
-                Box(modifier = Modifier.size(100.dp)) {
+            if (displayPhotoUrl != null) {
+                Box(modifier = Modifier.size(120.dp)) {
                     Image(
-                        painter = rememberAsyncImagePainter(selectedImageUris.first()),
+                        painter = rememberAsyncImagePainter(displayPhotoUrl),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                     IconButton(
-                        onClick = { selectedImageUris = emptyList() },
+                        onClick = { newPhotoUri = null },
                         modifier = Modifier
                             .size(24.dp)
                             .align(Alignment.TopEnd)
                     ) {
                         Icon(
-                            Icons.Default.Close,
-                            null,
+                            Icons.Default.Close, null,
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
             }
 
+            OutlinedButton(
+                onClick = { showImageSourceDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.AddAPhoto, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── SUBMIT ────────────────────────────────────────────────
+            // ── SAVE BUTTON ───────────────────────────────────────────
             Button(
                 onClick = {
                     val lat = latitude.toDoubleOrNull()
@@ -407,8 +405,7 @@ fun AddBusinessScreen(
                             Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
                         }
                         else -> {
-                            val business = Business(
-                                id = UUID.randomUUID().toString(),
+                            val updatedBusiness = business.copy(
                                 name = name.trim(),
                                 description = description.trim(),
                                 category = selectedCategory!!.name,
@@ -418,31 +415,28 @@ fun AddBusinessScreen(
                                 website = website.trim(),
                                 location = GeoPoint(lat, lng),
                                 isOpen24Hours = isOpen24Hours,
-                                workingHours = if (isOpen24Hours) emptyMap() else workingHours,
-                                isActive = true,
-                                rating = 0.0,
-                                reviewCount = 0
+                                workingHours = if (isOpen24Hours) emptyMap() else workingHours
                             )
-                            viewModel.addBusiness(business, selectedImageUris)
+                            viewModel.updateBusiness(updatedBusiness, newPhotoUri)
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = uiState !is AddBusinessUiState.Loading
+                enabled = uiState !is EditBusinessUiState.Loading
             ) {
-                if (uiState is AddBusinessUiState.Loading) {
+                if (uiState is EditBusinessUiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Registering...")
+                    Text("Saving...")
                 } else {
-                    Icon(Icons.Default.CheckCircle, null)
+                    Icon(Icons.Default.Save, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Register Business")
+                    Text("Save Changes")
                 }
             }
 
@@ -454,15 +448,13 @@ fun AddBusinessScreen(
     if (showImageSourceDialog) {
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
-            title = { Text("Add Photo") },
+            title = { Text("Change Photo") },
             text = { Text("Choose photo source") },
             confirmButton = {
                 TextButton(onClick = {
                     showImageSourceDialog = false
                     galleryLauncher.launch("image/*")
-                }) {
-                    Text("Gallery")
-                }
+                }) { Text("Gallery") }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -485,14 +477,12 @@ fun AddBusinessScreen(
                         }
                         else -> permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
-                }) {
-                    Text("Camera")
-                }
+                }) { Text("Camera") }
             }
         )
     }
 
-    // ── MAP PICKER DIALOG ─────────────────────────────────────────────
+    // ── MAP PICKER ────────────────────────────────────────────────────
     if (showMapPicker) {
         LocationPickerDialog(
             initialLocation = LatLng(
@@ -507,119 +497,4 @@ fun AddBusinessScreen(
             onDismiss = { showMapPicker = false }
         )
     }
-}
-
-// ── SECTION TITLE ─────────────────────────────────────────────────────
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary
-    )
-}
-
-// ── WORKING HOURS EDITOR ──────────────────────────────────────────────
-@Composable
-private fun WorkingHoursEditor(
-    hours: Map<String, String>,
-    onHoursChanged: (Map<String, String>) -> Unit
-) {
-    val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        days.forEach { day ->
-            var openTime by remember { mutableStateOf(hours["${day}_open"] ?: "09:00") }
-            var closeTime by remember { mutableStateOf(hours["${day}_close"] ?: "18:00") }
-            var isClosed by remember { mutableStateOf(hours["${day}_closed"] == "true") }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(day, modifier = Modifier.width(40.dp))
-
-                if (isClosed) {
-                    Text(
-                        "Closed",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = openTime,
-                            onValueChange = {
-                                openTime = it
-                                onHoursChanged(hours + ("${day}_open" to it))
-                            },
-                            label = { Text("Open") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = closeTime,
-                            onValueChange = {
-                                closeTime = it
-                                onHoursChanged(hours + ("${day}_close" to it))
-                            },
-                            label = { Text("Close") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-                }
-
-                TextButton(onClick = {
-                    isClosed = !isClosed
-                    onHoursChanged(hours + ("${day}_closed" to isClosed.toString()))
-                }) {
-                    Text(if (isClosed) "Open" else "Close")
-                }
-            }
-        }
-    }
-}
-
-// ── LOCATION PICKER DIALOG ────────────────────────────────────────────
-@Composable
-fun LocationPickerDialog(
-    initialLocation: LatLng,
-    onLocationSelected: (LatLng) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selectedLocation by remember { mutableStateOf(initialLocation) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Location") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter coordinates or pick from map")
-                Text(
-                    "Lat: ${selectedLocation.latitude}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Lng: ${selectedLocation.longitude}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onLocationSelected(selectedLocation) }) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }

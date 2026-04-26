@@ -1,57 +1,48 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.data
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.firebase.firestore.GeoPoint
 
 data class Business(
     val id: String = "",
     val name: String = "",
-    val description: String = "",
     val category: String = "",
+    val description: String = "",
     val address: String = "",
     val phone: String = "",
     val email: String = "",
     val website: String = "",
+    val isOpen24Hours: Boolean = false,
+    val workingHours: Map<String, String> = emptyMap(),
     val location: GeoPoint? = null,
-    val ownerId: String = "",
-    val isSponsored: Boolean = false,
-    val sponsoredUntil: Long? = null,
-    val isPremium: Boolean = false,
-    val premiumUntil: Long? = null,
+    val photos: List<String> = emptyList(),
     val rating: Double = 0.0,
     val reviewCount: Int = 0,
-    val photos: List<String> = emptyList(),
-    val createdAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = true,
-    val isOpen24Hours: Boolean = false,
-    val workingHours: Map<String, String> = emptyMap()
+    val isSponsored: Boolean = false,
+    val isPremium: Boolean = false,
+    val ownerId: String = ""
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "name" to name,
-            "description" to description,
             "category" to category,
+            "description" to description,
             "address" to address,
             "phone" to phone,
             "email" to email,
             "website" to website,
+            "isOpen24Hours" to isOpen24Hours,
+            "workingHours" to workingHours,
             "location" to location,
-            "ownerId" to ownerId,
-            "isSponsored" to isSponsored,
-            "sponsoredUntil" to sponsoredUntil,
-            "isPremium" to isPremium,
-            "premiumUntil" to premiumUntil,
+            "photos" to photos,
             "rating" to rating,
             "reviewCount" to reviewCount,
-            "photos" to photos,
-            "createdAt" to createdAt,
             "isActive" to isActive,
-            "isOpen24Hours" to isOpen24Hours,
-            "workingHours" to workingHours
+            "isSponsored" to isSponsored,
+            "isPremium" to isPremium,
+            "ownerId" to ownerId
         )
     }
 
@@ -60,44 +51,26 @@ data class Business(
             return Business(
                 id = id,
                 name = map["name"] as? String ?: "",
-                description = map["description"] as? String ?: "",
                 category = map["category"] as? String ?: "",
+                description = map["description"] as? String ?: "",
                 address = map["address"] as? String ?: "",
                 phone = map["phone"] as? String ?: "",
                 email = map["email"] as? String ?: "",
                 website = map["website"] as? String ?: "",
+                isOpen24Hours = map["isOpen24Hours"] as? Boolean ?: false,
+                workingHours = (map["workingHours"] as? Map<*, *>)
+                    ?.entries
+                    ?.associate { it.key.toString() to it.value.toString() }
+                    ?: emptyMap(),
                 location = map["location"] as? GeoPoint,
-                ownerId = map["ownerId"] as? String ?: "",
-                isSponsored = map["isSponsored"] as? Boolean ?: false,
-                sponsoredUntil = (map["sponsoredUntil"] as? Number)?.toLong(),
-                isPremium = map["isPremium"] as? Boolean ?: false,
-                premiumUntil = (map["premiumUntil"] as? Number)?.toLong(),
+                photos = (map["photos"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 rating = (map["rating"] as? Number)?.toDouble() ?: 0.0,
                 reviewCount = (map["reviewCount"] as? Number)?.toInt() ?: 0,
-                photos = (map["photos"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                createdAt = (map["createdAt"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 isActive = map["isActive"] as? Boolean ?: true,
-                isOpen24Hours = map["isOpen24Hours"] as? Boolean ?: false,
-                workingHours = (map["workingHours"] as? Map<*, *>)?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: emptyMap()
+                isSponsored = map["isSponsored"] as? Boolean ?: false,
+                isPremium = map["isPremium"] as? Boolean ?: false,
+                ownerId = map["ownerId"] as? String ?: ""
             )
-        }
-    }
-}
-
-enum class BusinessCategory(val displayName: String, val icon: ImageVector) {
-    RESTAURANT("Restaurant", Icons.Default.Restaurant),
-    CAFE("Cafe", Icons.Default.Coffee),
-    SHOP("Shop", Icons.Default.ShoppingCart),
-    HOTEL("Hotel", Icons.Default.Hotel),
-    PHARMACY("Pharmacy", Icons.Default.LocalPharmacy),
-    GAS_STATION("Gas Station", Icons.Default.LocalGasStation),
-    BANK("Bank", Icons.Default.AccountBalance),
-    HOSPITAL("Hospital", Icons.Default.LocalHospital),
-    OTHER("Other", Icons.Default.Business);
-
-    companion object {
-        fun fromString(value: String): BusinessCategory {
-            return entries.find { it.name.equals(value, ignoreCase = true) } ?: OTHER
         }
     }
 }

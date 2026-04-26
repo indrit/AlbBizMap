@@ -48,23 +48,23 @@
 
 # 4. Review System
 
-- [ ] Star rating (1–5 stars)
-- [ ] Written review
-- [ ] Display average rating
-- [ ] Display total number of reviews
-- [ ] Basic moderation ability
-- [ ] Ability to report reviews
+- [X] Star rating (1–5 stars)
+- [X] Written review
+- [X] Display average rating
+- [X] Display total number of reviews
+- [X] Basic moderation ability
+- [X] Ability to report reviews
 
 ---
 
 # 5. Business Owner Tools
 
-- [ ] Business registration
-- [ ] Business profile management
-- [ ] Photo upload
-- [ ] Business description editor
-- [ ] Contact information fields
-- [ ] Hours of operation fields
+- [X] Business registration
+- [X] Business profile management
+- [X] Photo upload
+- [X] Business description editor
+- [X] Contact information fields
+- [X] Hours of operation fields
 - [ ] Subscription management
 
 ---

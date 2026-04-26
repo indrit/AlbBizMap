@@ -129,4 +129,17 @@ class FirestoreService {
             false
         }
     }
+
+    suspend fun updateBusiness(business: Business): Result<String> {
+        return try {
+            businessesRef.document(business.id)
+                .update(business.toMap())
+                .await()
+            Log.d(TAG, "Business updated: ${business.id}")
+            Result.success(business.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating business", e)
+            Result.failure(e)
+        }
+    }
 }
