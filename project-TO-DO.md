@@ -71,10 +71,11 @@
 
 # 6. Business Claim System
 
-- [ ] Users can add a business listing
-- [ ] “Claim this business” option
-- [ ] Owner verification process
-- [ ] Ownership transfer to verified owner
+- [X] Users can add a business listing
+- [X] “Claim this business” option
+- [X] Owner verification process =>  (manual via Firebase Console for now,
+  scale to email/admin verification in future)
+- [X] Ownership transfer to verified owner
 
 ---
 

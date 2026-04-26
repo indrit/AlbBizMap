@@ -142,4 +142,23 @@ class FirestoreService {
             Result.failure(e)
         }
     }
+
+    suspend fun submitClaimRequest(claim: ClaimRequest): Result<String> {
+        return try {
+            val ref = db.collection("claim_requests").document()
+            val finalClaim = claim.copy(id = ref.id)
+            ref.set(finalClaim.toMap()).await()
+            Log.d(TAG, "Claim submitted: ${ref.id}")
+            Result.success(ref.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error submitting claim", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateBusinessPhotos(businessId: String, photos: List<String>) {
+        businessesRef.document(businessId)
+            .update("photos", photos)
+            .await()
+    }
 }

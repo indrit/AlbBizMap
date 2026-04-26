@@ -68,4 +68,8 @@ class BusinessRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun submitClaim(claim: ClaimRequest): Result<String> {
+        return firestoreService.submitClaimRequest(claim)
+    }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -21,6 +22,10 @@ import com.albbiz.map.viewmodel.ReviewViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.rememberCoroutineScope
+import com.albbiz.map.data.BusinessRepository
+import com.albbiz.map.data.ClaimRequest
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,6 +133,94 @@ fun BusinessDetailScreen(
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        // Show Claim button only if business has no owner
+                        if (business.ownerId.isEmpty()) {
+                            var showClaimDialog by remember { mutableStateOf(false) }
+                            var claimReason by remember { mutableStateOf("") }
+                            var claimEmail by remember { mutableStateOf("") }
+                            var isSubmittingClaim by remember { mutableStateOf(false) }
+                            val claimRepository = remember { BusinessRepository() }
+                            val claimScope = rememberCoroutineScope()
+
+                            OutlinedButton(
+                                onClick = { showClaimDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Flag, null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Claim this Business")
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            if (showClaimDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showClaimDialog = false },
+                                    title = { Text("Claim this Business") },
+                                    text = {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                "Fill in your details to claim ownership of ${business.name}.",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            OutlinedTextField(
+                                                value = claimEmail,
+                                                onValueChange = { claimEmail = it },
+                                                label = { Text("Your Email *") },
+                                                placeholder = { Text("email@example.com") },
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            OutlinedTextField(
+                                                value = claimReason,
+                                                onValueChange = { claimReason = it },
+                                                label = { Text("Why are you the owner? *") },
+                                                placeholder = { Text("e.g. I registered this business in 2020...") },
+                                                minLines = 3,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                if (claimEmail.isBlank() || claimReason.isBlank()) return@Button
+                                                isSubmittingClaim = true
+                                                claimScope.launch {
+                                                    val claim = ClaimRequest(
+                                                        businessId = business.id,
+                                                        businessName = business.name,
+                                                        userId = currentUserId,
+                                                        userName = "User", // TODO: replace with real username
+                                                        userEmail = claimEmail.trim(),
+                                                        reason = claimReason.trim()
+                                                    )
+                                                    claimRepository.submitClaim(claim)
+                                                        .onSuccess {
+                                                            isSubmittingClaim = false
+                                                            showClaimDialog = false
+                                                        }
+                                                        .onFailure {
+                                                            isSubmittingClaim = false
+                                                        }
+                                                }
+                                            },
+                                            enabled = !isSubmittingClaim &&
+                                                    claimEmail.isNotBlank() &&
+                                                    claimReason.isNotBlank()
+                                        ) {
+                                            Text(if (isSubmittingClaim) "Submitting..." else "Submit Claim")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showClaimDialog = false }) {
+                                            Text("Cancel")
+                                        }
+                                    }
+                                )
+                            }
+                        }
 
 
                         // Show Edit button only if current user is the owner
