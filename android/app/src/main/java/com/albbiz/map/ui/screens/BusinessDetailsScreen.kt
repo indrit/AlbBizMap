@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Star
@@ -34,6 +35,7 @@ fun BusinessDetailScreen(
     currentUserId: String,
     onWriteReviewClick: () -> Unit,
     onEditClick: () -> Unit,
+    onBackClick: () -> Unit,
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val reviews by reviewViewModel.reviews.collectAsState()
@@ -61,7 +63,20 @@ fun BusinessDetailScreen(
     val reviewCount = reviews.size
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text(business.name) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier

@@ -81,21 +81,21 @@
 
 # 7. Badges & Trust Indicators
 
-- [ ] Verified Business Badge
-- [ ] Albanian-Owned Badge
-- [ ] Premium Business Badge
-- [ ] Featured Business Badge
-- [ ] Sponsored Business Badge
+- [X] Verified Business Badge
+- [X] Albanian-Owned Badge
+- [X] Premium Business Badge
+- [X] Featured Business Badge
+- [X] Sponsored Business Badge
 
 ---
 
 # 8. Map Enhancements
 
-- [ ] Category filtering on map
-- [ ] Different colored pins for premium listings
-- [ ] Highlighted pins for sponsored listings
+- [X] Category filtering on map
+- [X] Different colored pins for premium listings
+- [X] Highlighted pins for sponsored listings
 - [ ] Map clustering for dense areas
-- [ ] Quick category filter buttons
+- [X] Quick category filter buttons
 
 Example filters:
 

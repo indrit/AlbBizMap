@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -161,13 +162,83 @@ fun BusinessListItem(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                if (business.isSponsored) {
-                    Text(
-                        text = "SPONSORED",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
+            }
+
+// ── BADGES ROW ────────────────────────────────────────────
+            if (business.isSponsored || business.isPremium || business.isVerified ||
+                business.isAlbanianOwned || business.isFeatured) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    if (business.isVerified) {
+                        Surface(
+                            color = Color(0xFF2196F3),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "✓ Verified",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    if (business.isAlbanianOwned) {
+                        Surface(
+                            color = Color(0xFFE41E20),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "🇦🇱 Albanian Owned",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    if (business.isPremium) {
+                        Surface(
+                            color = Color(0xFFFFAA00),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "⭐ Premium",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    if (business.isFeatured) {
+                        Surface(
+                            color = Color(0xFF9C27B0),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "🔥 Featured",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    if (business.isSponsored) {
+                        Surface(
+                            color = Color(0xFF4CAF50),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "📢 Sponsored",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
 

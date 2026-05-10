@@ -21,7 +21,10 @@ data class Business(
     val isActive: Boolean = true,
     val isSponsored: Boolean = false,
     val isPremium: Boolean = false,
-    val ownerId: String = ""
+    val ownerId: String = "",
+    val isVerified: Boolean = false,
+    val isAlbanianOwned: Boolean = false,
+    val isFeatured: Boolean = false
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -42,7 +45,10 @@ data class Business(
             "isActive" to isActive,
             "isSponsored" to isSponsored,
             "isPremium" to isPremium,
-            "ownerId" to ownerId
+            "ownerId" to ownerId,
+            "isVerified" to isVerified,
+            "isAlbanianOwned" to isAlbanianOwned,
+            "isFeatured" to isFeatured
         )
     }
 
@@ -69,7 +75,10 @@ data class Business(
                 isActive = map["isActive"] as? Boolean ?: true,
                 isSponsored = map["isSponsored"] as? Boolean ?: false,
                 isPremium = map["isPremium"] as? Boolean ?: false,
-                ownerId = map["ownerId"] as? String ?: ""
+                ownerId = map["ownerId"] as? String ?: "",
+                isVerified = map["isVerified"] as? Boolean ?: false,
+                isAlbanianOwned = map["isAlbanianOwned"] as? Boolean ?: false,
+                isFeatured = map["isFeatured"] as? Boolean ?: false
             )
         }
     }
