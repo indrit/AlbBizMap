@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +77,8 @@ data class BusinessClusterItem(
 fun MapScreen(
     onListClick: () -> Unit = {},
     onAddBusinessClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
+    onFavoritesClick: () -> Unit = {},
     onBusinessClick: (String) -> Unit,
     viewModel: MapViewModel = viewModel()
 ) {
@@ -86,6 +90,7 @@ fun MapScreen(
     val businesses by viewModel.filteredBusinesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
+    val favoriteIds by viewModel.favoriteIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     var selectedBusiness by remember { mutableStateOf<Business?>(null) }
@@ -149,8 +154,7 @@ fun MapScreen(
         }
     }
 
-    // Category filter state
-    var selectedCategory by remember { mutableStateOf("All") }
+    var selectedCategoryLabel by remember { mutableStateOf("All") }
     val categories = listOf(
         "All", "Restaurant", "Cafe", "Market",
         "Contractor", "Lawyer", "Dentist",
@@ -169,6 +173,20 @@ fun MapScreen(
                     fontWeight = FontWeight.Bold
                 )
                 HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("Profile") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onProfileClick() },
+                    icon = { Icon(Icons.Default.AccountCircle, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("My Favorites") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onFavoritesClick() },
+                    icon = { Icon(Icons.Default.Favorite, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
                 NavigationDrawerItem(
                     label = { Text("Add My Business") },
                     selected = false,
@@ -213,7 +231,6 @@ fun MapScreen(
                 .fillMaxSize()
                 .padding(padding)) {
 
-                // ── MAP ───────────────────────────────────────────────
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
@@ -224,8 +241,10 @@ fun MapScreen(
                     ),
                     onMapClick = { selectedBusiness = null; keyboardController?.hide() }
                 ) {
-                    val clusterItems = businesses.mapNotNull { business ->
-                        business.location?.let { BusinessClusterItem(business) }
+                    val clusterItems = remember(businesses) {
+                        businesses.mapNotNull { business ->
+                            business.location?.let { BusinessClusterItem(business) }
+                        }
                     }
 
                     Clustering<BusinessClusterItem>(
@@ -233,12 +252,10 @@ fun MapScreen(
                         onClusterItemClick = { item ->
                             selectedBusiness = item.business
                             true
-                        },
-                        onClusterItemInfoWindowClick = { }
+                        }
                     )
                 }
 
-                // ── CATEGORY FILTERS ──────────────────────────────────
                 Card(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -254,14 +271,10 @@ fun MapScreen(
                     ) {
                         items(categories) { category ->
                             FilterChip(
-                                selected = selectedCategory == category,
+                                selected = selectedCategoryLabel == category,
                                 onClick = {
-                                    selectedCategory = category
-                                    if (category == "All") {
-                                        viewModel.onCategoryChange("")
-                                    } else {
-                                        viewModel.onCategoryChange(category)
-                                    }
+                                    selectedCategoryLabel = category
+                                    viewModel.onCategoryChange(if (category == "All") "" else category)
                                 },
                                 label = { Text(category) }
                             )
@@ -269,7 +282,6 @@ fun MapScreen(
                     }
                 }
 
-                // ── SEARCH ────────────────────────────────────────────
                 if (showSearch) {
                     Card(
                         modifier = Modifier
@@ -337,7 +349,6 @@ fun MapScreen(
                     }
                 }
 
-                // ── FABs ──────────────────────────────────────────────
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -357,10 +368,11 @@ fun MapScreen(
 
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
-                // ── BUSINESS DETAIL CARD ──────────────────────────────
                 selectedBusiness?.let { biz ->
                     BusinessDetailCard(
                         business = biz,
+                        isFavorite = favoriteIds.contains(biz.id),
+                        onToggleFavorite = { viewModel.toggleFavorite(biz.id) },
                         onClose = { selectedBusiness = null },
                         onViewDetails = { onBusinessClick(biz.id) }
                     )
@@ -373,6 +385,8 @@ fun MapScreen(
 @Composable
 fun BusinessDetailCard(
     business: Business,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onClose: () -> Unit,
     onViewDetails: () -> Unit
 ) {
@@ -394,13 +408,32 @@ fun BusinessDetailCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = business.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = business.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row {
+                        if (business.isPremium) BadgeChip("Premium", Color(0xFFFFAA00))
+                        if (business.isVerified) {
+                            Spacer(Modifier.width(4.dp))
+                            BadgeChip("Verified", Color(0xFF2196F3))
+                        }
+                    }
+                }
+                
+                Row {
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) Color.Red else LocalContentColor.current
+                        )
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
                 }
             }
 
@@ -413,5 +446,21 @@ fun BusinessDetailCard(
                 Text("View Details & Rate")
             }
         }
+    }
+}
+
+@Composable
+fun BadgeChip(label: String, color: Color) {
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

@@ -17,6 +17,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
@@ -26,129 +28,155 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            var currentLanguage by remember { mutableStateOf(AppLanguage.EN) }
+
             AlbBizMapTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    val mapViewModel: MapViewModel = viewModel()
-
-                    // ← REAL AUTH: shared across whole app
-                    val authViewModel: AuthViewModel = viewModel()
-                    val currentUser by authViewModel.currentUser.collectAsState()
-
-                    // Convenient shortcuts
-                    val currentUserId = currentUser?.uid ?: ""
-                    val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
-
-                    // ← Start on auth screen if not logged in, map if logged in
-                    val startDestination = if (authViewModel.isLoggedIn()) "map" else "auth"
-
-                    NavHost(
-                        navController = navController,
-                        startDestination = startDestination
+                ProvideAppStrings(language = currentLanguage) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
                     ) {
+                        val navController = rememberNavController()
+                        val mapViewModel: MapViewModel = viewModel()
+                        val authViewModel: AuthViewModel = viewModel()
+                        val currentUser by authViewModel.currentUser.collectAsState()
 
-                        // ── AUTH ──────────────────────────────────────
-                        composable("auth") {
-                            AuthScreen(
-                                onAuthSuccess = {
-                                    navController.navigate("map") {
-                                        popUpTo("auth") { inclusive = true }
-                                    }
-                                },
-                                viewModel = authViewModel
-                            )
-                        }
+                        val currentUserId = currentUser?.uid ?: ""
+                        val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
 
-                        // ── MAP ───────────────────────────────────────
-                        composable("map") {
-                            MapScreen(
-                                onListClick = { navController.navigate("business_list") },
-                                onAddBusinessClick = { navController.navigate("add_business") },
-                                onBusinessClick = { businessId ->
-                                    navController.navigate("business_detail/$businessId")
-                                },
-                                viewModel = mapViewModel
-                            )
-                        }
+                        val startDestination = if (authViewModel.isLoggedIn()) "map" else "auth"
 
-                        // ── ADD BUSINESS ──────────────────────────────
-                        composable("add_business") {
-                            AddBusinessScreen(
-                                onBackClick = { navController.popBackStack() },
-                                onBusinessAdded = { navController.popBackStack() }
-                            )
-                        }
-
-                        // ── BUSINESS LIST ─────────────────────────────
-                        composable("business_list") {
-                            BusinessListScreen(
-                                onBackClick = { navController.popBackStack() }
-                            )
-                        }
-
-                        // ── BUSINESS DETAIL ───────────────────────────
-                        composable(
-                            route = "business_detail/{businessId}",
-                            arguments = listOf(navArgument("businessId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                            val business = mapViewModel.getBusinessById(businessId)
-
-                            if (business != null) {
-                                BusinessDetailScreen(
-                                    business = business,
-                                    currentUserId = currentUserId, // ← REAL user ID
-                                    onWriteReviewClick = {
-                                        if (currentUserId.isEmpty()) {
-                                            // Not logged in → send to auth
-                                            navController.navigate("auth")
-                                        } else {
-                                            navController.navigate("add_review/$businessId")
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDestination
+                        ) {
+                            composable("auth") {
+                                AuthScreen(
+                                    onAuthSuccess = {
+                                        navController.navigate("map") {
+                                            popUpTo("auth") { inclusive = true }
                                         }
                                     },
-                                    onEditClick = {
-                                        navController.navigate("edit_business/$businessId")
-                                    },
-                                   onBackClick = { navController.popBackStack() }
+                                    viewModel = authViewModel
                                 )
-                            } else {
-                                Text("Business not found.")
                             }
-                        }
 
-                        // ── ADD REVIEW ────────────────────────────────
-                        composable(
-                            route = "add_review/{businessId}",
-                            arguments = listOf(navArgument("businessId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                            AddReviewScreen(
-                                businessId = businessId,
-                                userId = currentUserId,     // ← REAL user ID
-                                userName = currentUserName, // ← REAL user name
-                                onReviewSubmitted = { navController.popBackStack() }
-                            )
-                        }
-
-                        // ── EDIT BUSINESS ─────────────────────────────
-                        composable(
-                            route = "edit_business/{businessId}",
-                            arguments = listOf(navArgument("businessId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                            val business = mapViewModel.getBusinessById(businessId)
-
-                            if (business != null) {
-                                EditBusinessScreen(
-                                    business = business,
-                                    onBackClick = { navController.popBackStack() },
-                                    onBusinessUpdated = { navController.popBackStack() }
+                            composable("map") {
+                                MapScreen(
+                                    onListClick = { navController.navigate("business_list") },
+                                    onAddBusinessClick = { navController.navigate("add_business") },
+                                    onProfileClick = { navController.navigate("profile") },
+                                    onFavoritesClick = { navController.navigate("favorites") },
+                                    onBusinessClick = { businessId ->
+                                        navController.navigate("business_detail/$businessId")
+                                    },
+                                    viewModel = mapViewModel
                                 )
-                            } else {
-                                Text("Business not found.")
+                            }
+
+                            composable("add_business") {
+                                AddBusinessScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onBusinessAdded = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("business_list") {
+                                BusinessListScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onBusinessClick = { businessId ->
+                                        navController.navigate("business_detail/$businessId")
+                                    },
+                                    viewModel = mapViewModel
+                                )
+                            }
+
+                            composable("profile") {
+                                UserProfileScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onLogout = {
+                                        navController.navigate("auth") {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    },
+                                    viewModel = authViewModel
+                                )
+                            }
+
+                            composable("favorites") {
+                                FavoritesScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onBusinessClick = { businessId ->
+                                        navController.navigate("business_detail/$businessId")
+                                    },
+                                    viewModel = mapViewModel
+                                )
+                            }
+
+                            composable("events") {
+                                EventsScreen(
+                                    onBackClick = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable(
+                                route = "business_detail/{businessId}",
+                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
+                                val business = mapViewModel.getBusinessById(businessId)
+
+                                if (business != null) {
+                                    BusinessDetailScreen(
+                                        business = business,
+                                        currentUserId = currentUserId,
+                                        onWriteReviewClick = {
+                                            if (currentUserId.isEmpty()) {
+                                                navController.navigate("auth")
+                                            } else {
+                                                navController.navigate("add_review/$businessId")
+                                            }
+                                        },
+                                        onEditClick = {
+                                            navController.navigate("edit_business/$businessId")
+                                        },
+                                       onBackClick = { navController.popBackStack() },
+                                       mapViewModel = mapViewModel
+                                    )
+                                } else {
+                                    Text("Business not found.")
+                                }
+                            }
+
+                            composable(
+                                route = "add_review/{businessId}",
+                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
+                                AddReviewScreen(
+                                    businessId = businessId,
+                                    userId = currentUserId,
+                                    userName = currentUserName,
+                                    onReviewSubmitted = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable(
+                                route = "edit_business/{businessId}",
+                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
+                                val business = mapViewModel.getBusinessById(businessId)
+
+                                if (business != null) {
+                                    EditBusinessScreen(
+                                        business = business,
+                                        onBackClick = { navController.popBackStack() },
+                                        onBusinessUpdated = { navController.popBackStack() }
+                                    )
+                                } else {
+                                    Text("Business not found.")
+                                }
                             }
                         }
                     }

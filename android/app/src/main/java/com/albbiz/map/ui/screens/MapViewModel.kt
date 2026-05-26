@@ -15,12 +15,10 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.GeoPoint
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class MapViewModel : ViewModel() {
@@ -31,6 +29,9 @@ class MapViewModel : ViewModel() {
 
     private val _filteredBusinesses = MutableStateFlow<List<Business>>(emptyList())
     val filteredBusinesses: StateFlow<List<Business>> = _filteredBusinesses
+
+    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteIds
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -46,104 +47,81 @@ class MapViewModel : ViewModel() {
 
     private val _selectedCategory = MutableStateFlow("")
 
+    // ── DISCOVERY FLOWS (Section 9) ──────────────────────────────
+    val recentlyAdded = _businesses.map { list ->
+        list.sortedByDescending { it.id }.take(10) 
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val topRated = _businesses.map { list ->
+        list.sortedByDescending { it.rating }.take(10)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val featured = _businesses.map { list ->
+        list.filter { it.isFeatured || it.isSponsored || it.isPremium }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val nearMe = combine(_businesses, _userLocation) { list, location ->
+        if (location == null) emptyList()
+        else {
+            val userPoint = GeoPoint(location.latitude, location.longitude)
+            list.sortedBy { repository.calculateDistance(userPoint, it.location ?: GeoPoint(0.0, 0.0)) }.take(10)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     private var locationCallback: LocationCallback? = null
 
     init {
         Log.d("AlbBizMap", "ViewModel initialized")
-
-        // TEMPORARY: Add hardcoded test businesses immediately
-        addHardcodedBusinesses()
-
-        // Then try to load from Firestore
         testFirestoreAndLoad()
-    }
-
-    private fun addHardcodedBusinesses() {
-        Log.d("AlbBizMap", "Adding hardcoded businesses for testing")
-        val testBusinesses = listOf(
-            Business(
-                id = "test-1",
-                name = "Bakllava e Nenes",
-                description = "Traditional Albanian bakery with fresh baklava daily",
-                category = "Food & Bakery",
-                address = "Tirana, Albania",
-                phone = "+355 69 123 4567",
-                email = "info@bakllava.al",
-                website = "https://bakllava.al",
-                location = GeoPoint(41.3275, 19.8187),
-                ownerId = "test-owner",
-                isSponsored = true,
-                rating = 4.8,
-                reviewCount = 42,
-                isActive = true
-            ),
-            Business(
-                id = "test-2",
-                name = "Bar Kafe Tirana",
-                description = "Best coffee in the city center",
-                category = "Cafe",
-                address = "Tirana, Albania",
-                location = GeoPoint(41.3280, 19.8190),
-                ownerId = "test-owner-2",
-                isSponsored = false,
-                rating = 4.5,
-                reviewCount = 28,
-                isActive = true
-            ),
-            Business(
-                id = "test-3",
-                name = "Albanian Motors",
-                description = "Car repair and maintenance",
-                category = "Automotive",
-                address = "Tirana, Albania",
-                location = GeoPoint(41.3260, 19.8170),
-                ownerId = "test-owner-3",
-                isSponsored = false,
-                rating = 4.2,
-                reviewCount = 15,
-                isActive = true
-            )
-        )
-        _businesses.value = testBusinesses
-        _filteredBusinesses.value = testBusinesses
-        _isLoading.value = false
-        Log.d("AlbBizMap", "Added ${testBusinesses.size} hardcoded businesses")
+        loadFavorites()
     }
 
     private fun testFirestoreAndLoad() {
         viewModelScope.launch {
-            Log.d("AlbBizMap", "Testing Firestore connection...")
             val connected = repository.testConnection()
             if (connected) {
-                Log.d("AlbBizMap", "Firestore connected, loading real businesses...")
                 loadBusinesses()
             } else {
-                Log.e("AlbBizMap", "Firestore connection failed, using hardcoded only")
+                _isLoading.value = false
+                Log.e("AlbBizMap", "Firestore connection failed")
             }
         }
     }
 
     private fun loadBusinesses() {
-        Log.d("AlbBizMap", "Starting business flow collection...")
         repository.getActiveBusinesses()
             .onEach { firestoreBusinesses ->
-                Log.d("AlbBizMap", "Received ${firestoreBusinesses.size} businesses from Firestore")
-                if (firestoreBusinesses.isNotEmpty()) {
-                    // Replace hardcoded with real data
-                    _businesses.value = firestoreBusinesses
-                    filterBusinesses()
-                    Log.d("AlbBizMap", "Replaced with real Firestore data")
-                } else {
-                    Log.d("AlbBizMap", "Firestore empty, keeping hardcoded businesses")
-                }
+                _businesses.value = firestoreBusinesses
+                filterBusinesses()
                 _isLoading.value = false
             }
             .catch { e ->
                 Log.e("AlbBizMap", "Error loading from Firestore: ${e.message}")
                 _error.value = e.message
-                // Keep hardcoded businesses on error
+                _isLoading.value = false
             }
             .launchIn(viewModelScope)
+    }
+
+    fun loadFavorites() {
+        val userId = Firebase.auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            repository.getFavoriteIds(userId).onSuccess { ids ->
+                _favoriteIds.value = ids.toSet()
+            }
+        }
+    }
+
+    fun toggleFavorite(businessId: String) {
+        val userId = Firebase.auth.currentUser?.uid ?: return
+        val currentlyFavorite = _favoriteIds.value.contains(businessId)
+        viewModelScope.launch {
+            repository.toggleFavorite(userId, businessId, !currentlyFavorite).onSuccess {
+                val newFavorites = _favoriteIds.value.toMutableSet()
+                if (currentlyFavorite) newFavorites.remove(businessId) else newFavorites.add(businessId)
+                _favoriteIds.value = newFavorites
+            }
+        }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -185,30 +163,6 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun addTestBusinessToFirestore(context: Context) {
-        viewModelScope.launch {
-            Log.d("AlbBizMap", "Adding test business to Firestore...")
-            val testBusiness = Business(
-                name = "Test Business ${System.currentTimeMillis()}",
-                description = "Added from app",
-                category = "Test",
-                address = "Tirana, Albania",
-                location = GeoPoint(41.3275, 19.8187),
-                ownerId = "test-user",
-                isActive = true,
-                rating = 4.5,
-                reviewCount = 10
-            )
-            repository.addBusiness(testBusiness)
-                .onSuccess {
-                    Log.d("AlbBizMap", "Test business added to Firestore!")
-                }
-                .onFailure {
-                    Log.e("AlbBizMap", "Failed to add: ${it.message}")
-                }
-        }
-    }
-
     @SuppressLint("MissingPermission")
     fun startLocationUpdates(context: Context) {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -245,7 +199,6 @@ class MapViewModel : ViewModel() {
     }
 
     fun getBusinessById(id: String): Business? {
-        // This looks through your list of businesses and returns the one matching the ID
-        return filteredBusinesses.value.find { it.id == id }
+        return _businesses.value.find { it.id == id }
     }
 }

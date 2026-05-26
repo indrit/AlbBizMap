@@ -15,6 +15,8 @@ import kotlinx.coroutines.tasks.await
 class FirestoreService {
     private val db = FirebaseFirestore.getInstance()
     private val businessesRef = db.collection("businesses")
+    private val usersRef = db.collection("users")
+    private val eventsRef = db.collection("events")
     private val storage = FirebaseStorage.getInstance()
 
     companion object {
@@ -34,24 +36,14 @@ class FirestoreService {
                 }
 
                 if (snapshot == null) {
-                    Log.d(TAG, "Firestore: Snapshot is null")
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
 
-                Log.d(TAG, "Firestore: Got ${snapshot.documents.size} documents")
-
                 val businesses = snapshot.documents.mapNotNull { doc ->
                     try {
-                        val data = doc.data
-                        if (data == null) {
-                            Log.w(TAG, "Firestore: Doc ${doc.id} has no data")
-                            return@mapNotNull null
-                        }
-
-                        Business.fromMap(doc.id, data)
+                        Business.fromMap(doc.id, doc.data ?: emptyMap())
                     } catch (e: Exception) {
-                        Log.e(TAG, "Firestore: Error parsing doc ${doc.id}", e)
                         null
                     }
                 }
@@ -61,14 +53,10 @@ class FirestoreService {
                         .thenByDescending { it.rating }
                 )
 
-                Log.d(TAG, "Firestore: Successfully parsed ${sortedBusinesses.size} businesses")
                 trySend(sortedBusinesses)
             }
 
-        awaitClose {
-            Log.d(TAG, "Firestore: Removing listener")
-            listener.remove()
-        }
+        awaitClose { listener.remove() }
     }
 
     suspend fun addBusiness(business: Business): Result<String> {
@@ -76,33 +64,17 @@ class FirestoreService {
             val auth = Firebase.auth
             var currentUser = auth.currentUser
             
-            // Critical check: Ensure we are logged in before writing
             if (currentUser == null) {
-                Log.d(TAG, "Firestore: No user found, attempting silent sign-in...")
                 auth.signInAnonymously().await()
                 currentUser = auth.currentUser
             }
 
-            if (currentUser == null) {
-                return Result.failure(Exception("Authentication failed"))
-            }
+            if (currentUser == null) return Result.failure(Exception("Authentication failed"))
 
-            Log.d(TAG, "Firestore: Adding business ${business.name} for user ${currentUser.uid}")
-            
-            val docRef = if (business.id.isEmpty()) {
-                businessesRef.document()
-            } else {
-                businessesRef.document(business.id)
-            }
-
-            // Ensure the business document has the correct ownerId
-            val finalBusiness = business.copy(
-                id = docRef.id,
-                ownerId = currentUser.uid
-            )
+            val docRef = if (business.id.isEmpty()) businessesRef.document() else businessesRef.document(business.id)
+            val finalBusiness = business.copy(id = docRef.id, ownerId = currentUser.uid)
 
             docRef.set(finalBusiness.toMap()).await()
-            Log.d(TAG, "Firestore: Business added with ID ${docRef.id}")
             Result.success(docRef.id)
         } catch (e: Exception) {
             Log.e(TAG, "Firestore: Error adding business", e)
@@ -110,35 +82,68 @@ class FirestoreService {
         }
     }
 
+    // FAVORITES SYSTEM
+    suspend fun toggleFavorite(userId: String, businessId: String, isFavorite: Boolean): Result<Unit> {
+        return try {
+            val favRef = usersRef.document(userId).collection("favorites").document(businessId)
+            if (isFavorite) {
+                favRef.set(mapOf("timestamp" to System.currentTimeMillis())).await()
+            } else {
+                favRef.delete().await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getFavoriteIds(userId: String): Flow<Set<String>> = callbackFlow {
+        val listener = usersRef.document(userId).collection("favorites")
+            .addSnapshotListener { snapshot, _ ->
+                val ids = snapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
+                trySend(ids)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    // ── EVENTS SYSTEM (Section 12) ─────────────────────────────
+    fun getEvents(): Flow<List<Event>> = callbackFlow {
+        val listener = eventsRef
+            .orderBy("date")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val events = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { Event.fromMap(doc.id, it) }
+                } ?: emptyList()
+                trySend(events)
+            }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun uploadImage(businessId: String, uri: Uri, index: Int): String {
         val filename = "businesses/$businessId/image_$index.jpg"
         val ref = storage.reference.child(filename)
-
         ref.putFile(uri).await()
         return ref.downloadUrl.await().toString()
     }
 
     suspend fun testConnection(): Boolean {
         return try {
-            Log.d(TAG, "Firestore: Testing connection...")
-            val snapshot = businessesRef.limit(1).get().await()
-            Log.d(TAG, "Firestore: Connection test successful, found ${snapshot.size()} docs")
+            businessesRef.limit(1).get().await()
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Firestore: Connection test failed", e)
             false
         }
     }
 
     suspend fun updateBusiness(business: Business): Result<String> {
         return try {
-            businessesRef.document(business.id)
-                .update(business.toMap())
-                .await()
-            Log.d(TAG, "Business updated: ${business.id}")
+            businessesRef.document(business.id).set(business.toMap()).await()
             Result.success(business.id)
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating business", e)
             Result.failure(e)
         }
     }
@@ -148,17 +153,13 @@ class FirestoreService {
             val ref = db.collection("claim_requests").document()
             val finalClaim = claim.copy(id = ref.id)
             ref.set(finalClaim.toMap()).await()
-            Log.d(TAG, "Claim submitted: ${ref.id}")
             Result.success(ref.id)
         } catch (e: Exception) {
-            Log.e(TAG, "Error submitting claim", e)
             Result.failure(e)
         }
     }
 
     suspend fun updateBusinessPhotos(businessId: String, photos: List<String>) {
-        businessesRef.document(businessId)
-            .update("photos", photos)
-            .await()
+        businessesRef.document(businessId).update("photos", photos).await()
     }
 }
