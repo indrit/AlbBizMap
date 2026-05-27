@@ -96,4 +96,17 @@ class BusinessRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun updateBusinessPhoto(
+        businessId: String,
+        imageUri: Uri
+    ): Result<String> {
+        return try {
+            val url = firestoreService.uploadImage(businessId, imageUri, 0)
+            firestoreService.updateBusinessPhotos(businessId, listOf(url))
+            Result.success(url)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

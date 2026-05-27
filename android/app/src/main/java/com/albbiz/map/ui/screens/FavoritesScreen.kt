@@ -97,6 +97,12 @@ fun BusinessListItemWrapper(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium
     ) {
-        BusinessListItem(business = business, userLocation = userLocation)
+        BusinessListItem(
+            business = business,
+            userLocation = userLocation,
+            isFavorite = false,
+            onToggleFavorite =  {},
+            onClick = onClick
+        )
     }
 }

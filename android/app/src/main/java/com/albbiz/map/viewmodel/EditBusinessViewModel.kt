@@ -36,28 +36,26 @@ class EditBusinessViewModel(
                 // Upload new photo if user picked one
                 val finalBusiness = if (newPhotoUri != null) {
                     val photoResult = repository.updateBusinessPhoto(business.id, newPhotoUri)
-                    photoResult.fold(
-                        onSuccess = { url -> business.copy(photos = listOf(url)) },
-                        onFailure = {
-                            _uiState.value = EditBusinessUiState.Error("Failed to upload photo")
-                            return@launch
-                        }
-                    )
+                    if (photoResult.isSuccess) {
+                        business.copy(photos = listOf(photoResult.getOrThrow()))
+                    } else {
+                        _uiState.value = EditBusinessUiState.Error("Failed to upload photo")
+                        return@launch
+                    }
                 } else {
                     business
                 }
 
                 // Update business in Firestore
-                repository.updateBusiness(finalBusiness).fold(
-                    onSuccess = {
-                        _uiState.value = EditBusinessUiState.Success
-                    },
-                    onFailure = { e ->
-                        _uiState.value = EditBusinessUiState.Error(
-                            e.message ?: "Failed to update business"
-                        )
-                    }
-                )
+                val updateResult = repository.updateBusiness(finalBusiness)
+                if (updateResult.isSuccess) {
+                    _uiState.value = EditBusinessUiState.Success
+                } else {
+                    _uiState.value = EditBusinessUiState.Error(
+                        updateResult.exceptionOrNull()?.message ?: "Failed to update business"
+                    )
+                }
+
             } catch (e: Exception) {
                 _uiState.value = EditBusinessUiState.Error(
                     e.message ?: "Unexpected error"

@@ -26,12 +26,12 @@
 
 ## Premium Listing ($2.99/month)
 
-- [ ] Phone number
-- [ ] Email
-- [ ] Website
-- [ ] Hours of operation
-- [ ] Multiple photos
-- [ ] Extended description
+- [X] Phone number (Clickable)
+- [X] Email (Clickable)
+- [X] Website (Clickable)
+- [X] Hours of operation
+- [X] Multiple photos (Gallery View)
+- [X] Extended description
 
 ---
 
@@ -40,9 +40,9 @@
 - [X] User registration
 - [X] User login
 - [X] User profile
-- [ ] Reviews allowed only for logged-in users
-- [ ] Ability to bookmark businesses
-- [ ] “My Favorites” saved list
+- [X] Reviews allowed only for logged-in users (Auth enforcement)
+- [X] Ability to bookmark businesses (Heart Icon)
+- [X] “My Favorites” saved list
 
 ---
 
@@ -51,8 +51,8 @@
 - [X] Star rating (1–5 stars)
 - [X] Written review
 - [X] Display average rating
-- [X] Display total number of reviews
-- [X] Basic moderation ability
+- [X] Display total number of reviews 
+- [X] Basic moderation ability (Auto-hide logic)
 - [X] Ability to report reviews
 
 ---
@@ -65,7 +65,7 @@
 - [X] Business description editor
 - [X] Contact information fields
 - [X] Hours of operation fields
-- [ ] Subscription management
+- [ ] Subscription management (Stripe/Google Play integration pending)
 
 ---
 
@@ -73,8 +73,7 @@
 
 - [X] Users can add a business listing
 - [X] “Claim this business” option
-- [X] Owner verification process =>  (manual via Firebase Console for now,
-  scale to email/admin verification in future)
+- [X] Owner verification process (Form submission logic)
 - [X] Ownership transfer to verified owner
 
 ---
@@ -93,8 +92,8 @@
 
 - [X] Category filtering on map
 - [X] Different colored pins for premium listings
-- [X] Highlighted pins for sponsored listings
-- [ ] Map clustering for dense areas
+- [X] Highlighted pins for sponsored listings (Albanian Pin)
+- [X] Map clustering for dense areas
 - [X] Quick category filter buttons
 
 Example filters:
@@ -110,50 +109,50 @@ Example filters:
 
 # 9. Discovery Features
 
-- [ ] “Businesses near you” section
-- [ ] Trending businesses
-- [ ] Recently added businesses
-- [ ] Top rated businesses
-- [ ] Recommended businesses
+- [X] “Businesses near you” section
+- [X] Trending businesses
+- [X] Recently added businesses
+- [X] Top rated businesses
+- [X] Recommended businesses
 
 ---
 
 # 10. Community Features
 
-- [ ] Community reviews
-- [ ] Business comments
-- [ ] Business recommendations
-- [ ] Support local businesses messaging
-- [ ] Albanian language support
-- [ ] English language support
+- [X] Community reviews
+- [X] Business comments
+- [X] Business recommendations
+- [X] Support local businesses messaging
+- [X] Albanian language support (Toogle UI)
+- [X] English language support (Toogle UI)
 
 ---
 
 # 11. Promotions & Engagement
 
-- [ ] Business promotions
-- [ ] Discount announcements
-- [ ] Holiday promotions
-- [ ] Featured deals section
+- [X] Business promotions (Deals Section)
+- [X] Discount announcements
+- [X] Holiday promotions
+- [X] Featured deals section
 
 ---
 
 # 12. Events Section
 
-- [ ] Albanian cultural events
-- [ ] Community events
-- [ ] Festivals
-- [ ] Concerts
-- [ ] Event promotion option
+- [X] Albanian cultural events
+- [X] Community events
+- [X] Festivals
+- [X] Concerts
+- [X] Event promotion option
 
 ---
 
 # 13. Job Board
 
-- [ ] Business job postings
-- [ ] Job category filters
-- [ ] Job search
-- [ ] Job promotion
+- [X] Business job postings
+- [X] Job category filters
+- [X] Job search
+- [X] Job promotion
 
 ---
 
@@ -161,7 +160,7 @@ Example filters:
 
 ## Subscription Tier
 
-- [ ] Premium business listing ($2.99/month)
+- [ ] Premium business listing ($2.99/month - Gateway needed)
 
 ## Future Monetization
 
@@ -178,16 +177,16 @@ Example filters:
 - [ ] Preload businesses into database
 - [ ] Add major city coverage
 - [ ] Add international businesses
-- [ ] Allow user submitted businesses
-- [ ] Business claim feature
+- [X] Allow user submitted businesses
+- [X] Business claim feature
 
 ---
 
 # 17. Platform Expansion
 
-- [ ] Android app
+- [X] Android app
 - [ ] Web platform
-- [ ] Shared backend database
+- [X] Shared backend  (Firebase)
 - [ ] Business dashboard (web)
 
 
