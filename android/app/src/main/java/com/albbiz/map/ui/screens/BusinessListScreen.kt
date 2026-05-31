@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessRepository
+import com.albbiz.map.ui.LocalAppStrings
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
 
@@ -44,7 +45,7 @@ fun BusinessListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Directory") },
+                title = { Text(LocalAppStrings.current.directory) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -62,7 +63,7 @@ fun BusinessListScreen(
             if (searchQuery.isEmpty()) {
                 item {
                     DiscoveryRow(
-                        title = "Featured Businesses",
+                        title = LocalAppStrings.current.featured,
                         businesses = allBusinesses.filter { it.isFeatured || it.isSponsored },
                         onBusinessClick = onBusinessClick
                     )
@@ -70,7 +71,7 @@ fun BusinessListScreen(
                 
                 item {
                     DiscoveryRow(
-                        title = "Recently Added",
+                        title = LocalAppStrings.current.recentlyAdded,
                         businesses = allBusinesses.sortedByDescending { it.id }.take(5), // Simplified recent
                         onBusinessClick = onBusinessClick
                     )
@@ -78,7 +79,7 @@ fun BusinessListScreen(
                 
                 item {
                     DiscoveryRow(
-                        title = "Top Rated",
+                        title = LocalAppStrings.current.topRated,
                         businesses = allBusinesses.sortedByDescending { it.rating }.take(5),
                         onBusinessClick = onBusinessClick
                     )
@@ -86,7 +87,7 @@ fun BusinessListScreen(
                 
                 item {
                     Text(
-                        "All Businesses",
+                        LocalAppStrings.current.allBusinesses,
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
@@ -102,7 +103,7 @@ fun BusinessListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    placeholder = { Text("Search by name, city...") },
+                    placeholder = { Text(LocalAppStrings.current.searchPlaceholder) },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
                     singleLine = true
                 )
@@ -136,7 +137,7 @@ fun BusinessListScreen(
             if (businesses.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text("No businesses found", style = MaterialTheme.typography.bodyLarge)
+                        Text(LocalAppStrings.current.noResults, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             } else {
@@ -226,9 +227,9 @@ fun BusinessListItem(
                     
                     // Badges
                     Row(modifier = Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (business.isVerified) BadgeChip("Verified", Color(0xFF2196F3))
-                        if (business.isAlbanianOwned) BadgeChip("Albanian Owned", Color(0xFFE41E20))
-                        if (business.isPremium) BadgeChip("Premium", Color(0xFFFFAA00))
+                        if (business.isVerified) BadgeChip(LocalAppStrings.current.verified, Color(0xFF2196F3))
+                        if (business.isAlbanianOwned) BadgeChip(LocalAppStrings.current.verified, Color(0xFFE41E20))
+                        if (business.isPremium) BadgeChip(LocalAppStrings.current.verified, Color(0xFFFFAA00))
                     }
                 }
                 
@@ -272,7 +273,7 @@ fun BusinessListItem(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Get Directions")
+                Text(LocalAppStrings.current.getDirections)
             }
         }
     }

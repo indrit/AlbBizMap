@@ -162,4 +162,141 @@ class FirestoreService {
     suspend fun updateBusinessPhotos(businessId: String, photos: List<String>) {
         businessesRef.document(businessId).update("photos", photos).await()
     }
+
+    suspend fun addEvent(event: Event): Result<String> {
+        return try {
+            val ref = eventsRef.document()
+            val finalEvent = event.copy(id = ref.id)
+            ref.set(finalEvent.toMap()).await()
+            Log.d(TAG, "Event added: ${ref.id}")
+            Result.success(ref.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding event", e)
+            Result.failure(e)
+        }
+    }
+
+    // ── ADMIN FUNCTIONS ───────────────────────────────────────
+    suspend fun isUserAdmin(userId: String): Boolean {
+        return try {
+            val doc = usersRef.document(userId).get().await()
+            doc.getBoolean("isAdmin") ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun getClaimRequests(): Flow<List<ClaimRequest>> = callbackFlow {
+        val listener = db.collection("claim_requests")
+            .whereEqualTo("status", "pending")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val claims = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let {
+                        ClaimRequest(
+                            id = doc.id,
+                            businessId = it["businessId"] as? String ?: "",
+                            businessName = it["businessName"] as? String ?: "",
+                            userId = it["userId"] as? String ?: "",
+                            userName = it["userName"] as? String ?: "",
+                            userEmail = it["userEmail"] as? String ?: "",
+                            reason = it["reason"] as? String ?: "",
+                            status = it["status"] as? String ?: "pending",
+                            createdAt = (it["createdAt"] as? Number)?.toLong() ?: 0L
+                        )
+                    }
+                } ?: emptyList()
+                trySend(claims)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun approveClaim(claim: ClaimRequest): Result<Unit> {
+        return try {
+            // Update business ownerId and set isVerified
+            businessesRef.document(claim.businessId).update(
+                mapOf(
+                    "ownerId" to claim.userId,
+                    "isVerified" to true
+                )
+            ).await()
+
+            // Update claim status to approved
+            db.collection("claim_requests").document(claim.id)
+                .update("status", "approved").await()
+
+            Log.d(TAG, "Claim approved for business: ${claim.businessId}")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error approving claim", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rejectClaim(claimId: String): Result<Unit> {
+        return try {
+            db.collection("claim_requests").document(claimId)
+                .update("status", "rejected").await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun seedBusinessesFromJson(context: android.content.Context): Result<Int> {
+        return try {
+            val jsonString = context.assets.open("sample_businesses.json")
+                .bufferedReader().use { it.readText() }
+
+            val jsonArray = org.json.JSONArray(jsonString)
+            var count = 0
+
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val docRef = businessesRef.document()
+
+                val business = mapOf(
+                    "id" to docRef.id,
+                    "name" to obj.getString("name"),
+                    "category" to obj.getString("category"),
+                    "description" to obj.getString("description"),
+                    "address" to obj.getString("address"),
+                    "phone" to obj.getString("phone"),
+                    "email" to obj.getString("email"),
+                    "website" to obj.getString("website"),
+                    "location" to com.google.firebase.firestore.GeoPoint(
+                        obj.getDouble("latitude"),
+                        obj.getDouble("longitude")
+                    ),
+                    "isActive" to obj.getBoolean("isActive"),
+                    "isVerified" to obj.getBoolean("isVerified"),
+                    "isAlbanianOwned" to obj.getBoolean("isAlbanianOwned"),
+                    "isPremium" to obj.getBoolean("isPremium"),
+                    "isSponsored" to obj.getBoolean("isSponsored"),
+                    "isFeatured" to obj.getBoolean("isFeatured"),
+                    "rating" to 0.0,
+                    "reviewCount" to 0,
+                    "ownerId" to "",
+                    "photos" to emptyList<String>(),
+                    "workingHours" to emptyMap<String, String>(),
+                    "isOpen24Hours" to false,
+                    "longDescription" to "",
+                    "promotions" to emptyList<String>(),
+                    "jobs" to emptyList<String>()
+                )
+
+                docRef.set(business).await()
+                count++
+            }
+
+            Log.d(TAG, "Seeded $count businesses successfully")
+            Result.success(count)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error seeding businesses", e)
+            Result.failure(e)
+        }
+    }
 }

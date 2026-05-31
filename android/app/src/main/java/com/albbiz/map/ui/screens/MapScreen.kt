@@ -39,6 +39,7 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.automirrored.filled.List
+import com.albbiz.map.ui.LocalAppStrings
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
 
@@ -79,6 +80,7 @@ fun MapScreen(
     onAddBusinessClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
+    onEventsClick: () -> Unit = {},
     onBusinessClick: (String) -> Unit,
     viewModel: MapViewModel = viewModel()
 ) {
@@ -174,28 +176,35 @@ fun MapScreen(
                 )
                 HorizontalDivider()
                 NavigationDrawerItem(
-                    label = { Text("Profile") },
+                    label = { Text(LocalAppStrings.current.profile) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onProfileClick() },
                     icon = { Icon(Icons.Default.AccountCircle, null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
-                    label = { Text("My Favorites") },
+                    label = { Text(LocalAppStrings.current.favorites) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onFavoritesClick() },
                     icon = { Icon(Icons.Default.Favorite, null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
-                    label = { Text("Add My Business") },
+                    label = { Text(LocalAppStrings.current.communityEvents) },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onEventsClick() },
+                    icon = { Icon(Icons.Default.Event, null) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text(LocalAppStrings.current.addBusiness) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onAddBusinessClick() },
                     icon = { Icon(Icons.Default.AddBusiness, null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
-                    label = { Text("List View") },
+                    label = { Text(LocalAppStrings.current.listView) },
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onListClick() },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, null) },
@@ -207,7 +216,7 @@ fun MapScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("AlbBizMap") },
+                    title = { Text(LocalAppStrings.current.appName) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, null)
@@ -298,7 +307,7 @@ fun MapScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(8.dp),
-                                placeholder = { Text("Search businesses...") },
+                                placeholder = {  Text(LocalAppStrings.current.searchPlaceholder) },
                                 leadingIcon = { Icon(Icons.Default.Search, null) },
                                 singleLine = true,
                                 keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() })
@@ -339,7 +348,7 @@ fun MapScreen(
                                     }
                                 } else {
                                     Text(
-                                        "No results for \"$searchQuery\"",
+                                        LocalAppStrings.current.noSearchResults,
                                         modifier = Modifier.padding(16.dp),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
@@ -415,10 +424,10 @@ fun BusinessDetailCard(
                         fontWeight = FontWeight.Bold
                     )
                     Row {
-                        if (business.isPremium) BadgeChip("Premium", Color(0xFFFFAA00))
+                        if (business.isPremium) BadgeChip(LocalAppStrings.current.premium, Color(0xFFFFAA00))
                         if (business.isVerified) {
                             Spacer(Modifier.width(4.dp))
-                            BadgeChip("Verified", Color(0xFF2196F3))
+                            BadgeChip(LocalAppStrings.current.verified, Color(0xFF2196F3))
                         }
                     }
                 }
@@ -443,7 +452,7 @@ fun BusinessDetailCard(
                 onClick = onViewDetails,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("View Details & Rate")
+                Text(LocalAppStrings.current.viewDetailsAndRate)
             }
         }
     }

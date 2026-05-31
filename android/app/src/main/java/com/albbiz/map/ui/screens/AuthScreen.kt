@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.viewmodel.AuthUiState
 import com.albbiz.map.viewmodel.AuthViewModel
 
@@ -31,6 +32,7 @@ fun AuthScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
     var isLoginMode by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
@@ -38,12 +40,13 @@ fun AuthScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+
     LaunchedEffect(uiState) {
         when (uiState) {
             is AuthUiState.Success -> {
                 Toast.makeText(
                     context,
-                    if (isLoginMode) "Welcome back!" else "Account created!",
+                    if (isLoginMode) strings.welcomeBack else strings.signUp,
                     Toast.LENGTH_SHORT
                 ).show()
                 onAuthSuccess()
@@ -63,7 +66,7 @@ fun AuthScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AlbBizMap") },
+                title = { Text(LocalAppStrings.current.appName) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -82,13 +85,13 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = if (isLoginMode) "Miresevini!" else "Create Account",
+                text = if (isLoginMode) LocalAppStrings.current.welcomeBack else LocalAppStrings.current.signUp,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = if (isLoginMode) "Sign in to continue" else "Sign up to get started",
+                text = if (isLoginMode) LocalAppStrings.current.signInToContinue else LocalAppStrings.current.signUpToGetStarted,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -98,7 +101,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text(LocalAppStrings.current.email) },
                 leadingIcon = { Icon(Icons.Default.Email, null) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
@@ -111,7 +114,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(LocalAppStrings.current.password) },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -138,7 +141,7 @@ fun AuthScreen(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm Password") },
+                    label = { Text(LocalAppStrings.current.confirmPassword) },
                     leadingIcon = { Icon(Icons.Default.Lock, null) },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
@@ -156,16 +159,16 @@ fun AuthScreen(
                 onClick = {
                     when {
                         email.isBlank() -> {
-                            Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.emailRequired, Toast.LENGTH_SHORT).show()
                         }
                         password.isBlank() -> {
-                            Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.passwordRequired, Toast.LENGTH_SHORT).show()
                         }
                         !isLoginMode && password != confirmPassword -> {
-                            Toast.makeText(context, "Passwords don't match", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.passwordsDoNotMatch, Toast.LENGTH_SHORT).show()
                         }
                         !isLoginMode && password.length < 6 -> {
-                            Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.passwordTooShort, Toast.LENGTH_SHORT).show()
                         }
                         else -> {
                             if (isLoginMode) {
@@ -186,7 +189,7 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(if (isLoginMode) "Sign In" else "Create Account")
+                Text(if (isLoginMode) LocalAppStrings.current.signIn else LocalAppStrings.current.signUp)
             }
 
             TextButton(
@@ -196,11 +199,8 @@ fun AuthScreen(
                 }
             ) {
                 Text(
-                    if (isLoginMode)
-                        "Don't have an account? Sign Up"
-                    else
-                        "Already have an account? Sign In"
-                )
+                    if (isLoginMode) LocalAppStrings.current.noAccount
+                    else LocalAppStrings.current.haveAccount)
             }
         }
     }

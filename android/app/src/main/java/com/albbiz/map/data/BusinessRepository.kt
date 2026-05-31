@@ -109,4 +109,24 @@ class BusinessRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun isUserAdmin(userId: String): Boolean {
+        return firestoreService.isUserAdmin(userId)
+    }
+
+    fun getClaimRequests(): Flow<List<ClaimRequest>> {
+        return firestoreService.getClaimRequests()
+    }
+
+    suspend fun approveClaim(claim: ClaimRequest): Result<Unit> {
+        return firestoreService.approveClaim(claim)
+    }
+
+    suspend fun rejectClaim(claimId: String): Result<Unit> {
+        return firestoreService.rejectClaim(claimId)
+    }
+
+    suspend fun seedBusinessesFromJson(context: android.content.Context): Result<Int> {
+        return firestoreService.seedBusinessesFromJson(context)
+    }
 }

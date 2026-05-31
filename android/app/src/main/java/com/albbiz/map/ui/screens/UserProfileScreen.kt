@@ -21,12 +21,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
+import androidx.compose.ui.graphics.Color
+import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.LocalAppStrings
+import com.albbiz.map.viewmodel.AdminViewModel
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     onBackClick: () -> Unit,
     onLogout: () -> Unit,
+    onUpgradeClick: () -> Unit,
+    currentLanguage: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+    onAdminClick: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -36,6 +46,9 @@ fun UserProfileScreen(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
+
+    val strings = LocalAppStrings.current
+
 
     // Load existing display name if available
     LaunchedEffect(Unit) {
@@ -49,7 +62,7 @@ fun UserProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Profile") },
+                title = { Text(LocalAppStrings.current.myProfile) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -89,7 +102,7 @@ fun UserProfileScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             Text(
-                text = "Personal Information",
+                text = LocalAppStrings.current.personalInformation,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -98,7 +111,7 @@ fun UserProfileScreen(
             OutlinedTextField(
                 value = firstName,
                 onValueChange = { firstName = it },
-                label = { Text("First Name") },
+                label = { Text(LocalAppStrings.current.firstName) },
                 leadingIcon = { Icon(Icons.Default.Person, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -107,7 +120,7 @@ fun UserProfileScreen(
             OutlinedTextField(
                 value = lastName,
                 onValueChange = { lastName = it },
-                label = { Text("Last Name") },
+                label = { Text(LocalAppStrings.current.lastName) },
                 leadingIcon = { Icon(Icons.Default.Person, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -118,7 +131,7 @@ fun UserProfileScreen(
             Button(
                 onClick = {
                     if (firstName.isBlank()) {
-                        Toast.makeText(context, "First name is required", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.firstNameRequired, Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     isSaving = true
@@ -130,9 +143,13 @@ fun UserProfileScreen(
                         ?.addOnCompleteListener { task ->
                             isSaving = false
                             if (task.isSuccessful) {
-                                Toast.makeText(context, "Profile saved!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, strings.profileSaved, Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "Failed to save profile", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    strings.profileSaveFailed,
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                 },
@@ -146,7 +163,83 @@ fun UserProfileScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Save Profile")
+                Text(LocalAppStrings.current.saveProfile)
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            // Subscription upgrade button
+            Button(
+                onClick = onUpgradeClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFAA00)
+                )
+            ) {
+                Icon(Icons.Default.Star, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text( LocalAppStrings.current.upgradeToPremium, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            // Show admin panel button only for admins
+            val adminViewModel: AdminViewModel = viewModel()
+            val isAdmin by adminViewModel.isAdmin.collectAsState()
+
+            LaunchedEffect(user?.uid) {
+                user?.uid?.let { adminViewModel.checkAdminStatus(it) }
+            }
+
+            if (isAdmin) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Button(
+                    onClick = onAdminClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.AdminPanelSettings, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Admin Panel", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Text(
+                text = "Language / Gjuha",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { onLanguageChange(AppLanguage.EN) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentLanguage == AppLanguage.EN)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Text("🇬🇧 English")
+                }
+                OutlinedButton(
+                    onClick = { onLanguageChange(AppLanguage.SQ) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentLanguage == AppLanguage.SQ)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Text("🇦🇱 Shqip")
+                }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -164,7 +257,7 @@ fun UserProfileScreen(
             ) {
                 Icon(Icons.Default.Logout, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout")
+                Text(LocalAppStrings.current.logout)
             }
         }
     }

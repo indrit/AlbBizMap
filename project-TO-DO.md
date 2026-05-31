@@ -164,17 +164,36 @@ Example filters:
 
 ## Future Monetization
 
-- [ ] Featured listing ($9.99)
-- [ ] Sponsored map pin ($19.99)
+- [X] Featured listing ($9.99)
+- [X] Sponsored map pin ($19.99)
 - [ ] Homepage promotions
 - [ ] Event promotion packages
 - [ ] Job listing promotion
+
+Next features to be done: 
+1. Set up Google Play Billing in the app
+   — Add the billing library dependency to build.gradle.kts
+   — Create a BillingManager class to handle purchase flows
+   — Replace the email request buttons in SubscriptionScreen.kt with real Google Play purchase triggers
+
+2. Set up subscription products in Google Play Console
+   — Create a $2.99/month subscription product (Premium)
+   — Create a $9.99/month subscription product (Featured)
+   — Create a $19.99/month subscription product (Sponsored)
+
+3. Handle purchase verification
+   — After successful purchase, update the business document in Firestore (isPremium: true, premiumUntil: timestamp)
+   — Ideally verify purchases server-side using Firebase Functions to prevent fraud
+
+4. Subscription management
+   — Users should be able to see their active subscription status
+   — Handle subscription cancellation and expiry
 
 ---
 
 # 15. Growth & Data Expansion
 
-- [ ] Preload businesses into database
+- [X] Preload businesses into database
 - [ ] Add major city coverage
 - [ ] Add international businesses
 - [X] Allow user submitted businesses

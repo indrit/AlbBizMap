@@ -17,12 +17,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.albbiz.map.ui.AppLanguage
-import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
-
+import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.ProvideAppStrings
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +66,7 @@ class MainActivity : ComponentActivity() {
                                     onAddBusinessClick = { navController.navigate("add_business") },
                                     onProfileClick = { navController.navigate("profile") },
                                     onFavoritesClick = { navController.navigate("favorites") },
+                                    onEventsClick = { navController.navigate("events") },
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },
@@ -99,7 +99,18 @@ class MainActivity : ComponentActivity() {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
+                                    onUpgradeClick = { navController.navigate("subscription") },
+                                    onAdminClick = { navController.navigate("admin") }, // ← ADD
+                                    currentLanguage = currentLanguage,
+                                    onLanguageChange = { currentLanguage = it },
                                     viewModel = authViewModel
+                                )
+                            }
+
+                            composable("admin") {
+                                AdminScreen(
+                                    currentUserId = currentUserId,
+                                    onBackClick = { navController.popBackStack() }
                                 )
                             }
 
@@ -115,7 +126,14 @@ class MainActivity : ComponentActivity() {
 
                             composable("events") {
                                 EventsScreen(
-                                    onBackClick = { navController.popBackStack() }
+                                    onBackClick = { navController.popBackStack() },
+                                    onAddEventClick = { navController.navigate("add_event") }
+                                )
+                            }
+                            composable("add_event") {
+                                AddEventScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onEventAdded = { navController.popBackStack() }
                                 )
                             }
 
@@ -140,8 +158,9 @@ class MainActivity : ComponentActivity() {
                                         onEditClick = {
                                             navController.navigate("edit_business/$businessId")
                                         },
-                                       onBackClick = { navController.popBackStack() },
-                                       mapViewModel = mapViewModel
+                                        onBackClick = { navController.popBackStack() },
+                                        onUpgradeClick = { navController.navigate("subscription") }, // ← ADD
+                                        mapViewModel = mapViewModel
                                     )
                                 } else {
                                     Text("Business not found.")
@@ -158,6 +177,12 @@ class MainActivity : ComponentActivity() {
                                     userId = currentUserId,
                                     userName = currentUserName,
                                     onReviewSubmitted = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("subscription") {
+                                SubscriptionScreen(
+                                    onBackClick = { navController.popBackStack() }
                                 )
                             }
 

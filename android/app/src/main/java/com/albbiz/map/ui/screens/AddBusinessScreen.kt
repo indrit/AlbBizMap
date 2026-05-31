@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.viewmodel.AddBusinessUiState
 import com.albbiz.map.viewmodel.AddBusinessViewModel
 import com.google.android.gms.maps.model.LatLng
@@ -49,6 +50,7 @@ fun AddBusinessScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    val strings = LocalAppStrings.current
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -99,14 +101,14 @@ fun AddBusinessScreen(
             cameraImageUri.value = uri
             cameraLauncher.launch(uri)
         } else {
-            Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strings.cameraPermissionRequired, Toast.LENGTH_SHORT).show()
         }
     }
 
     LaunchedEffect(uiState) {
         when (uiState) {
             is AddBusinessUiState.Success -> {
-                Toast.makeText(context, "Business registered successfully!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, strings.businessRegistered, Toast.LENGTH_LONG).show()
                 onBusinessAdded()
                 viewModel.resetState()
             }
@@ -124,7 +126,7 @@ fun AddBusinessScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Register Business") },
+                title = { Text(strings.registerBusiness) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -146,12 +148,12 @@ fun AddBusinessScreen(
         ) {
 
             // ── REQUIRED INFO ─────────────────────────────────────────
-            SectionTitle("Required Information")
+            SectionTitle(strings.requiredInformation)
 
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Business Name *") },
+                label = { Text(strings.businessName) },
                 leadingIcon = { Icon(Icons.Default.Store, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -171,7 +173,7 @@ fun AddBusinessScreen(
                     value = selectedCategory?.displayName ?: "",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Category *") },
+                    label = { Text(strings.category) },
                     leadingIcon = { Icon(Icons.Default.Category, null) },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown)
@@ -210,7 +212,7 @@ fun AddBusinessScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { if (it.length <= 100) description = it },
-                label = { Text("Description *") },
+                label = { Text(strings.eventDescription) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -223,12 +225,12 @@ fun AddBusinessScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── LOCATION ──────────────────────────────────────────────
-            SectionTitle("Location *")
+            SectionTitle(strings.locationSection)
 
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
-                label = { Text("Full Address *") },
+                label = { Text(strings.fullAddress) },
                 leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
@@ -244,7 +246,7 @@ fun AddBusinessScreen(
                 OutlinedTextField(
                     value = latitude,
                     onValueChange = { latitude = it },
-                    label = { Text("Latitude *") },
+                    label = { Text(strings.latitude) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -252,7 +254,7 @@ fun AddBusinessScreen(
                 OutlinedTextField(
                     value = longitude,
                     onValueChange = { longitude = it },
-                    label = { Text("Longitude *") },
+                    label = { Text(strings.longitude) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -265,18 +267,18 @@ fun AddBusinessScreen(
             ) {
                 Icon(Icons.Default.Map, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Pick Location from Map")
+                Text(strings.pickLocationFromMap)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── CONTACT ───────────────────────────────────────────────
-            SectionTitle("Contact Information")
+            SectionTitle(strings.contactInformation)
 
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
-                label = { Text("Phone Number *") },
+                label = { Text(strings.phoneNumber) },
                 leadingIcon = { Icon(Icons.Default.Phone, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -289,7 +291,7 @@ fun AddBusinessScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email (Optional)") },
+                label = { Text(strings.emailOptional) },
                 leadingIcon = { Icon(Icons.Default.Email, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -302,7 +304,7 @@ fun AddBusinessScreen(
             OutlinedTextField(
                 value = website,
                 onValueChange = { website = it },
-                label = { Text("Website (Optional)") },
+                label = { Text(strings.websiteOptional) },
                 leadingIcon = { Icon(Icons.Default.Language, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -315,14 +317,14 @@ fun AddBusinessScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── WORKING HOURS ─────────────────────────────────────────
-            SectionTitle("Working Hours")
+            SectionTitle(strings.workingHoursSection)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Open 24/7")
+                Text(strings.open247)
                 Switch(
                     checked = isOpen24Hours,
                     onCheckedChange = { isOpen24Hours = it }
@@ -339,7 +341,7 @@ fun AddBusinessScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // ── PHOTO ─────────────────────────────────────────────────
-            SectionTitle("Photo (Optional)")
+            SectionTitle(strings.photoOptional)
 
             Button(
                 onClick = { showImageSourceDialog = true },
@@ -348,7 +350,7 @@ fun AddBusinessScreen(
             ) {
                 Icon(Icons.Default.AddAPhoto, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (selectedImageUris.isEmpty()) "Add Photo" else "Photo Added (1/1)")
+                Text(if (selectedImageUris.isEmpty()) strings.addPhoto else strings.photoAdded)
             }
 
             if (selectedImageUris.isNotEmpty()) {
@@ -384,22 +386,22 @@ fun AddBusinessScreen(
 
                     when {
                         name.isBlank() -> {
-                            Toast.makeText(context, "Business name is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.businessNameRequired, Toast.LENGTH_SHORT).show()
                         }
                         selectedCategory == null -> {
-                            Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.selectCategory, Toast.LENGTH_SHORT).show()
                         }
                         description.isBlank() -> {
-                            Toast.makeText(context, "Description is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.descriptionRequired, Toast.LENGTH_SHORT).show()
                         }
                         address.isBlank() -> {
-                            Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.addressRequired, Toast.LENGTH_SHORT).show()
                         }
                         phone.isBlank() -> {
-                            Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.phoneRequired, Toast.LENGTH_SHORT).show()
                         }
                         lat == null || lng == null -> {
-                            Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.validCoordinates, Toast.LENGTH_SHORT).show()
                         }
                         else -> {
                             val business = Business(
@@ -433,11 +435,11 @@ fun AddBusinessScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Registering...")
+                    Text(strings.registering)
                 } else {
                     Icon(Icons.Default.CheckCircle, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Register Business")
+                    Text(strings.registerBusinessButton)
                 }
             }
 
@@ -449,14 +451,14 @@ fun AddBusinessScreen(
     if (showImageSourceDialog) {
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
-            title = { Text("Add Photo") },
-            text = { Text("Choose photo source") },
+            title = { Text(strings.addPhoto) },
+            text = { Text(strings.choosePhotoSource) },
             confirmButton = {
                 TextButton(onClick = {
                     showImageSourceDialog = false
                     galleryLauncher.launch("image/*")
                 }) {
-                    Text("Gallery")
+                    Text(strings.gallery)
                 }
             },
             dismissButton = {
@@ -481,7 +483,7 @@ fun AddBusinessScreen(
                         else -> permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 }) {
-                    Text("Camera")
+                    Text(strings.camera)
                 }
             }
         )

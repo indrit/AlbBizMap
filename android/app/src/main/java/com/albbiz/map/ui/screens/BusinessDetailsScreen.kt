@@ -34,6 +34,7 @@ import com.albbiz.map.data.Business
 import com.albbiz.map.data.JobPosting
 import com.albbiz.map.data.Promotion
 import com.albbiz.map.data.Review
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.viewmodel.ReviewViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -46,6 +47,7 @@ fun BusinessDetailScreen(
     onWriteReviewClick: () -> Unit,
     onEditClick: () -> Unit,
     onBackClick: () -> Unit,
+    onUpgradeClick: () -> Unit,
     mapViewModel: MapViewModel = viewModel(),
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
@@ -101,11 +103,11 @@ fun BusinessDetailScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (business.isVerified) DetailBadgeChip("Verified", Color(0xFF2196F3), Icons.Default.Verified)
-                        if (business.isAlbanianOwned) DetailBadgeChip("Albanian Owned", Color(0xFFE41E20), Icons.Default.Flag)
-                        if (business.isPremium) DetailBadgeChip("Premium", Color(0xFFFFAA00), Icons.Default.Star)
-                        if (business.isFeatured) DetailBadgeChip("Featured", Color(0xFF9C27B0), Icons.Default.LocalFireDepartment)
-                        if (business.isSponsored) DetailBadgeChip("Sponsored", Color(0xFF4CAF50), Icons.Default.Campaign)
+                        if (business.isVerified) DetailBadgeChip(LocalAppStrings.current.verified, Color(0xFF2196F3), Icons.Default.Verified)
+                        if (business.isAlbanianOwned) DetailBadgeChip(LocalAppStrings.current.albanianOwned, Color(0xFFE41E20), Icons.Default.Flag)
+                        if (business.isPremium) DetailBadgeChip(LocalAppStrings.current.premium, Color(0xFFFFAA00), Icons.Default.Star)
+                        if (business.isFeatured) DetailBadgeChip(LocalAppStrings.current.featured2, Color(0xFF9C27B0), Icons.Default.LocalFireDepartment)
+                        if (business.isSponsored) DetailBadgeChip(LocalAppStrings.current.sponsored, Color(0xFF4CAF50), Icons.Default.Campaign)
                     }
                 }
 
@@ -151,7 +153,7 @@ fun BusinessDetailScreen(
                     }
 
                     if (business.photos.isNotEmpty()) {
-                        Text("Photos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+                        Text(LocalAppStrings.current.photos, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.height(150.dp).padding(vertical = 8.dp)) {
                             items(business.photos) { url ->
                                 AsyncImage(
@@ -168,7 +170,7 @@ fun BusinessDetailScreen(
                     }
 
                     if (business.workingHours.isNotEmpty()) {
-                        Text("Working Hours", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+                        Text(LocalAppStrings.current.workingHours, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
                         business.workingHours.forEach { (day, hours) ->
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(day, style = MaterialTheme.typography.bodySmall)
@@ -177,19 +179,41 @@ fun BusinessDetailScreen(
                         }
                     }
                 } else {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), modifier = Modifier.padding(top = 16.dp)) {
-                        Text(
-                            "Upgrade to Premium to unlock contact info, website, and photos!",
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFFFF8E1)
+                        ),
+                        border = BorderStroke(1.dp, Color(0xFFFFAA00)),
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                LocalAppStrings.current.upgradePremiumTitle,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF8F00)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                LocalAppStrings.current.upgradePremium,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = onUpgradeClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAA00)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(LocalAppStrings.current.viewPlans, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
 
                 // ── PROMOTIONS SECTION ───────────────────────────────
                 if (business.promotions.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Promotions & Deals", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(LocalAppStrings.current.promotions, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     business.promotions.forEach { promotion ->
                         DetailPromotionItem(promotion)
                     }
@@ -198,7 +222,7 @@ fun BusinessDetailScreen(
                 // ── JOB BOARD SECTION ────────────────────────────────
                 if (business.jobs.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Job Postings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(LocalAppStrings.current.jobs, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     business.jobs.forEach { job ->
                         DetailJobItem(job)
                     }
@@ -209,21 +233,21 @@ fun BusinessDetailScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (currentUserId == business.ownerId) {
                         Button(onClick = onEditClick, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Edit, null); Spacer(Modifier.width(8.dp)); Text("Edit")
+                            Icon(Icons.Default.Edit, null); Spacer(Modifier.width(8.dp)); Text(LocalAppStrings.current.editBusiness)
                         }
                     }
                     Button(onClick = onWriteReviewClick, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.RateReview, null); Spacer(Modifier.width(8.dp)); Text("Review")
+                        Icon(Icons.Default.RateReview, null); Spacer(Modifier.width(8.dp)); Text(LocalAppStrings.current.writeReview)
                     }
                 }
             }
 
-            item { Text("Recent Reviews", style = MaterialTheme.typography.titleLarge) }
+            item { Text(LocalAppStrings.current.recentReviews, style = MaterialTheme.typography.titleLarge) }
 
             if (isLoading) {
                 item { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
             } else if (reviews.isEmpty()) {
-                item { Text("No reviews yet. Be the first!", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item { Text(LocalAppStrings.current.noReviewsYet, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
                 items(reviews) { review -> DetailReviewItem(review) }
             }

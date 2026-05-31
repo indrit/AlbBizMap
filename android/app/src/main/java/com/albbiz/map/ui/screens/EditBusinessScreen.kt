@@ -32,6 +32,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
+import com.albbiz.map.data.JobPosting
+import com.albbiz.map.data.Promotion
 import com.albbiz.map.viewmodel.EditBusinessUiState
 import com.albbiz.map.viewmodel.EditBusinessViewModel
 import com.google.android.gms.maps.model.LatLng
@@ -50,7 +52,7 @@ fun EditBusinessScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Pre-fill all fields with existing business data
+    // Pre-fill all fields
     var name by remember { mutableStateOf(business.name) }
     var description by remember { mutableStateOf(business.description) }
     var phone by remember { mutableStateOf(business.phone) }
@@ -58,46 +60,42 @@ fun EditBusinessScreen(
     var website by remember { mutableStateOf(business.website) }
     var address by remember { mutableStateOf(business.address) }
     var selectedCategory by remember {
-        mutableStateOf(
-            BusinessCategory.entries.find { it.name == business.category }
-        )
+        mutableStateOf(BusinessCategory.entries.find { it.name == business.category })
     }
     var showCategoryDropdown by remember { mutableStateOf(false) }
-    var latitude by remember {
-        mutableStateOf(business.location?.latitude?.toString() ?: "")
-    }
-    var longitude by remember {
-        mutableStateOf(business.location?.longitude?.toString() ?: "")
-    }
+    var latitude by remember { mutableStateOf(business.location?.latitude?.toString() ?: "") }
+    var longitude by remember { mutableStateOf(business.location?.longitude?.toString() ?: "") }
     var isOpen24Hours by remember { mutableStateOf(business.isOpen24Hours) }
     var workingHours by remember { mutableStateOf(business.workingHours) }
 
-    // Photo state — start with existing photo
+    // ── JOBS STATE ────────────────────────────────────────────────────
+    var jobs by remember { mutableStateOf(business.jobs.toMutableList()) }
+    var showAddJobDialog by remember { mutableStateOf(false) }
+
+    // ── PROMOTIONS STATE ──────────────────────────────────────────────
+    var promotions by remember { mutableStateOf(business.promotions.toMutableList()) }
+    var showAddPromoDialog by remember { mutableStateOf(false) }
+
+    // Photo state
     var newPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var showMapPicker by remember { mutableStateOf(false) }
 
-    // Gallery picker
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri -> uri?.let { newPhotoUri = it } }
 
-    // Camera
     val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) cameraImageUri.value?.let { newPhotoUri = it }
-    }
+    ) { success -> if (success) cameraImageUri.value?.let { newPhotoUri = it } }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-            val uri = FileProvider.getUriForFile(
-                context, "${context.packageName}.fileprovider", file
-            )
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             cameraImageUri.value = uri
             cameraLauncher.launch(uri)
         } else {
@@ -105,7 +103,6 @@ fun EditBusinessScreen(
         }
     }
 
-    // Handle state changes
     LaunchedEffect(uiState) {
         when (uiState) {
             is EditBusinessUiState.Success -> {
@@ -114,14 +111,151 @@ fun EditBusinessScreen(
                 viewModel.resetState()
             }
             is EditBusinessUiState.Error -> {
-                Toast.makeText(
-                    context,
-                    (uiState as EditBusinessUiState.Error).message,
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, (uiState as EditBusinessUiState.Error).message, Toast.LENGTH_LONG).show()
             }
             else -> {}
         }
+    }
+
+    // ── ADD JOB DIALOG ────────────────────────────────────────────────
+    if (showAddJobDialog) {
+        var jobTitle by remember { mutableStateOf("") }
+        var jobDescription by remember { mutableStateOf("") }
+        var jobType by remember { mutableStateOf("Full-time") }
+        var jobSalary by remember { mutableStateOf("") }
+        var jobTypeExpanded by remember { mutableStateOf(false) }
+        val jobTypes = listOf("Full-time", "Part-time", "Contract")
+
+        AlertDialog(
+            onDismissRequest = { showAddJobDialog = false },
+            title = { Text("Add Job Posting", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = jobTitle,
+                        onValueChange = { jobTitle = it },
+                        label = { Text("Job Title *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    // Job type dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = jobTypeExpanded,
+                        onExpandedChange = { jobTypeExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = jobType,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Job Type *") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = jobTypeExpanded)
+                            },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = jobTypeExpanded,
+                            onDismissRequest = { jobTypeExpanded = false }
+                        ) {
+                            jobTypes.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type) },
+                                    onClick = {
+                                        jobType = type
+                                        jobTypeExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = jobDescription,
+                        onValueChange = { jobDescription = it },
+                        label = { Text("Description *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3
+                    )
+
+                    OutlinedTextField(
+                        value = jobSalary,
+                        onValueChange = { jobSalary = it },
+                        label = { Text("Salary (Optional)") },
+                        placeholder = { Text("e.g. \$1,500/month") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (jobTitle.isBlank() || jobDescription.isBlank()) {
+                        Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val newJob = JobPosting(
+                        title = jobTitle.trim(),
+                        description = jobDescription.trim(),
+                        type = jobType,
+                        salary = jobSalary.trim().ifBlank { null }
+                    )
+                    jobs = (jobs + newJob).toMutableList()
+                    showAddJobDialog = false
+                }) { Text("Add Job") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddJobDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── ADD PROMOTION DIALOG ──────────────────────────────────────────
+    if (showAddPromoDialog) {
+        var promoTitle by remember { mutableStateOf("") }
+        var promoDescription by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddPromoDialog = false },
+            title = { Text("Add Promotion", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = promoTitle,
+                        onValueChange = { promoTitle = it },
+                        label = { Text("Promotion Title *") },
+                        placeholder = { Text("e.g. Summer Sale 20% Off") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = promoDescription,
+                        onValueChange = { promoDescription = it },
+                        label = { Text("Description *") },
+                        placeholder = { Text("Describe your promotion...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (promoTitle.isBlank() || promoDescription.isBlank()) {
+                        Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val newPromo = Promotion(
+                        title = promoTitle.trim(),
+                        description = promoDescription.trim()
+                    )
+                    promotions = (promotions + newPromo).toMutableList()
+                    showAddPromoDialog = false
+                }) { Text("Add Promotion") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddPromoDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 
     Scaffold(
@@ -164,7 +298,6 @@ fun EditBusinessScreen(
                 )
             )
 
-            // ── CATEGORY ──────────────────────────────────────────────
             ExposedDropdownMenuBox(
                 expanded = showCategoryDropdown,
                 onExpandedChange = { showCategoryDropdown = it },
@@ -179,9 +312,7 @@ fun EditBusinessScreen(
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
                 ExposedDropdownMenu(
                     expanded = showCategoryDropdown,
@@ -191,10 +322,7 @@ fun EditBusinessScreen(
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        category.icon, null,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                    Icon(category.icon, null, modifier = Modifier.size(24.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(category.displayName)
                                 }
@@ -216,9 +344,7 @@ fun EditBusinessScreen(
                 minLines = 3,
                 maxLines = 5,
                 supportingText = { Text("${description.length}/100") },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences
-                )
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -233,15 +359,10 @@ fun EditBusinessScreen(
                 leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words
-                )
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = latitude,
                     onValueChange = { latitude = it },
@@ -260,10 +381,7 @@ fun EditBusinessScreen(
                 )
             }
 
-            OutlinedButton(
-                onClick = { showMapPicker = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            OutlinedButton(onClick = { showMapPicker = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Map, null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Pick Location from Map")
@@ -281,10 +399,7 @@ fun EditBusinessScreen(
                 leadingIcon = { Icon(Icons.Default.Phone, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Next
-                )
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next)
             )
 
             OutlinedTextField(
@@ -294,10 +409,7 @@ fun EditBusinessScreen(
                 leadingIcon = { Icon(Icons.Default.Email, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                )
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
             )
 
             OutlinedTextField(
@@ -307,10 +419,7 @@ fun EditBusinessScreen(
                 leadingIcon = { Icon(Icons.Default.Language, null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Done
-                )
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done)
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -324,17 +433,11 @@ fun EditBusinessScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Open 24/7")
-                Switch(
-                    checked = isOpen24Hours,
-                    onCheckedChange = { isOpen24Hours = it }
-                )
+                Switch(checked = isOpen24Hours, onCheckedChange = { isOpen24Hours = it })
             }
 
             if (!isOpen24Hours) {
-                WorkingHoursEditor(
-                    hours = workingHours,
-                    onHoursChanged = { workingHours = it }
-                )
+                WorkingHoursEditor(hours = workingHours, onHoursChanged = { workingHours = it })
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -342,9 +445,7 @@ fun EditBusinessScreen(
             // ── PHOTO ─────────────────────────────────────────────────
             SectionTitle("Photo")
 
-            // Show current photo or new picked photo
-            val displayPhotoUrl = newPhotoUri?.toString()
-                ?: business.photos.firstOrNull()
+            val displayPhotoUrl = newPhotoUri?.toString() ?: business.photos.firstOrNull()
 
             if (displayPhotoUrl != null) {
                 Box(modifier = Modifier.size(120.dp)) {
@@ -356,25 +457,122 @@ fun EditBusinessScreen(
                     )
                     IconButton(
                         onClick = { newPhotoUri = null },
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.TopEnd)
+                        modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
                     ) {
-                        Icon(
-                            Icons.Default.Close, null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            OutlinedButton(onClick = { showImageSourceDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.AddAPhoto, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // ── JOB POSTINGS ──────────────────────────────────────────
+            SectionTitle("Job Postings")
+
+            if (jobs.isEmpty()) {
+                Text(
+                    "No job postings yet.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                jobs.forEachIndexed { index, job ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(job.title, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "${job.type}${if (job.salary != null) " • ${job.salary}" else ""}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    job.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2
+                                )
+                            }
+                            IconButton(onClick = {
+                                jobs = jobs.toMutableList().also { it.removeAt(index) }
+                            }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     }
                 }
             }
 
             OutlinedButton(
-                onClick = { showImageSourceDialog = true },
+                onClick = { showAddJobDialog = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.AddAPhoto, null)
+                Icon(Icons.Default.Add, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+                Text("Add Job Posting")
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // ── PROMOTIONS ────────────────────────────────────────────
+            SectionTitle("Promotions & Deals")
+
+            if (promotions.isEmpty()) {
+                Text(
+                    "No promotions yet.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                promotions.forEachIndexed { index, promo ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(promo.title, fontWeight = FontWeight.Bold)
+                                Text(
+                                    promo.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2
+                                )
+                            }
+                            IconButton(onClick = {
+                                promotions = promotions.toMutableList().also { it.removeAt(index) }
+                            }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            OutlinedButton(
+                onClick = { showAddPromoDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Promotion")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -415,15 +613,15 @@ fun EditBusinessScreen(
                                 website = website.trim(),
                                 location = GeoPoint(lat, lng),
                                 isOpen24Hours = isOpen24Hours,
-                                workingHours = if (isOpen24Hours) emptyMap() else workingHours
+                                workingHours = if (isOpen24Hours) emptyMap() else workingHours,
+                                jobs = jobs,
+                                promotions = promotions
                             )
                             viewModel.updateBusiness(updatedBusiness, newPhotoUri)
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 enabled = uiState !is EditBusinessUiState.Loading
             ) {
                 if (uiState is EditBusinessUiState.Loading) {
@@ -460,18 +658,9 @@ fun EditBusinessScreen(
                 TextButton(onClick = {
                     showImageSourceDialog = false
                     when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.CAMERA
-                        ) -> {
-                            val file = File(
-                                context.cacheDir,
-                                "camera_${System.currentTimeMillis()}.jpg"
-                            )
-                            val uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                file
-                            )
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) -> {
+                            val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
                             cameraImageUri.value = uri
                             cameraLauncher.launch(uri)
                         }

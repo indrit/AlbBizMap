@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.viewmodel.ReviewViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +30,7 @@ fun AddReviewScreen(
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
 
     var rating by remember { mutableIntStateOf(0) }
     var comment by remember { mutableStateOf("") }
@@ -38,7 +40,7 @@ fun AddReviewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Write a Review") },
+                title = { Text(LocalAppStrings.current.writeReview) },
                 navigationIcon = {
                     IconButton(onClick = onReviewSubmitted) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -62,7 +64,7 @@ fun AddReviewScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Rate this business",
+                text = LocalAppStrings.current.rateThisBusiness,
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -84,7 +86,7 @@ fun AddReviewScreen(
             }
 
             Text(
-                text = if (rating == 0) "Tap a star to select a rating" else "Rating: $rating / 5",
+                (if (rating == 0) LocalAppStrings.current.tapStarToRate else "Rating: $rating / 5"),
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -96,8 +98,8 @@ fun AddReviewScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 140.dp),
-                label = { Text("Write your review") },
-                placeholder = { Text("Share your experience...") },
+                label = { Text(LocalAppStrings.current.writeReviewLabel) },
+                placeholder = { Text(LocalAppStrings.current.shareExperience) },
                 maxLines = 6
             )
 
@@ -106,12 +108,12 @@ fun AddReviewScreen(
             Button(
                 onClick = {
                     if (rating == 0) {
-                        Toast.makeText(context, "Please select a rating", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.pleaseSelectRating, Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
                     if (comment.isBlank()) {
-                        Toast.makeText(context, "Please write a review", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.pleaseWriteReview, Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
@@ -122,7 +124,7 @@ fun AddReviewScreen(
                         userId = userId,
                         userName = userName,
                         onSuccess = {
-                            Toast.makeText(context, "Review submitted!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.reviewSubmitted, Toast.LENGTH_SHORT).show()
                             onReviewSubmitted()
                         }
                     )
@@ -130,7 +132,7 @@ fun AddReviewScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading && rating > 0 && comment.isNotBlank()
             ) {
-                Text(if (isLoading) "Submitting..." else "Submit Review")
+                Text(if (isLoading) LocalAppStrings.current.submitting else LocalAppStrings.current.submitReview)
             }
 
             error?.let {
