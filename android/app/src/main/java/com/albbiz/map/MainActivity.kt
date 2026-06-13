@@ -22,8 +22,15 @@ import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.ui.AppLanguage
 import com.albbiz.map.ui.ProvideAppStrings
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.ui.graphics.Color
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Remove default splash screen
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { false }
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -33,7 +40,7 @@ class MainActivity : ComponentActivity() {
                 ProvideAppStrings(language = currentLanguage) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                        color = Color.Transparent
                     ) {
                         val navController = rememberNavController()
                         val mapViewModel: MapViewModel = viewModel()
@@ -43,12 +50,23 @@ class MainActivity : ComponentActivity() {
                         val currentUserId = currentUser?.uid ?: ""
                         val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
 
-                        val startDestination = if (authViewModel.isLoggedIn()) "map" else "auth"
+                        val startDestination = "splash"
 
                         NavHost(
                             navController = navController,
                             startDestination = startDestination
                         ) {
+                            composable("splash") {
+                                SplashScreen(
+                                    onSplashFinished = {
+                                        val destination = if (authViewModel.isLoggedIn()) "map" else "auth"
+                                        navController.navigate(destination) {
+                                            popUpTo("splash") { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
+
                             composable("auth") {
                                 AuthScreen(
                                     onAuthSuccess = {
@@ -100,7 +118,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     onUpgradeClick = { navController.navigate("subscription") },
-                                    onAdminClick = { navController.navigate("admin") }, // ← ADD
+                                    onAdminClick = { navController.navigate("admin") },
                                     currentLanguage = currentLanguage,
                                     onLanguageChange = { currentLanguage = it },
                                     viewModel = authViewModel
@@ -130,6 +148,7 @@ class MainActivity : ComponentActivity() {
                                     onAddEventClick = { navController.navigate("add_event") }
                                 )
                             }
+
                             composable("add_event") {
                                 AddEventScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -159,7 +178,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("edit_business/$businessId")
                                         },
                                         onBackClick = { navController.popBackStack() },
-                                        onUpgradeClick = { navController.navigate("subscription") }, // ← ADD
+                                        onUpgradeClick = { navController.navigate("subscription") },
                                         mapViewModel = mapViewModel
                                     )
                                 } else {

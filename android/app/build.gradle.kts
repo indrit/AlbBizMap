@@ -77,6 +77,9 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:6.4.0")
     implementation("com.google.maps.android:maps-compose-utils:6.4.0")
     implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -85,4 +88,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
+
 }
