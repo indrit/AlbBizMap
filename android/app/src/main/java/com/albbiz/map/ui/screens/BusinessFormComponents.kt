@@ -2,12 +2,21 @@
 package com.albbiz.map.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.albbiz.map.ui.MeTontGrey
+import com.albbiz.map.ui.MeTontRed
 import com.google.android.gms.maps.model.LatLng
 
 @Composable
@@ -16,7 +25,7 @@ fun SectionTitle(title: String) {
         text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary
+        color = MeTontRed
     )
 }
 
@@ -33,52 +42,97 @@ fun WorkingHoursEditor(
             var closeTime by remember { mutableStateOf(hours["${day}_close"] ?: "18:00") }
             var isClosed by remember { mutableStateOf(hours["${day}_closed"] == "true") }
 
-            Row(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFF5F5F5)
             ) {
-                Text(day, modifier = Modifier.width(40.dp))
-
-                if (isClosed) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "Closed",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f)
+                        day,
+                        modifier = Modifier.width(36.dp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontSize = 13.sp
                     )
-                } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = openTime,
-                            onValueChange = {
-                                openTime = it
-                                onHoursChanged(hours + ("${day}_open" to it))
-                            },
-                            label = { Text("Open") },
+
+                    if (isClosed) {
+                        Text(
+                            "Closed",
+                            color = MeTontRed,
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
                         )
-                        OutlinedTextField(
-                            value = closeTime,
-                            onValueChange = {
-                                closeTime = it
-                                onHoursChanged(hours + ("${day}_close" to it))
-                            },
-                            label = { Text("Close") },
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.AccessTime,
+                                null,
+                                tint = MeTontRed,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            OutlinedTextField(
+                                value = openTime,
+                                onValueChange = {
+                                    openTime = it
+                                    onHoursChanged(hours + ("${day}_open" to it))
+                                },
+                                label = { Text("Open", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MeTontRed,
+                                    cursorColor = MeTontRed
+                                ),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            Text("-", color = MeTontGrey, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(
+                                value = closeTime,
+                                onValueChange = {
+                                    closeTime = it
+                                    onHoursChanged(hours + ("${day}_close" to it))
+                                },
+                                label = { Text("Close", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MeTontRed,
+                                    cursorColor = MeTontRed
+                                ),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            isClosed = !isClosed
+                            onHoursChanged(hours + ("${day}_closed" to isClosed.toString()))
+                        }
+                    ) {
+                        Text(
+                            if (isClosed) "Open" else "Close",
+                            color = MeTontRed,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
-
-                TextButton(onClick = {
-                    isClosed = !isClosed
-                    onHoursChanged(hours + ("${day}_closed" to isClosed.toString()))
-                }) {
-                    Text(if (isClosed) "Open" else "Close")
                 }
             }
         }
@@ -95,28 +149,71 @@ fun LocationPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Location") },
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                "Select Location",
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter coordinates or pick from map")
                 Text(
-                    "Lat: ${selectedLocation.latitude}",
-                    style = MaterialTheme.typography.bodySmall
+                    "Enter coordinates or pick from map",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MeTontGrey
                 )
-                Text(
-                    "Lng: ${selectedLocation.longitude}",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Surface(
+                    color = Color(0xFFF5F5F5),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Lat: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed
+                            )
+                            Text(
+                                "${selectedLocation.latitude}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Lng: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed
+                            )
+                            Text(
+                                "${selectedLocation.longitude}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            Button(onClick = { onLocationSelected(selectedLocation) }) {
-                Text("Confirm")
+            Button(
+                onClick = { onLocationSelected(selectedLocation) },
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MeTontRed,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Confirm", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = MeTontGrey)
             }
         }
     )

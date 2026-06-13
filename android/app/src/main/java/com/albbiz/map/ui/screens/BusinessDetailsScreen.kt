@@ -5,13 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
@@ -35,6 +36,8 @@ import com.albbiz.map.data.JobPosting
 import com.albbiz.map.data.Promotion
 import com.albbiz.map.data.Review
 import com.albbiz.map.ui.LocalAppStrings
+import com.albbiz.map.ui.MeTontGrey
+import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.ReviewViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,6 +55,7 @@ fun BusinessDetailScreen(
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val reviews by reviewViewModel.reviews.collectAsState()
     val isLoading by reviewViewModel.isLoading.collectAsState()
     val favoriteIds by mapViewModel.favoriteIds.collectAsState()
@@ -64,220 +68,436 @@ fun BusinessDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(business.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Text(
+                        business.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
                     }
                 },
                 actions = {
                     IconButton(onClick = { mapViewModel.toggleFavorite(business.id) }) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            imageVector = if (isFavorite) Icons.Default.Favorite
+                            else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
-                            tint = if (isFavorite) Color.Red else LocalContentColor.current
+                            tint = if (isFavorite) Color.White else Color.White.copy(alpha = 0.7f)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
             )
         }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(Color(0xFFF5F5F5))
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(16.dp)
         ) {
+            // ── MAIN INFO CARD ────────────────────────────────────
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // ── BADGES SECTION ──────────────────────────────────
-                if (business.isVerified || business.isAlbanianOwned || business.isPremium || business.isFeatured || business.isSponsored) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (business.isVerified) DetailBadgeChip(LocalAppStrings.current.verified, Color(0xFF2196F3), Icons.Default.Verified)
-                        if (business.isAlbanianOwned) DetailBadgeChip(LocalAppStrings.current.albanianOwned, Color(0xFFE41E20), Icons.Default.Flag)
-                        if (business.isPremium) DetailBadgeChip(LocalAppStrings.current.premium, Color(0xFFFFAA00), Icons.Default.Star)
-                        if (business.isFeatured) DetailBadgeChip(LocalAppStrings.current.featured2, Color(0xFF9C27B0), Icons.Default.LocalFireDepartment)
-                        if (business.isSponsored) DetailBadgeChip(LocalAppStrings.current.sponsored, Color(0xFF4CAF50), Icons.Default.Campaign)
-                    }
-                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = business.category, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(20.dp))
-                    Text(text = " ${String.format(Locale.getDefault(), "%.1f", business.rating)} (${business.reviewCount} reviews)", style = MaterialTheme.typography.bodyLarge)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = business.description, style = MaterialTheme.typography.bodyMedium)
-                
-                if (business.isPremium && business.longDescription.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = business.longDescription, style = MaterialTheme.typography.bodySmall)
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                DetailRowItem(Icons.Default.LocationOn, business.address)
-
-                // ── PREMIUM FIELDS ──────────────────────────────────
-                if (business.isPremium) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                    
-                    if (business.phone.isNotEmpty()) {
-                        ClickableDetailRowItem(Icons.Default.Phone, business.phone) {
-                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${business.phone}")))
-                        }
-                    }
-                    if (business.email.isNotEmpty()) {
-                        ClickableDetailRowItem(Icons.Default.Email, business.email) {
-                            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${business.email}"))
-                            context.startActivity(intent)
-                        }
-                    }
-                    if (business.website.isNotEmpty()) {
-                        ClickableDetailRowItem(Icons.Default.Language, business.website) {
-                            val url = if (!business.website.startsWith("http")) "https://${business.website}" else business.website
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        }
-                    }
-
-                    if (business.photos.isNotEmpty()) {
-                        Text(LocalAppStrings.current.photos, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.height(150.dp).padding(vertical = 8.dp)) {
-                            items(business.photos) { url ->
-                                AsyncImage(
-                                    model = url, contentDescription = null,
-                                    modifier = Modifier
-                                        .width(200.dp)
-                                        .fillMaxHeight()
-                                        .aspectRatio(16 / 9f)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                        // Badges
+                        if (business.isVerified || business.isAlbanianOwned ||
+                            business.isPremium || business.isFeatured || business.isSponsored
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (business.isVerified) DetailBadgeChip(strings.verified, Color(0xFF2196F3), Icons.Default.Verified)
+                                if (business.isAlbanianOwned) DetailBadgeChip(strings.albanianOwned, MeTontRed, Icons.Default.Flag)
+                                if (business.isPremium) DetailBadgeChip(strings.premium, Color(0xFFFFAA00), Icons.Default.Star)
+                                if (business.isFeatured) DetailBadgeChip(strings.featured2, Color(0xFF9C27B0), Icons.Default.LocalFireDepartment)
+                                if (business.isSponsored) DetailBadgeChip(strings.sponsored, Color(0xFF4CAF50), Icons.Default.Campaign)
                             }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        // Category
+                        Text(
+                            business.category,
+                            color = MeTontRed,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Rating
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Star,
+                                null,
+                                tint = Color(0xFFFFC107),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                " ${String.format(Locale.getDefault(), "%.1f", business.rating)} (${business.reviewCount} reviews)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MeTontGrey
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Description
+                        Text(
+                            business.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Black
+                        )
+
+                        if (business.isPremium && business.longDescription.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                business.longDescription,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Address
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MeTontRed
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                business.address,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
                         }
                     }
+                }
+            }
 
-                    if (business.workingHours.isNotEmpty()) {
-                        Text(LocalAppStrings.current.workingHours, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
-                        business.workingHours.forEach { (day, hours) ->
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(day, style = MaterialTheme.typography.bodySmall)
-                                Text(hours, style = MaterialTheme.typography.bodySmall)
+            // ── CONTACT CARD (Premium) ────────────────────────────
+            item {
+                if (business.isPremium) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Contact",
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed,
+                                fontSize = 14.sp
+                            )
+
+                            if (business.phone.isNotEmpty()) {
+                                ClickableDetailRowItem(Icons.Default.Phone, business.phone) {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:${business.phone}"))
+                                    )
+                                }
+                            }
+                            if (business.email.isNotEmpty()) {
+                                ClickableDetailRowItem(Icons.Default.Email, business.email) {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${business.email}"))
+                                    )
+                                }
+                            }
+                            if (business.website.isNotEmpty()) {
+                                ClickableDetailRowItem(Icons.Default.Language, business.website) {
+                                    val url = if (!business.website.startsWith("http"))
+                                        "https://${business.website}" else business.website
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            }
+
+                            // Photos
+                            if (business.photos.isNotEmpty()) {
+                                Text(
+                                    strings.photos,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MeTontRed,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.height(150.dp).padding(vertical = 8.dp)
+                                ) {
+                                    items(business.photos) { url ->
+                                        AsyncImage(
+                                            model = url,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .width(200.dp)
+                                                .fillMaxHeight()
+                                                .clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Working Hours
+                            if (business.workingHours.isNotEmpty()) {
+                                Text(
+                                    strings.workingHours,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MeTontRed,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                business.workingHours.forEach { (day, hours) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(day, style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                                        Text(hours, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    }
+                                }
                             }
                         }
                     }
                 } else {
+                    // Upgrade card
                     Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFF8E1)
-                        ),
-                        border = BorderStroke(1.dp, Color(0xFFFFAA00)),
-                        modifier = Modifier.padding(top = 16.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                        border = BorderStroke(1.dp, Color(0xFFFFAA00))
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                LocalAppStrings.current.upgradePremiumTitle,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFF8F00)
-                            )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    null,
+                                    tint = Color(0xFFFFAA00),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    strings.upgradePremiumTitle,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFF8F00)
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                LocalAppStrings.current.upgradePremium,
-                                style = MaterialTheme.typography.bodySmall
+                                strings.upgradePremium,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = onUpgradeClick,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAA00)),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFFAA00),
+                                    contentColor = Color.White
+                                )
                             ) {
-                                Text(LocalAppStrings.current.viewPlans, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(strings.viewPlans, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
+            }
 
-                // ── PROMOTIONS SECTION ───────────────────────────────
-                if (business.promotions.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(LocalAppStrings.current.promotions, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    business.promotions.forEach { promotion ->
-                        DetailPromotionItem(promotion)
-                    }
-                }
-
-                // ── JOB BOARD SECTION ────────────────────────────────
-                if (business.jobs.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(LocalAppStrings.current.jobs, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    business.jobs.forEach { job ->
-                        DetailJobItem(job)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (currentUserId == business.ownerId) {
-                        Button(onClick = onEditClick, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Edit, null); Spacer(Modifier.width(8.dp)); Text(LocalAppStrings.current.editBusiness)
+            // ── PROMOTIONS CARD ───────────────────────────────────
+            if (business.promotions.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                strings.promotions,
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed,
+                                fontSize = 14.sp
+                            )
+                            business.promotions.forEach { promotion ->
+                                DetailPromotionItem(promotion)
+                            }
                         }
-                    }
-                    Button(onClick = onWriteReviewClick, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.RateReview, null); Spacer(Modifier.width(8.dp)); Text(LocalAppStrings.current.writeReview)
                     }
                 }
             }
 
-            item { Text(LocalAppStrings.current.recentReviews, style = MaterialTheme.typography.titleLarge) }
+            // ── JOBS CARD ─────────────────────────────────────────
+            if (business.jobs.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                strings.jobs,
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed,
+                                fontSize = 14.sp
+                            )
+                            business.jobs.forEach { job ->
+                                DetailJobItem(job)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── ACTION BUTTONS ────────────────────────────────────
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (currentUserId == business.ownerId) {
+                        OutlinedButton(
+                            onClick = onEditClick,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                            border = BorderStroke(1.dp, MeTontRed)
+                        ) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(strings.editBusiness, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Button(
+                        onClick = onWriteReviewClick,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MeTontRed,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Default.RateReview, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(strings.writeReview, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // ── REVIEWS SECTION ───────────────────────────────────
+            item {
+                Text(
+                    strings.recentReviews,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
 
             if (isLoading) {
-                item { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+                item {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MeTontRed)
+                    }
+                }
             } else if (reviews.isEmpty()) {
-                item { Text(LocalAppStrings.current.noReviewsYet, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                strings.noReviewsYet,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MeTontGrey
+                            )
+                        }
+                    }
+                }
             } else {
                 items(reviews) { review -> DetailReviewItem(review) }
             }
-            
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
 
 @Composable
 fun DetailPromotionItem(promotion: Promotion) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9C4)),
+    Surface(
+        color = Color(0xFFFFF9C4),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, Color(0xFFFBC02D))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(promotion.title, fontWeight = FontWeight.Bold, color = Color(0xFFF57F17))
-            Text(promotion.description, style = MaterialTheme.typography.bodySmall)
+            Text(
+                promotion.title,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFF57F17)
+            )
+            Text(
+                promotion.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MeTontGrey
+            )
             if (promotion.discountCode != null) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     color = Color(0xFFFBC02D),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.padding(top = 8.dp)
+                    shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
                         "Code: ${promotion.discountCode}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
@@ -287,18 +507,51 @@ fun DetailPromotionItem(promotion: Promotion) {
 
 @Composable
 fun DetailJobItem(job: JobPosting) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Surface(
+        color = Color(0xFFF3E5F5),
+        shape = RoundedCornerShape(10.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(job.title, fontWeight = FontWeight.Bold)
-                DetailBadgeChip("Job: " + job.type, Color(0xFF673AB7), Icons.Default.Work)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    job.title,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF673AB7),
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    color = Color(0xFF673AB7),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        job.type,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-            Text(job.description, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                job.description,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MeTontGrey
+            )
             if (job.salary != null) {
-                Text("Salary: ${job.salary}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "💰 ${job.salary}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF673AB7)
+                )
             }
         }
     }
@@ -307,45 +560,112 @@ fun DetailJobItem(job: JobPosting) {
 @Composable
 fun DetailRowItem(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MeTontRed)
         Spacer(Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium)
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
     }
 }
 
 @Composable
 fun ClickableDetailRowItem(icon: ImageVector, text: String, onClick: () -> Unit) {
-    Surface(onClick = onClick, color = Color.Transparent) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-            Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(8.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+    Surface(
+        onClick = onClick,
+        color = Color(0xFFF5F5F5),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            Icon(icon, null, modifier = Modifier.size(18.dp), tint = MeTontRed)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MeTontRed,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
 @Composable
 fun DetailReviewItem(review: Review) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(review.userName, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                repeat(review.rating) { Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp)) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Surface(
+                    modifier = Modifier.size(36.dp),
+                    shape = CircleShape,
+                    color = MeTontRed.copy(alpha = 0.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            review.userName.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
+                            color = MeTontRed,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(review.userName, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(review.createdAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MeTontGrey
+                    )
+                }
+                Row {
+                    repeat(review.rating) {
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = Color(0xFFFFC107),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
-            Text(review.comment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 4.dp))
-            Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(review.createdAt)), style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                review.comment,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Black.copy(alpha = 0.8f)
+            )
         }
     }
 }
 
 @Composable
 private fun DetailBadgeChip(label: String, color: Color, icon: ImageVector) {
-    Surface(color = color, shape = MaterialTheme.shapes.small) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-            Icon(icon, null, tint = Color.White, modifier = Modifier.size(14.dp))
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.3f))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

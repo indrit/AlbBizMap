@@ -8,8 +8,10 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +29,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +38,8 @@ import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
 import com.albbiz.map.data.JobPosting
 import com.albbiz.map.data.Promotion
+import com.albbiz.map.ui.MeTontGrey
+import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.EditBusinessUiState
 import com.albbiz.map.viewmodel.EditBusinessViewModel
 import com.google.android.gms.maps.model.LatLng
@@ -52,7 +58,6 @@ fun EditBusinessScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Pre-fill all fields
     var name by remember { mutableStateOf(business.name) }
     var description by remember { mutableStateOf(business.description) }
     var phone by remember { mutableStateOf(business.phone) }
@@ -67,16 +72,10 @@ fun EditBusinessScreen(
     var longitude by remember { mutableStateOf(business.location?.longitude?.toString() ?: "") }
     var isOpen24Hours by remember { mutableStateOf(business.isOpen24Hours) }
     var workingHours by remember { mutableStateOf(business.workingHours) }
-
-    // ── JOBS STATE ────────────────────────────────────────────────────
     var jobs by remember { mutableStateOf(business.jobs.toMutableList()) }
     var showAddJobDialog by remember { mutableStateOf(false) }
-
-    // ── PROMOTIONS STATE ──────────────────────────────────────────────
     var promotions by remember { mutableStateOf(business.promotions.toMutableList()) }
     var showAddPromoDialog by remember { mutableStateOf(false) }
-
-    // Photo state
     var newPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var showMapPicker by remember { mutableStateOf(false) }
@@ -128,7 +127,10 @@ fun EditBusinessScreen(
 
         AlertDialog(
             onDismissRequest = { showAddJobDialog = false },
-            title = { Text("Add Job Posting", fontWeight = FontWeight.Bold) },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text("Add Job Posting", fontWeight = FontWeight.Bold, color = MeTontRed)
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
@@ -136,10 +138,13 @@ fun EditBusinessScreen(
                         onValueChange = { jobTitle = it },
                         label = { Text("Job Title *") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
                     )
-
-                    // Job type dropdown
                     ExposedDropdownMenuBox(
                         expanded = jobTypeExpanded,
                         onExpandedChange = { jobTypeExpanded = it }
@@ -152,7 +157,11 @@ fun EditBusinessScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = jobTypeExpanded)
                             },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MeTontRed
+                            )
                         )
                         ExposedDropdownMenu(
                             expanded = jobTypeExpanded,
@@ -161,51 +170,61 @@ fun EditBusinessScreen(
                             jobTypes.forEach { type ->
                                 DropdownMenuItem(
                                     text = { Text(type) },
-                                    onClick = {
-                                        jobType = type
-                                        jobTypeExpanded = false
-                                    }
+                                    onClick = { jobType = type; jobTypeExpanded = false }
                                 )
                             }
                         }
                     }
-
                     OutlinedTextField(
                         value = jobDescription,
                         onValueChange = { jobDescription = it },
                         label = { Text("Description *") },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 3
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
                     )
-
                     OutlinedTextField(
                         value = jobSalary,
                         onValueChange = { jobSalary = it },
                         label = { Text("Salary (Optional)") },
                         placeholder = { Text("e.g. \$1,500/month") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
                     )
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    if (jobTitle.isBlank() || jobDescription.isBlank()) {
-                        Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    val newJob = JobPosting(
-                        title = jobTitle.trim(),
-                        description = jobDescription.trim(),
-                        type = jobType,
-                        salary = jobSalary.trim().ifBlank { null }
-                    )
-                    jobs = (jobs + newJob).toMutableList()
-                    showAddJobDialog = false
-                }) { Text("Add Job") }
+                Button(
+                    onClick = {
+                        if (jobTitle.isBlank() || jobDescription.isBlank()) {
+                            Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        jobs = (jobs + JobPosting(
+                            title = jobTitle.trim(),
+                            description = jobDescription.trim(),
+                            type = jobType,
+                            salary = jobSalary.trim().ifBlank { null }
+                        )).toMutableList()
+                        showAddJobDialog = false
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
+                ) { Text("Add Job", color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddJobDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showAddJobDialog = false }) {
+                    Text("Cancel", color = MeTontGrey)
+                }
             }
         )
     }
@@ -217,43 +236,59 @@ fun EditBusinessScreen(
 
         AlertDialog(
             onDismissRequest = { showAddPromoDialog = false },
-            title = { Text("Add Promotion", fontWeight = FontWeight.Bold) },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text("Add Promotion", fontWeight = FontWeight.Bold, color = MeTontRed)
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = promoTitle,
                         onValueChange = { promoTitle = it },
                         label = { Text("Promotion Title *") },
-                        placeholder = { Text("e.g. Summer Sale 20% Off") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
                     )
                     OutlinedTextField(
                         value = promoDescription,
                         onValueChange = { promoDescription = it },
                         label = { Text("Description *") },
-                        placeholder = { Text("Describe your promotion...") },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 3
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
                     )
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    if (promoTitle.isBlank() || promoDescription.isBlank()) {
-                        Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    val newPromo = Promotion(
-                        title = promoTitle.trim(),
-                        description = promoDescription.trim()
-                    )
-                    promotions = (promotions + newPromo).toMutableList()
-                    showAddPromoDialog = false
-                }) { Text("Add Promotion") }
+                Button(
+                    onClick = {
+                        if (promoTitle.isBlank() || promoDescription.isBlank()) {
+                            Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        promotions = (promotions + Promotion(
+                            title = promoTitle.trim(),
+                            description = promoDescription.trim()
+                        )).toMutableList()
+                        showAddPromoDialog = false
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
+                ) { Text("Add Promotion", color = Color.White) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddPromoDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showAddPromoDialog = false }) {
+                    Text("Cancel", color = MeTontGrey)
+                }
             }
         )
     }
@@ -261,347 +296,357 @@ fun EditBusinessScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Business") },
+                title = {
+                    Text(
+                        "Edit Business",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
             )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFF5F5F5))
                 .padding(padding)
                 .verticalScroll(scrollState)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            // ── BASIC INFO ────────────────────────────────────────────
-            SectionTitle("Basic Information")
-
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Business Name *") },
-                leadingIcon = { Icon(Icons.Default.Store, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next
+            // ── BASIC INFO ────────────────────────────────────────
+            SectionCard(title = "Basic Information") {
+                RedOutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = "Business Name *",
+                    icon = Icons.Default.Store
                 )
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = showCategoryDropdown,
-                onExpandedChange = { showCategoryDropdown = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedCategory?.displayName ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Category *") },
-                    leadingIcon = { Icon(Icons.Default.Category, null) },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown)
-                    },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(
+                ExposedDropdownMenuBox(
                     expanded = showCategoryDropdown,
-                    onDismissRequest = { showCategoryDropdown = false }
+                    onExpandedChange = { showCategoryDropdown = it },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    BusinessCategory.entries.forEach { category ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(category.icon, null, modifier = Modifier.size(24.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(category.displayName)
-                                }
-                            },
-                            onClick = {
-                                selectedCategory = category
-                                showCategoryDropdown = false
-                            }
+                    OutlinedTextField(
+                        value = selectedCategory?.displayName ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category *") },
+                        leadingIcon = { Icon(Icons.Default.Category, null, tint = MeTontRed) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown)
+                        },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            focusedLabelColor = MeTontRed
                         )
-                    }
-                }
-            }
-
-            OutlinedTextField(
-                value = description,
-                onValueChange = { if (it.length <= 100) description = it },
-                label = { Text("Description *") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5,
-                supportingText = { Text("${description.length}/100") },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // ── LOCATION ──────────────────────────────────────────────
-            SectionTitle("Location")
-
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = { Text("Full Address *") },
-                leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
-            )
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = latitude,
-                    onValueChange = { latitude = it },
-                    label = { Text("Latitude *") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-                OutlinedTextField(
-                    value = longitude,
-                    onValueChange = { longitude = it },
-                    label = { Text("Longitude *") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-            }
-
-            OutlinedButton(onClick = { showMapPicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Map, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Pick Location from Map")
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // ── CONTACT ───────────────────────────────────────────────
-            SectionTitle("Contact Information")
-
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Phone Number *") },
-                leadingIcon = { Icon(Icons.Default.Phone, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next)
-            )
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email (Optional)") },
-                leadingIcon = { Icon(Icons.Default.Email, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
-            )
-
-            OutlinedTextField(
-                value = website,
-                onValueChange = { website = it },
-                label = { Text("Website (Optional)") },
-                leadingIcon = { Icon(Icons.Default.Language, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done)
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // ── WORKING HOURS ─────────────────────────────────────────
-            SectionTitle("Working Hours")
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Open 24/7")
-                Switch(checked = isOpen24Hours, onCheckedChange = { isOpen24Hours = it })
-            }
-
-            if (!isOpen24Hours) {
-                WorkingHoursEditor(hours = workingHours, onHoursChanged = { workingHours = it })
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // ── PHOTO ─────────────────────────────────────────────────
-            SectionTitle("Photo")
-
-            val displayPhotoUrl = newPhotoUri?.toString() ?: business.photos.firstOrNull()
-
-            if (displayPhotoUrl != null) {
-                Box(modifier = Modifier.size(120.dp)) {
-                    Image(
-                        painter = rememberAsyncImagePainter(displayPhotoUrl),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
                     )
-                    IconButton(
-                        onClick = { newPhotoUri = null },
-                        modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
+                    ExposedDropdownMenu(
+                        expanded = showCategoryDropdown,
+                        onDismissRequest = { showCategoryDropdown = false }
                     ) {
-                        Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.error)
+                        BusinessCategory.entries.forEach { category ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(category.icon, null, modifier = Modifier.size(24.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(category.displayName)
+                                    }
+                                },
+                                onClick = { selectedCategory = category; showCategoryDropdown = false }
+                            )
+                        }
                     }
+                }
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { if (it.length <= 100) description = it },
+                    label = { Text("Description *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5,
+                    supportingText = { Text("${description.length}/100", color = MeTontGrey) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeTontRed,
+                        cursorColor = MeTontRed
+                    ),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                )
+            }
+
+            // ── LOCATION ──────────────────────────────────────────
+            SectionCard(title = "Location") {
+                RedOutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = "Full Address *",
+                    icon = Icons.Default.LocationOn,
+                    singleLine = false
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = latitude,
+                        onValueChange = { latitude = it },
+                        label = { Text("Latitude *") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    OutlinedTextField(
+                        value = longitude,
+                        onValueChange = { longitude = it },
+                        label = { Text("Longitude *") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                }
+                OutlinedButton(
+                    onClick = { showMapPicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                ) {
+                    Icon(Icons.Default.Map, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Pick Location from Map")
                 }
             }
 
-            OutlinedButton(onClick = { showImageSourceDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.AddAPhoto, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+            // ── CONTACT ───────────────────────────────────────────
+            SectionCard(title = "Contact Information") {
+                RedOutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = "Phone Number *",
+                    icon = Icons.Default.Phone,
+                    keyboardType = KeyboardType.Phone
+                )
+                RedOutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "Email (Optional)",
+                    icon = Icons.Default.Email,
+                    keyboardType = KeyboardType.Email
+                )
+                RedOutlinedTextField(
+                    value = website,
+                    onValueChange = { website = it },
+                    label = "Website (Optional)",
+                    icon = Icons.Default.Language,
+                    keyboardType = KeyboardType.Uri
+                )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            // ── WORKING HOURS ─────────────────────────────────────
+            SectionCard(title = "Working Hours") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Open 24/7", fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = isOpen24Hours,
+                        onCheckedChange = { isOpen24Hours = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MeTontRed
+                        )
+                    )
+                }
+                if (!isOpen24Hours) {
+                    WorkingHoursEditor(hours = workingHours, onHoursChanged = { workingHours = it })
+                }
+            }
 
-            // ── JOB POSTINGS ──────────────────────────────────────────
-            SectionTitle("Job Postings")
-
-            if (jobs.isEmpty()) {
-                Text(
-                    "No job postings yet.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                jobs.forEachIndexed { index, job ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+            // ── PHOTO ─────────────────────────────────────────────
+            SectionCard(title = "Photo") {
+                val displayPhotoUrl = newPhotoUri?.toString() ?: business.photos.firstOrNull()
+                if (displayPhotoUrl != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(displayPhotoUrl),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = { newPhotoUri = null },
+                            modifier = Modifier.align(Alignment.TopEnd)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(job.title, fontWeight = FontWeight.Bold)
-                                Text(
-                                    "${job.type}${if (job.salary != null) " • ${job.salary}" else ""}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    job.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 2
-                                )
-                            }
-                            IconButton(onClick = {
-                                jobs = jobs.toMutableList().also { it.removeAt(index) }
-                            }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            Icon(Icons.Default.Close, null, tint = MeTontRed)
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = { showImageSourceDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                ) {
+                    Icon(Icons.Default.AddAPhoto, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+                }
+            }
+
+            // ── JOB POSTINGS ──────────────────────────────────────
+            SectionCard(title = "Job Postings") {
+                if (jobs.isEmpty()) {
+                    Text(
+                        "No job postings yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                } else {
+                    jobs.forEachIndexed { index, job ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF3E5F5)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(job.title, fontWeight = FontWeight.Bold, color = Color(0xFF673AB7))
+                                    Text(
+                                        "${job.type}${if (job.salary != null) " • ${job.salary}" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MeTontGrey
+                                    )
+                                    Text(
+                                        job.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        color = Color.Black.copy(alpha = 0.7f)
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    jobs = jobs.toMutableList().also { it.removeAt(index) }
+                                }) {
+                                    Icon(Icons.Default.Delete, null, tint = MeTontRed)
+                                }
                             }
                         }
                     }
                 }
+                OutlinedButton(
+                    onClick = { showAddJobDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                ) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Job Posting")
+                }
             }
 
-            OutlinedButton(
-                onClick = { showAddJobDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Job Posting")
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            // ── PROMOTIONS ────────────────────────────────────────────
-            SectionTitle("Promotions & Deals")
-
-            if (promotions.isEmpty()) {
-                Text(
-                    "No promotions yet.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                promotions.forEachIndexed { index, promo ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+            // ── PROMOTIONS ────────────────────────────────────────
+            SectionCard(title = "Promotions & Deals") {
+                if (promotions.isEmpty()) {
+                    Text(
+                        "No promotions yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                } else {
+                    promotions.forEachIndexed { index, promo ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFFFF9C4),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp, Color(0xFFFBC02D)
+                            )
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(promo.title, fontWeight = FontWeight.Bold)
-                                Text(
-                                    promo.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 2
-                                )
-                            }
-                            IconButton(onClick = {
-                                promotions = promotions.toMutableList().also { it.removeAt(index) }
-                            }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            Row(
+                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        promo.title,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFF57F17)
+                                    )
+                                    Text(
+                                        promo.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        color = MeTontGrey
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    promotions = promotions.toMutableList().also { it.removeAt(index) }
+                                }) {
+                                    Icon(Icons.Default.Delete, null, tint = MeTontRed)
+                                }
                             }
                         }
                     }
                 }
+                OutlinedButton(
+                    onClick = { showAddPromoDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                ) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Promotion")
+                }
             }
 
-            OutlinedButton(
-                onClick = { showAddPromoDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Promotion")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── SAVE BUTTON ───────────────────────────────────────────
+            // ── SAVE BUTTON ───────────────────────────────────────
             Button(
                 onClick = {
                     val lat = latitude.toDoubleOrNull()
                     val lng = longitude.toDoubleOrNull()
-
                     when {
-                        name.isBlank() -> {
-                            Toast.makeText(context, "Business name is required", Toast.LENGTH_SHORT).show()
-                        }
-                        selectedCategory == null -> {
-                            Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
-                        }
-                        description.isBlank() -> {
-                            Toast.makeText(context, "Description is required", Toast.LENGTH_SHORT).show()
-                        }
-                        address.isBlank() -> {
-                            Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
-                        }
-                        phone.isBlank() -> {
-                            Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
-                        }
-                        lat == null || lng == null -> {
-                            Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
-                        }
+                        name.isBlank() -> Toast.makeText(context, "Business name is required", Toast.LENGTH_SHORT).show()
+                        selectedCategory == null -> Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
+                        description.isBlank() -> Toast.makeText(context, "Description is required", Toast.LENGTH_SHORT).show()
+                        address.isBlank() -> Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                        phone.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                        lat == null || lng == null -> Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
                         else -> {
                             val updatedBusiness = business.copy(
                                 name = name.trim(),
@@ -622,19 +667,25 @@ fun EditBusinessScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MeTontRed,
+                    contentColor = Color.White
+                ),
                 enabled = uiState !is EditBusinessUiState.Loading
             ) {
                 if (uiState is EditBusinessUiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = Color.White,
+                        strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Saving...")
                 } else {
                     Icon(Icons.Default.Save, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Changes")
+                    Text("Save Changes", fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -646,13 +697,14 @@ fun EditBusinessScreen(
     if (showImageSourceDialog) {
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
-            title = { Text("Change Photo") },
-            text = { Text("Choose photo source") },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text("Change Photo", fontWeight = FontWeight.Bold) },
+            text = { Text("Choose photo source", color = MeTontGrey) },
             confirmButton = {
                 TextButton(onClick = {
                     showImageSourceDialog = false
                     galleryLauncher.launch("image/*")
-                }) { Text("Gallery") }
+                }) { Text("Gallery", color = MeTontRed) }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -666,7 +718,7 @@ fun EditBusinessScreen(
                         }
                         else -> permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
-                }) { Text("Camera") }
+                }) { Text("Camera", color = MeTontRed) }
             }
         )
     }
