@@ -84,7 +84,8 @@ fun AdminScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF5F5F5))
+                    //.background(Color(0xFFF5F5F5))
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {

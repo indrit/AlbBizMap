@@ -315,7 +315,8 @@ fun EditBusinessScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                //.background(Color(0xFFF5F5F5))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
                 .verticalScroll(scrollState)
                 .padding(16.dp),

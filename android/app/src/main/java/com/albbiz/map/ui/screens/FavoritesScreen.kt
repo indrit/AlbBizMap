@@ -64,7 +64,8 @@ fun FavoritesScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                //.background(Color(0xFFFFF8F0))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
             if (favoriteBusinesses.isEmpty()) {

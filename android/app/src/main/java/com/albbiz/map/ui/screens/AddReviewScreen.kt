@@ -1,5 +1,3 @@
-
-
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
@@ -73,7 +71,8 @@ fun AddReviewScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                //.background(Color(0xFFF5F5F5))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),

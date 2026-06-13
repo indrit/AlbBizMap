@@ -83,7 +83,9 @@ fun AuthScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MeTontWhite)
+            //.background(Color(0xFFFFF8F0))
+            .background(MaterialTheme.colorScheme.background)
+
     ) {
         Column(
             modifier = Modifier

@@ -85,6 +85,13 @@ class MainActivity : ComponentActivity() {
                                     onProfileClick = { navController.navigate("profile") },
                                     onFavoritesClick = { navController.navigate("favorites") },
                                     onEventsClick = { navController.navigate("events") },
+                                    onLogout = {
+                                        navController.navigate("auth") {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    },
+                                    currentUserName = currentUserName,
+
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },

@@ -15,6 +15,8 @@ data class AppStrings(
     val back: String,
     val loading: String,
     val noResults: String,
+    val welcomeUser: String,
+
     // Auth
     val welcomeTitle: String,
     val welcomeDesc: String,
@@ -168,12 +170,13 @@ data class AppStrings(
 
 val EnglishStrings = AppStrings(
     // General
-    appName = "AlbBizMap",
+    appName = "MeTont",
     save = "Save",
     cancel = "Cancel",
     back = "Back",
     loading = "Loading...",
     noResults = "No businesses found",
+    welcomeUser = "Welcome",
     // Auth
     welcomeTitle = "Welcome to Albanian Business App",
     welcomeDesc = "Register your business, or explore the Albanian business map in your area and beyond.",
@@ -325,14 +328,15 @@ val EnglishStrings = AppStrings(
 
 val AlbanianStrings = AppStrings(
     // General
-    appName = "AlbBizMap",
+    appName = "MeTont",
     save = "Ruaj",
     cancel = "Anulo",
     back = "Kthehu",
     loading = "Duke ngarkuar...",
     noResults = "Nuk u gjet asnjë biznes",
+    welcomeUser = "Mirë se vini",
     // Auth
-    welcomeTitle = "Mirësevini në AlbBizMap",
+    welcomeTitle = "Mirësevini në MeTont",
     welcomeDesc = "Regjistroni biznesin tuaj, ose eksploroni hartën e bizneseve shqiptare në zonën tuaj dhe më gjerë.",
     getStarted = "Fillo Tani",
     signIn = "Hyr",

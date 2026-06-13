@@ -32,6 +32,9 @@ import com.albbiz.map.viewmodel.AdminViewModel
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.albbiz.map.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +99,8 @@ fun UserProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+               // .background(Color(0xFFFFF8F0))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -114,20 +118,25 @@ fun UserProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Avatar circle
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.AccountCircle,
-                            null,
-                            modifier = Modifier.size(60.dp),
-                            tint = Color.White
-                        )
-                    }
+
+                       //Test value to see the premium layout
+                        val isPremiumUser = false
+
+                        if (isPremiumUser) {
+                            Image(
+                                painter = painterResource(id = R.drawable.metont_premium),
+                                contentDescription = "Premium",
+                                modifier = Modifier.size(120.dp)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                null,
+                                modifier = Modifier.size(60.dp),
+                                tint = Color.White
+                            )
+                        }
+
                     Text(
                         text = if (firstName.isNotEmpty()) "$firstName $lastName" else "User",
                         color = Color.White,
