@@ -40,6 +40,9 @@ import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.ReviewViewModel
 import java.text.SimpleDateFormat
+import com.albbiz.map.ui.theme.TierBronze
+import com.albbiz.map.ui.theme.TierSilver
+import com.albbiz.map.ui.theme.TierGold
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,9 +130,9 @@ fun BusinessDetailScreen(
                             ) {
                                 if (business.isVerified) DetailBadgeChip(strings.verified, Color(0xFF2196F3), Icons.Default.Verified)
                                 if (business.isAlbanianOwned) DetailBadgeChip(strings.albanianOwned, MeTontRed, Icons.Default.Flag)
-                                if (business.isPremium) DetailBadgeChip(strings.premium, Color(0xFFFFAA00), Icons.Default.Star)
-                                if (business.isFeatured) DetailBadgeChip(strings.featured2, Color(0xFF9C27B0), Icons.Default.LocalFireDepartment)
-                                if (business.isSponsored) DetailBadgeChip(strings.sponsored, Color(0xFF4CAF50), Icons.Default.Campaign)
+                                if (business.isPremium) DetailBadgeChip(strings.premium, TierBronze, Icons.Default.Star)
+                                if (business.isFeatured) DetailBadgeChip(strings.featured2, TierSilver, Icons.Default.LocalFireDepartment)
+                                if (business.isSponsored) DetailBadgeChip(strings.sponsored, TierGold, Icons.Default.Campaign)
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                         }

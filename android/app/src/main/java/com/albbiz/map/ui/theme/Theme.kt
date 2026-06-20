@@ -8,6 +8,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// ── TIER BADGE COLORS (Premium/Featured/Sponsored) ─────────────────────
+val TierBronze = Color(0xFFCD7F32)   // Premium
+val TierSilver = Color(0xFFC0C0C0)   // Featured
+val TierGold = Color(0xFFC7BF3F)     // Sponsored
+
 // ── LIGHT COLOR SCHEME ────────────────────────────────────────────────
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFFE41E20),           // MeTont Red

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.tasks.await
 
+
 class BusinessRepository {
     private val firestoreService = FirestoreService()
     private val db = FirebaseFirestore.getInstance()
@@ -17,6 +18,13 @@ class BusinessRepository {
         return firestoreService.getActiveBusinesses()
             .catch { e ->
                 android.util.Log.e("AlbBizMap", "Repository: Error in flow", e)
+                emit(emptyList())
+            }
+    }
+    fun getBusinessesByOwner(ownerId: String): Flow<List<Business>> {
+        return firestoreService.getBusinessesByOwner(ownerId)
+            .catch { e ->
+                android.util.Log.e("AlbBizMap", "Repository: Error fetching owner businesses", e)
                 emit(emptyList())
             }
     }

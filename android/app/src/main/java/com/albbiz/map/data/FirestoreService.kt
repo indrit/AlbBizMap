@@ -59,6 +59,27 @@ class FirestoreService {
         awaitClose { listener.remove() }
     }
 
+    fun getBusinessesByOwner(ownerId: String): Flow<List<Business>> = callbackFlow {
+        val listener = businessesRef
+            .whereEqualTo("ownerId", ownerId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Firestore: Error listening for owner businesses", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val businesses = snapshot?.documents?.mapNotNull { doc ->
+                    try {
+                        Business.fromMap(doc.id, doc.data ?: emptyMap())
+                    } catch (e: Exception) {
+                        null
+                    }
+                } ?: emptyList()
+                trySend(businesses)
+            }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun addBusiness(business: Business): Result<String> {
         return try {
             val auth = Firebase.auth

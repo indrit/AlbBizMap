@@ -35,6 +35,8 @@ import com.google.firebase.auth.userProfileChangeRequest
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.albbiz.map.R
+import com.albbiz.map.data.BusinessRepository
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +60,21 @@ fun UserProfileScreen(
 
     val adminViewModel: AdminViewModel = viewModel()
     val isAdmin by adminViewModel.isAdmin.collectAsState()
+    val businessRepository = remember { BusinessRepository() }
+    var userTierIcon by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(user?.uid) {
+        user?.uid?.let { uid ->
+            businessRepository.getBusinessesByOwner(uid).collect { ownedBusinesses ->
+                userTierIcon = when {
+                    ownedBusinesses.any { it.isSponsored } -> R.drawable.metont_gold
+                    ownedBusinesses.any { it.isFeatured } -> R.drawable.metont_silver
+                    ownedBusinesses.any { it.isPremium } -> R.drawable.metont_bronze
+                    else -> null
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         user?.displayName?.let { name ->
@@ -118,24 +135,22 @@ fun UserProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Avatar circle
+                    if (userTierIcon != null) {
+                        Image(
+                            painter = painterResource(id = userTierIcon!!),
+                            contentDescription = "Tier badge",
+                            modifier = Modifier.size(80.dp)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.AccountCircle,
+                            null,
+                            modifier = Modifier.size(60.dp),
+                            tint = Color.White
+                        )
+                    }
 
-                       //Test value to see the premium layout
-                        val isPremiumUser = false
 
-                        if (isPremiumUser) {
-                            Image(
-                                painter = painterResource(id = R.drawable.metont_premium),
-                                contentDescription = "Premium",
-                                modifier = Modifier.size(120.dp)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                null,
-                                modifier = Modifier.size(60.dp),
-                                tint = Color.White
-                            )
-                        }
 
                     Text(
                         text = if (firstName.isNotEmpty()) "$firstName $lastName" else "User",

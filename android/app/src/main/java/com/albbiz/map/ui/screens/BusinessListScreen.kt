@@ -31,6 +31,9 @@ import com.albbiz.map.data.BusinessRepository
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
+import com.albbiz.map.ui.theme.TierBronze
+import com.albbiz.map.ui.theme.TierGold
+import com.albbiz.map.ui.theme.TierSilver
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
 
@@ -357,10 +360,11 @@ fun BusinessListItem(
                             strings.albanianOwned,
                             MeTontRed
                         )
-                        if (business.isPremium) BadgeChip(
-                            strings.premium,
-                            Color(0xFFFFAA00)
-                        )
+                        when {
+                            business.isSponsored -> BadgeChip(strings.sponsored, TierGold)
+                            business.isFeatured -> BadgeChip(strings.featured2, TierSilver)
+                            business.isPremium -> BadgeChip(strings.premium, TierBronze)
+                        }
                     }
                 }
 
