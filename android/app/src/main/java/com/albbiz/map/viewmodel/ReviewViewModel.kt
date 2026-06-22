@@ -87,6 +87,20 @@ class ReviewViewModel(
         }
     }
 
+    // TOGGLE LIKE ON A REVIEW
+    fun toggleLike(
+        businessId: String,
+        reviewId: String,
+        userId: String
+    ) {
+        viewModelScope.launch {
+            repo.toggleLike(businessId, reviewId, userId)
+                .onFailure { e ->
+                    _error.value = e.message
+                }
+        }
+    }
+
     fun clearReportMessage() {
         _reportMessage.value = null
     }

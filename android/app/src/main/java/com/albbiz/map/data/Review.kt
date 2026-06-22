@@ -12,8 +12,9 @@ data class Review(
     val createdAt: Long = System.currentTimeMillis(),
     val ownerReply: String? = null,
     val ownerReplyAt: Long? = null,
-    val reportCount: Int = 0,            // ← NEW: tracks how many reports
-    val reportedBy: List<String> = emptyList() // ← NEW: tracks who reported
+    val reportCount: Int = 0,
+    val reportedBy: List<String> = emptyList(),
+    val likedBy: List<String> = emptyList()
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -28,7 +29,8 @@ data class Review(
             "ownerReply" to ownerReply,
             "ownerReplyAt" to ownerReplyAt,
             "reportCount" to reportCount,
-            "reportedBy" to reportedBy
+            "reportedBy" to reportedBy,
+            "likedBy" to likedBy
         )
     }
 
@@ -46,7 +48,8 @@ data class Review(
                 ownerReply = map["ownerReply"] as? String,
                 ownerReplyAt = (map["ownerReplyAt"] as? Number)?.toLong(),
                 reportCount = (map["reportCount"] as? Number)?.toInt() ?: 0,
-                reportedBy = (map["reportedBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                reportedBy = (map["reportedBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                likedBy = (map["likedBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
             )
         }
     }

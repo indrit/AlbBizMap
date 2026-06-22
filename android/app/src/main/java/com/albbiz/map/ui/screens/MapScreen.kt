@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,7 +51,9 @@ import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.ui.draw.alpha
+import com.albbiz.map.data.EventsRepository
+import com.albbiz.map.data.BusinessCategory
+
 val TIRANA_LOCATION = LatLng(41.3275, 19.8187)
 
 fun loadMarkerFromAssets(context: Context, fileName: String): BitmapDescriptor? {
@@ -105,6 +108,10 @@ fun MapScreen(
     val userLocation by viewModel.userLocation.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val nearMeBusinesses by viewModel.nearMe.collectAsState()
+    val eventsRepository = remember { EventsRepository() }
+    val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
+    val topRatedBusinesses by viewModel.topRated.collectAsState()
 
     var selectedBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
@@ -173,6 +180,8 @@ fun MapScreen(
         "Contractor", "Lawyer", "Dentist",
         "Barber", "Auto Shop", "Other"
     )
+
+    val sheetState = rememberBottomSheetScaffoldState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -331,241 +340,524 @@ fun MapScreen(
             }
         }
     ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            strings.appName,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+        Column(modifier = Modifier.fillMaxSize()) {
+            // ── TOP APP BAR ──────────────────────────────────────────
+            TopAppBar(
+                title = {
+                    Text(
+                        strings.appName,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(Icons.Default.Menu, null, tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        showSearch = !showSearch
+                        if (!showSearch) viewModel.onSearchQueryChange("")
+                    }) {
+                        Icon(
+                            if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                            null,
+                            tint = Color.White
                         )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, null, tint = Color.White)
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            showSearch = !showSearch
-                            if (!showSearch) viewModel.onSearchQueryChange("")
-                        }) {
-                            Icon(
-                                if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                                null,
-                                tint = Color.White
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MeTontRed
-                    )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MeTontRed
                 )
-            }
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // ── MAP ───────────────────────────────────────────
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState,
-                    properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
-                    uiSettings = MapUiSettings(
-                        zoomControlsEnabled = false,
-                        myLocationButtonEnabled = false
-                    ),
-                    onMapClick = { selectedBusiness = null; keyboardController?.hide() }
-                ) {
-                    val clusterItems = remember(businesses) {
-                        businesses.mapNotNull { business ->
-                            business.location?.let { BusinessClusterItem(business) }
-                        }
-                    }
-                    Clustering<BusinessClusterItem>(
-                        items = clusterItems,
-                        onClusterItemClick = { item ->
-                            selectedBusiness = item.business
-                            true
-                        }
+            )
+
+            // ── BOTTOM SHEET SCAFFOLD (MAP + NEAR YOU SHEET) ─────────
+            BottomSheetScaffold(
+                scaffoldState = sheetState,
+                sheetPeekHeight = 140.dp,
+                sheetContainerColor = MaterialTheme.colorScheme.background,
+                sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                sheetDragHandle = {
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 12.dp)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .background(
+                                MeTontGrey.copy(alpha = 0.3f),
+                                RoundedCornerShape(2.dp)
+                            )
                     )
-                }
-
-                // ── CATEGORY FILTERS ──────────────────────────────
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    LazyRow(
+                },
+                sheetContent = {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .heightIn(min = 400.dp)
+                            .padding(bottom = 24.dp)
                     ) {
-                        items(categories) { category ->
-                            FilterChip(
-                                selected = selectedCategoryLabel == category,
-                                onClick = {
-                                    selectedCategoryLabel = category
-                                    viewModel.onCategoryChange(
-                                        if (category == "All") "" else category
-                                    )
-                                },
-                                label = { Text(category, fontSize = 12.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MeTontRed,
-                                    selectedLabelColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
+                        Text(
+                            "Near You",
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
 
-                // ── SEARCH BAR ────────────────────────────────────
-                if (showSearch) {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .padding(top = 64.dp, start = 16.dp, end = 16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column {
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { viewModel.onSearchQueryChange(it) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                placeholder = { Text(strings.searchPlaceholder) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Search, null, tint = MeTontRed)
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MeTontRed,
-                                    cursorColor = MeTontRed
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                singleLine = true,
-                                keyboardActions = KeyboardActions(
-                                    onSearch = { keyboardController?.hide() }
-                                )
+                        if (nearMeBusinesses.isEmpty()) {
+                            Text(
+                                "Enable location to see businesses near you",
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
                             )
+                        } else {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(nearMeBusinesses) { business ->
+                                    val categoryIcon = BusinessCategory.entries
+                                        .find { it.name.equals(business.category, ignoreCase = true) }
+                                        ?.icon ?: Icons.Default.Business
 
-                            if (searchQuery.isNotEmpty()) {
-                                if (businesses.isNotEmpty()) {
-                                    HorizontalDivider()
-                                    LazyColumn(
+                                    Card(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(max = 250.dp)
+                                            .width(220.dp)
+                                            .shadow(2.dp, RoundedCornerShape(14.dp))
+                                            .clickable { onBusinessClick(business.id) },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
                                     ) {
-                                        items(businesses) { business ->
-                                            ListItem(
-                                                headlineContent = {
-                                                    Text(
-                                                        business.name,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                },
-                                                supportingContent = {
-                                                    Text(
-                                                        business.category,
-                                                        color = MeTontRed,
-                                                        fontSize = 12.sp
-                                                    )
-                                                },
-                                                leadingContent = {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier.size(40.dp),
+                                                shape = CircleShape,
+                                                color = MeTontRed.copy(alpha = 0.1f)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
                                                     Icon(
-                                                        Icons.Default.Business,
+                                                        categoryIcon,
                                                         null,
-                                                        tint = MeTontRed
+                                                        tint = MeTontRed,
+                                                        modifier = Modifier.size(20.dp)
                                                     )
-                                                },
-                                                modifier = Modifier.clickable {
-                                                    selectedBusiness = business
-                                                    business.location?.let { geoPoint ->
-                                                        cameraPositionState.position =
-                                                            CameraPosition.fromLatLngZoom(
-                                                                LatLng(
-                                                                    geoPoint.latitude,
-                                                                    geoPoint.longitude
-                                                                ),
-                                                                15f
-                                                            )
-                                                    }
-                                                    keyboardController?.hide()
                                                 }
-                                            )
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    business.name,
+                                                    maxLines = 1,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.Black
+                                                )
+                                                Text(
+                                                    business.category,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MeTontRed,
+                                                    fontSize = 11.sp
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        Icons.Default.Star, null,
+                                                        tint = Color(0xFFFFC107),
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        " ${business.rating} (${business.reviewCount})",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MeTontGrey
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
-                                } else {
-                                    Text(
-                                        strings.noSearchResults,
-                                        modifier = Modifier.padding(16.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MeTontGrey
-                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            "Community Announcements",
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+
+                        if (announcements.isEmpty()) {
+                            Text(
+                                "No upcoming events right now",
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                        } else {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(announcements) { event ->
+                                    Card(
+                                        modifier = Modifier
+                                            .width(220.dp)
+                                            .shadow(2.dp, RoundedCornerShape(14.dp))
+                                            .clickable { onEventsClick() },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier.size(40.dp),
+                                                shape = CircleShape,
+                                                color = MeTontRed.copy(alpha = 0.1f)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        Icons.Default.Event,
+                                                        null,
+                                                        tint = MeTontRed,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    event.title,
+                                                    maxLines = 1,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.Black
+                                                )
+                                                Text(
+                                                    event.category,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MeTontRed,
+                                                    fontSize = 11.sp
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        Icons.Default.LocationOn, null,
+                                                        tint = MeTontGrey,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        " ${event.locationName}",
+                                                        maxLines = 1,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MeTontGrey
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            "Most Favorited Worldwide",
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+
+                        if (topRatedBusinesses.isEmpty()) {
+                            Text(
+                                "No businesses yet",
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                        } else {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(topRatedBusinesses) { business ->
+                                    val categoryIcon = BusinessCategory.entries
+                                        .find { it.name.equals(business.category, ignoreCase = true) }
+                                        ?.icon ?: Icons.Default.Business
+
+                                    Card(
+                                        modifier = Modifier
+                                            .width(220.dp)
+                                            .shadow(2.dp, RoundedCornerShape(14.dp))
+                                            .clickable { onBusinessClick(business.id) },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier.size(40.dp),
+                                                shape = CircleShape,
+                                                color = MeTontRed.copy(alpha = 0.1f)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        categoryIcon,
+                                                        null,
+                                                        tint = MeTontRed,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    business.name,
+                                                    maxLines = 1,
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.Black
+                                                )
+                                                Text(
+                                                    business.category,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MeTontRed,
+                                                    fontSize = 11.sp
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        Icons.Default.Star, null,
+                                                        tint = Color(0xFFFFC107),
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        " ${business.rating} (${business.reviewCount})",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MeTontGrey
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                // ── FAB BUTTONS ───────────────────────────────────
-                Column(
+            ) { padding ->
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxSize()
+                        .padding(padding)
                 ) {
-                    FloatingActionButton(
-                        onClick = { onAddBusinessClick() },
-                        containerColor = MeTontRed,
-                        contentColor = Color.White,
-                        shape = CircleShape
+                    // ── MAP ───────────────────────────────────────────
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+                        uiSettings = MapUiSettings(
+                            zoomControlsEnabled = false,
+                            myLocationButtonEnabled = false
+                        ),
+                        onMapClick = { selectedBusiness = null; keyboardController?.hide() }
                     ) {
-                        Icon(Icons.Default.Add, null)
+                        val clusterItems = remember(businesses) {
+                            businesses.mapNotNull { business ->
+                                business.location?.let { BusinessClusterItem(business) }
+                            }
+                        }
+                        Clustering<BusinessClusterItem>(
+                            items = clusterItems,
+                            onClusterItemClick = { item ->
+                                selectedBusiness = item.business
+                                true
+                            }
+                        )
                     }
-                    FloatingActionButton(
-                        onClick = {
-                            val target = userLocation ?: TIRANA_LOCATION
-                            cameraPositionState.position =
-                                CameraPosition.fromLatLngZoom(target, 15f)
-                        },
-                        containerColor = Color.White,
-                        contentColor = MeTontRed,
-                        shape = CircleShape
+
+                    // ── CATEGORY FILTERS ──────────────────────────────
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
-                        Icon(Icons.Default.MyLocation, null)
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(categories) { category ->
+                                FilterChip(
+                                    selected = selectedCategoryLabel == category,
+                                    onClick = {
+                                        selectedCategoryLabel = category
+                                        viewModel.onCategoryChange(
+                                            if (category == "All") "" else category
+                                        )
+                                    },
+                                    label = { Text(category, fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MeTontRed,
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
                     }
-                }
 
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MeTontRed
-                    )
-                }
+                    // ── SEARCH BAR ────────────────────────────────────
+                    if (showSearch) {
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .padding(top = 64.dp, start = 16.dp, end = 16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { viewModel.onSearchQueryChange(it) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    placeholder = { Text(strings.searchPlaceholder) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Search, null, tint = MeTontRed)
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MeTontRed,
+                                        cursorColor = MeTontRed
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    keyboardActions = KeyboardActions(
+                                        onSearch = { keyboardController?.hide() }
+                                    )
+                                )
 
-                // ── BUSINESS DETAIL CARD ──────────────────────────
-                selectedBusiness?.let { biz ->
-                    BusinessDetailCard(
-                        business = biz,
-                        isFavorite = favoriteIds.contains(biz.id),
-                        onToggleFavorite = { viewModel.toggleFavorite(biz.id) },
-                        onClose = { selectedBusiness = null },
-                        onViewDetails = { onBusinessClick(biz.id) }
-                    )
+                                if (searchQuery.isNotEmpty()) {
+                                    if (businesses.isNotEmpty()) {
+                                        HorizontalDivider()
+                                        LazyColumn(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(max = 250.dp)
+                                        ) {
+                                            items(businesses) { business ->
+                                                ListItem(
+                                                    headlineContent = {
+                                                        Text(
+                                                            business.name,
+                                                            fontWeight = FontWeight.Medium
+                                                        )
+                                                    },
+                                                    supportingContent = {
+                                                        Text(
+                                                            business.category,
+                                                            color = MeTontRed,
+                                                            fontSize = 12.sp
+                                                        )
+                                                    },
+                                                    leadingContent = {
+                                                        Icon(
+                                                            Icons.Default.Business,
+                                                            null,
+                                                            tint = MeTontRed
+                                                        )
+                                                    },
+                                                    modifier = Modifier.clickable {
+                                                        selectedBusiness = business
+                                                        business.location?.let { geoPoint ->
+                                                            cameraPositionState.position =
+                                                                CameraPosition.fromLatLngZoom(
+                                                                    LatLng(
+                                                                        geoPoint.latitude,
+                                                                        geoPoint.longitude
+                                                                    ),
+                                                                    15f
+                                                                )
+                                                        }
+                                                        keyboardController?.hide()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            strings.noSearchResults,
+                                            modifier = Modifier.padding(16.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MeTontGrey
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── FAB BUTTONS ───────────────────────────────────
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FloatingActionButton(
+                            onClick = { onAddBusinessClick() },
+                            containerColor = MeTontRed,
+                            contentColor = Color.White,
+                            shape = CircleShape
+                        ) {
+                            Icon(Icons.Default.Add, null)
+                        }
+                        FloatingActionButton(
+                            onClick = {
+                                val target = userLocation ?: TIRANA_LOCATION
+                                cameraPositionState.position =
+                                    CameraPosition.fromLatLngZoom(target, 15f)
+                            },
+                            containerColor = Color.White,
+                            contentColor = MeTontRed,
+                            shape = CircleShape
+                        ) {
+                            Icon(Icons.Default.MyLocation, null)
+                        }
+                    }
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MeTontRed
+                        )
+                    }
+
+                    // ── BUSINESS DETAIL CARD ──────────────────────────
+                    selectedBusiness?.let { biz ->
+                        BusinessDetailCard(
+                            business = biz,
+                            isFavorite = favoriteIds.contains(biz.id),
+                            onToggleFavorite = { viewModel.toggleFavorite(biz.id) },
+                            onClose = { selectedBusiness = null },
+                            onViewDetails = { onBusinessClick(biz.id) }
+                        )
+                    }
                 }
             }
         }

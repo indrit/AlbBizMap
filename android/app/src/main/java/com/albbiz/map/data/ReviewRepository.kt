@@ -100,6 +100,35 @@ class ReviewRepository {
             Result.failure(e)
         }
     }
+    suspend fun toggleLike(
+        businessId: String,
+        reviewId: String,
+        userId: String
+    ): Result<Unit> {
+        return try {
+            val reviewRef = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+
+            val snapshot = reviewRef.get().await()
+            val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
+                ?: return Result.failure(Exception("Review not found"))
+
+            if (userId in review.likedBy) {
+                // already liked → unlike
+                reviewRef.update("likedBy", FieldValue.arrayRemove(userId)).await()
+            } else {
+                // not liked → like
+                reviewRef.update("likedBy", FieldValue.arrayUnion(userId)).await()
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling like", e)
+            Result.failure(e)
+        }
+    }
 
     // UPDATE BUSINESS RATING + REVIEW COUNT
     private suspend fun updateBusinessStats(businessId: String) {

@@ -186,6 +186,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onBackClick = { navController.popBackStack() },
                                         onUpgradeClick = { navController.navigate("subscription") },
+                                        onNavigateToAuth = { navController.navigate("auth") },
                                         mapViewModel = mapViewModel
                                     )
                                 } else {

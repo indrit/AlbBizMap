@@ -43,6 +43,7 @@ import java.text.SimpleDateFormat
 import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.ui.theme.TierGold
+import com.albbiz.map.utils.AuthGate
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +55,7 @@ fun BusinessDetailScreen(
     onEditClick: () -> Unit,
     onBackClick: () -> Unit,
     onUpgradeClick: () -> Unit,
+    onNavigateToAuth: () -> Unit,
     mapViewModel: MapViewModel = viewModel(),
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
@@ -86,7 +88,31 @@ fun BusinessDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { mapViewModel.toggleFavorite(business.id) }) {
+                    IconButton(onClick = {
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = onNavigateToAuth,
+                            action = {
+                                val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                            }
+                        )
+                    }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = {
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = onNavigateToAuth,
+                            action = { mapViewModel.toggleFavorite(business.id) }
+                        )
+                    }) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite
                             else Icons.Default.FavoriteBorder,
@@ -464,9 +490,14 @@ fun BusinessDetailScreen(
                     }
                 }
             } else {
-                items(reviews) { review -> DetailReviewItem(review) }
+                items(reviews) { review ->
+                    DetailReviewItem(
+                        review = review,
+                        businessId = business.id,
+                        onNavigateToAuth = onNavigateToAuth
+                    )
+                }
             }
-
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
@@ -596,7 +627,15 @@ fun ClickableDetailRowItem(icon: ImageVector, text: String, onClick: () -> Unit)
 }
 
 @Composable
-fun DetailReviewItem(review: Review) {
+fun DetailReviewItem(
+    review: Review,
+    businessId: String,
+    onNavigateToAuth: () -> Unit,
+    reviewViewModel: ReviewViewModel = viewModel()
+) {
+    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+    val isLiked = currentUserId != null && currentUserId in review.likedBy
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -647,10 +686,38 @@ fun DetailReviewItem(review: Review) {
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Black.copy(alpha = 0.8f)
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── LIKE BUTTON ───────────────────────────────────────
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = {
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = onNavigateToAuth,
+                            action = {
+                                currentUserId?.let { uid ->
+                                    reviewViewModel.toggleLike(businessId, review.id, uid)
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,                        contentDescription = "Like",
+                        tint = if (isLiked) MeTontRed else MeTontGrey,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    "${review.likedBy.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontGrey
+                )
+            }
         }
     }
 }
-
 @Composable
 private fun DetailBadgeChip(label: String, color: Color, icon: ImageVector) {
     Surface(
