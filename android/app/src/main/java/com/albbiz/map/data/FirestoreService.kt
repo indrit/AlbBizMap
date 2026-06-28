@@ -4,6 +4,7 @@ package com.albbiz.map.data
 import android.net.Uri
 import android.util.Log
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
@@ -111,6 +112,33 @@ class FirestoreService {
                 favRef.set(mapOf("timestamp" to System.currentTimeMillis())).await()
             } else {
                 favRef.delete().await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun toggleBusinessLike(userId: String, businessId: String): Result<Unit> {
+        return try {
+            val businessRef = businessesRef.document(businessId)
+            val snapshot = businessRef.get().await()
+            val likedBy = (snapshot.get("likedBy") as? List<*>)
+                ?.filterIsInstance<String>() ?: emptyList()
+
+            if (userId in likedBy) {
+                businessRef.update(
+                    mapOf(
+                        "likedBy" to FieldValue.arrayRemove(userId),
+                        "likeCount" to FieldValue.increment(-1)
+                    )
+                ).await()
+            } else {
+                businessRef.update(
+                    mapOf(
+                        "likedBy" to FieldValue.arrayUnion(userId),
+                        "likeCount" to FieldValue.increment(1)
+                    )
+                ).await()
             }
             Result.success(Unit)
         } catch (e: Exception) {

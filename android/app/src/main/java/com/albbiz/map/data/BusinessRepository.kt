@@ -95,6 +95,9 @@ class BusinessRepository {
         }
     }
 
+    suspend fun toggleBusinessLike(userId: String, businessId: String): Result<Unit> {
+        return firestoreService.toggleBusinessLike(userId, businessId)
+    }
     suspend fun getFavoriteIds(userId: String): Result<List<String>> {
         return try {
             val snapshot = db.collection("users").document(userId).get().await()

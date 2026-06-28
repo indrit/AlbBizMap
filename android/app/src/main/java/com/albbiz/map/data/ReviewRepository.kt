@@ -158,4 +158,79 @@ class ReviewRepository {
             Log.e(TAG, "Error updating business stats", e)
         }
     }
+
+    // GET REPLIES FOR A REVIEW
+    fun getReplies(businessId: String, reviewId: String): Flow<List<Reply>> = callbackFlow {
+        val ref = db.collection("businesses")
+            .document(businessId)
+            .collection("reviews")
+            .document(reviewId)
+            .collection("replies")
+
+        val listener = ref.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val replies = snapshot?.documents?.mapNotNull { doc ->
+                doc.data?.let { Reply.fromMap(doc.id, it) }
+            }?.sortedBy { it.createdAt } ?: emptyList()
+            trySend(replies)
+        }
+        awaitClose { listener.remove() }
+    }
+
+    // ADD A REPLY
+    suspend fun addReply(
+        businessId: String,
+        reviewId: String,
+        reply: Reply
+    ): Result<String> {
+        return try {
+            val ref = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+                .collection("replies")
+                .document()
+
+            val finalReply = reply.copy(id = ref.id)
+            ref.set(finalReply.toMap()).await()
+            Result.success(ref.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding reply", e)
+            Result.failure(e)
+        }
+    }
+
+    // TOGGLE LIKE ON A REPLY
+    suspend fun toggleReplyLike(
+        businessId: String,
+        reviewId: String,
+        replyId: String,
+        userId: String
+    ): Result<Unit> {
+        return try {
+            val replyRef = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+                .collection("replies")
+                .document(replyId)
+
+            val snapshot = replyRef.get().await()
+            val reply = snapshot.data?.let { Reply.fromMap(replyId, it) }
+                ?: return Result.failure(Exception("Reply not found"))
+
+            if (userId in reply.likedBy) {
+                replyRef.update("likedBy", FieldValue.arrayRemove(userId)).await()
+            } else {
+                replyRef.update("likedBy", FieldValue.arrayUnion(userId)).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling reply like", e)
+            Result.failure(e)
+        }
+    }
 }

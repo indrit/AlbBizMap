@@ -6,28 +6,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
-import com.albbiz.map.ui.AppLanguage
-import com.albbiz.map.ui.ProvideAppStrings
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.ui.graphics.Color
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Remove default splash screen
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { false }
 
@@ -50,12 +48,11 @@ class MainActivity : ComponentActivity() {
                         val currentUserId = currentUser?.uid ?: ""
                         val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
 
-                        val startDestination = "splash"
-
                         NavHost(
                             navController = navController,
-                            startDestination = startDestination
+                            startDestination = "splash"
                         ) {
+                            // ── SPLASH ────────────────────────────────────────────
                             composable("splash") {
                                 SplashScreen(
                                     onSplashFinished = {
@@ -67,6 +64,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── AUTH ──────────────────────────────────────────────
                             composable("auth") {
                                 AuthScreen(
                                     onAuthSuccess = {
@@ -78,20 +76,33 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── MAP ───────────────────────────────────────────────
                             composable("map") {
                                 MapScreen(
-                                    onListClick = { navController.navigate("business_list") },
-                                    onAddBusinessClick = { navController.navigate("add_business") },
-                                    onProfileClick = { navController.navigate("profile") },
-                                    onFavoritesClick = { navController.navigate("favorites") },
-                                    onEventsClick = { navController.navigate("events") },
+                                    onListClick = {
+                                        navController.navigate("business_list?sortBy=default")
+                                    },
+                                    onAddBusinessClick = {
+                                        navController.navigate("add_business")
+                                    },
+                                    onProfileClick = {
+                                        navController.navigate("profile")
+                                    },
+                                    onFavoritesClick = {
+                                        navController.navigate("favorites")
+                                    },
+                                    onEventsClick = {
+                                        navController.navigate("events")
+                                    },
+                                    onSeeMoreClick = { sortBy ->
+                                        navController.navigate("business_list?sortBy=$sortBy")
+                                    },
                                     onLogout = {
                                         navController.navigate("auth") {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     currentUserName = currentUserName,
-
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },
@@ -99,6 +110,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── ADD BUSINESS ──────────────────────────────────────
                             composable("add_business") {
                                 AddBusinessScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -106,16 +118,28 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            composable("business_list") {
+                            // ── BUSINESS LIST (with sortBy) ───────────────────────
+                            composable(
+                                route = "business_list?sortBy={sortBy}",
+                                arguments = listOf(
+                                    navArgument("sortBy") {
+                                        type = NavType.StringType
+                                        defaultValue = "default"
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                val sortBy = backStackEntry.arguments?.getString("sortBy") ?: "default"
                                 BusinessListScreen(
                                     onBackClick = { navController.popBackStack() },
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },
-                                    viewModel = mapViewModel
+                                    viewModel = mapViewModel,
+                                    sortBy = sortBy
                                 )
                             }
 
+                            // ── PROFILE ───────────────────────────────────────────
                             composable("profile") {
                                 UserProfileScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -132,6 +156,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── ADMIN ─────────────────────────────────────────────
                             composable("admin") {
                                 AdminScreen(
                                     currentUserId = currentUserId,
@@ -139,6 +164,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── FAVORITES ─────────────────────────────────────────
                             composable("favorites") {
                                 FavoritesScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -149,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── EVENTS ────────────────────────────────────────────
                             composable("events") {
                                 EventsScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -156,6 +183,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── ADD EVENT ─────────────────────────────────────────
                             composable("add_event") {
                                 AddEventScreen(
                                     onBackClick = { navController.popBackStack() },
@@ -163,9 +191,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── BUSINESS DETAIL ───────────────────────────────────
                             composable(
                                 route = "business_detail/{businessId}",
-                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                                arguments = listOf(
+                                    navArgument("businessId") { type = NavType.StringType }
+                                )
                             ) { backStackEntry ->
                                 val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
                                 val business = mapViewModel.getBusinessById(businessId)
@@ -194,9 +225,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // ── ADD REVIEW ────────────────────────────────────────
                             composable(
                                 route = "add_review/{businessId}",
-                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                                arguments = listOf(
+                                    navArgument("businessId") { type = NavType.StringType }
+                                )
                             ) { backStackEntry ->
                                 val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
                                 AddReviewScreen(
@@ -207,15 +241,19 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // ── SUBSCRIPTION ──────────────────────────────────────
                             composable("subscription") {
                                 SubscriptionScreen(
                                     onBackClick = { navController.popBackStack() }
                                 )
                             }
 
+                            // ── EDIT BUSINESS ─────────────────────────────────────
                             composable(
                                 route = "edit_business/{businessId}",
-                                arguments = listOf(navArgument("businessId") { type = NavType.StringType })
+                                arguments = listOf(
+                                    navArgument("businessId") { type = NavType.StringType }
+                                )
                             ) { backStackEntry ->
                                 val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
                                 val business = mapViewModel.getBusinessById(businessId)

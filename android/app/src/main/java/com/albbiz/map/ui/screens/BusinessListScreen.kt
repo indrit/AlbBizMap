@@ -35,6 +35,7 @@ import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.ui.theme.TierSilver
 import com.google.android.gms.maps.model.LatLng
+import com.albbiz.map.utils.AuthGate
 import com.google.firebase.firestore.GeoPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,14 +43,36 @@ import com.google.firebase.firestore.GeoPoint
 fun BusinessListScreen(
     onBackClick: () -> Unit,
     onBusinessClick: (String) -> Unit,
-    viewModel: MapViewModel = viewModel()
+    viewModel: MapViewModel = viewModel(),
+    sortBy: String = "default"
 ) {
-    val businesses by viewModel.filteredBusinesses.collectAsState()
     val allBusinesses by viewModel.businesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val userLocation by viewModel.userLocation.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val strings = LocalAppStrings.current
+
+    val filteredBusinesses by viewModel.filteredBusinesses.collectAsState()
+    val userLocation by viewModel.userLocation.collectAsState()
+
+    val businesses = remember(filteredBusinesses, sortBy, userLocation) {
+        when (sortBy) {
+            "nearMe" -> {
+                val location = userLocation
+                if (location != null) {
+                    val userPoint = com.google.firebase.firestore.GeoPoint(
+                        location.latitude, location.longitude
+                    )
+                    filteredBusinesses.sortedBy {
+                        it.location?.let { gp ->
+                            com.albbiz.map.data.BusinessRepository().calculateDistance(userPoint, gp)
+                        } ?: Double.MAX_VALUE
+                    }
+                } else filteredBusinesses
+            }
+            "topRated" -> filteredBusinesses.sortedByDescending { it.rating }
+            else -> filteredBusinesses
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -215,6 +238,7 @@ fun BusinessListScreen(
                             userLocation = userLocation,
                             isFavorite = favoriteIds.contains(business.id),
                             onToggleFavorite = { viewModel.toggleFavorite(business.id) },
+                            onToggleLike = { viewModel.toggleBusinessLike(business.id) {} },
                             onClick = { onBusinessClick(business.id) }
                         )
                     }
@@ -312,6 +336,8 @@ fun BusinessListItem(
     userLocation: LatLng?,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    onToggleLike: () -> Unit = {},
+    onNavigateToAuth: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -347,19 +373,14 @@ fun BusinessListItem(
                         fontWeight = FontWeight.Medium
                     )
 
-                    // Badges
                     Row(
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        if (business.isVerified) BadgeChip(
-                            strings.verified,
-                            Color(0xFF2196F3)
-                        )
-                        if (business.isAlbanianOwned) BadgeChip(
-                            strings.albanianOwned,
-                            MeTontRed
-                        )
+                        if (business.isVerified) BadgeChip(strings.verified, Color(0xFF2196F3))
+                        if (business.isAlbanianOwned) BadgeChip(strings.albanianOwned, MeTontRed)
                         when {
                             business.isSponsored -> BadgeChip(strings.sponsored, TierGold)
                             business.isFeatured -> BadgeChip(strings.featured2, TierSilver)
@@ -368,13 +389,55 @@ fun BusinessListItem(
                     }
                 }
 
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        if (isFavorite) Icons.Default.Favorite
-                        else Icons.Default.FavoriteBorder,
-                        null,
-                        tint = if (isFavorite) MeTontRed else MeTontGrey
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // ── LIKE BUTTON ───────────────────────────────────────
+                    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                    val isLiked = currentUserId != null && currentUserId in business.likedBy
+
+                    IconButton(onClick = {
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = onNavigateToAuth,
+                            action = { onToggleLike() }
+                        )
+                    }) {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
+                            contentDescription = "Like",
+                            tint = if (isLiked) MeTontRed else MeTontGrey,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        "${business.likeCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MeTontGrey
                     )
+                    // ── SHARE BUTTON ──────────────────────────────────────
+                    IconButton(onClick = {
+                        val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                    }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = MeTontGrey,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    // ── FAVORITE BUTTON ───────────────────────────────────
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            if (isFavorite) Icons.Default.Favorite
+                            else Icons.Default.FavoriteBorder,
+                            null,
+                            tint = if (isFavorite) MeTontRed else MeTontGrey,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 

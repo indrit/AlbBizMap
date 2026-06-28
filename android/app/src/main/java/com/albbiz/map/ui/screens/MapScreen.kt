@@ -1,6 +1,6 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
-
+import android.content.Intent
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -40,7 +41,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.R
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import com.albbiz.map.data.Business
+import com.albbiz.map.data.BusinessCategory
+import com.albbiz.map.data.EventsRepository
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
@@ -51,8 +56,8 @@ import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.albbiz.map.data.EventsRepository
-import com.albbiz.map.data.BusinessCategory
+import androidx.compose.ui.platform.LocalContext
+
 
 val TIRANA_LOCATION = LatLng(41.3275, 19.8187)
 
@@ -95,27 +100,29 @@ fun MapScreen(
     onLogout: () -> Unit = {},
     currentUserName: String = "",
     onBusinessClick: (String) -> Unit,
+    onSeeMoreClick: (String) -> Unit = {},
     viewModel: MapViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val strings = LocalAppStrings.current
-
+    val context = LocalContext.current
     val businesses by viewModel.filteredBusinesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val nearMeBusinesses by viewModel.nearMe.collectAsState()
-    val eventsRepository = remember { EventsRepository() }
-    val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
     val topRatedBusinesses by viewModel.topRated.collectAsState()
 
+    val eventsRepository = remember { EventsRepository() }
+    val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
+
+    var showCategoryFilter by remember { mutableStateOf(false) }
     var selectedBusiness by remember { mutableStateOf<Business?>(null) }
-    var showSearch by remember { mutableStateOf(false) }
     var markerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    val topPicksBusinesses by viewModel.topPicks.collectAsState()
 
     LaunchedEffect(Unit) {
         MapsInitializer.initialize(context, MapsInitializer.Renderer.LATEST) {
@@ -186,9 +193,7 @@ fun MapScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = Color.White
-            ) {
+            ModalDrawerSheet(drawerContainerColor = Color.White) {
                 // ── RED HEADER ─────────────────────────────────────────
                 Box(
                     modifier = Modifier
@@ -197,7 +202,6 @@ fun MapScreen(
                         .background(MeTontRed),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Image(
                         painter = painterResource(id = R.drawable.metont_nobackgroundcolor),
                         contentDescription = null,
@@ -206,7 +210,6 @@ fun MapScreen(
                             .alpha(0.15f),
                         contentScale = ContentScale.Crop
                     )
-
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -217,17 +220,8 @@ fun MapScreen(
                             modifier = Modifier.size(80.dp),
                             contentScale = ContentScale.Fit
                         )
-                        Text(
-                            "MeTont",
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Albanian Business Directory",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 12.sp
-                        )
+                        Text("MeTont", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text("Albanian Business Directory", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
                     }
                 }
 
@@ -255,9 +249,7 @@ fun MapScreen(
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onProfileClick() },
                     icon = { Icon(Icons.Default.AccountCircle, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
@@ -265,9 +257,7 @@ fun MapScreen(
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onFavoritesClick() },
                     icon = { Icon(Icons.Default.Favorite, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
@@ -275,9 +265,7 @@ fun MapScreen(
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onEventsClick() },
                     icon = { Icon(Icons.Default.Event, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
@@ -285,9 +273,7 @@ fun MapScreen(
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onAddBusinessClick() },
                     icon = { Icon(Icons.Default.AddBusiness, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
@@ -295,43 +281,26 @@ fun MapScreen(
                     selected = false,
                     onClick = { scope.launch { drawerState.close() }; onListClick() },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
-
                 HorizontalDivider(color = Color(0xFFEEEEEE))
 
-                // ── LOGOUT BUTTON ──────────────────────────────────────
+                // ── LOGOUT ─────────────────────────────────────────────
                 NavigationDrawerItem(
-                    label = {
-                        Text(
-                            strings.logout,
-                            fontWeight = FontWeight.Bold,
-                            color = MeTontRed
-                        )
-                    },
+                    label = { Text(strings.logout, fontWeight = FontWeight.Bold, color = MeTontRed) },
                     selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        onLogout()
-                    },
+                    onClick = { scope.launch { drawerState.close() }; onLogout() },
                     icon = { Icon(Icons.Default.Logout, null, tint = MeTontRed) },
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent
-                    ),
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
-                // ── VERSION ────────────────────────────────────────────
                 Text(
                     "MeTont v1.0.0",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     color = MeTontGrey,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
@@ -341,38 +310,94 @@ fun MapScreen(
         }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // ── TOP APP BAR ──────────────────────────────────────────
+
+            // ── TOP APP BAR WITH SEARCH ───────────────────────────────
             TopAppBar(
                 title = {
-                    Text(
-                        strings.appName,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 8.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.White,
+                        tonalElevation = 0.dp
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MeTontGrey,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChange(it) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = LocalTextStyle.current.copy(
+                                    color = Color.Black,
+                                    fontSize = 14.sp
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = { keyboardController?.hide() }
+                                ),
+                                decorationBox = { innerTextField ->
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            strings.searchPlaceholder,
+                                            color = MeTontGrey,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { viewModel.onSearchQueryChange("") },
+                                    modifier = Modifier.size(20.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = MeTontGrey,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            VerticalDivider(
+                                modifier = Modifier.height(20.dp),
+                                color = Color(0xFFE0E0E0)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { showCategoryFilter = !showCategoryFilter },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Tune,
+                                    contentDescription = "Filter",
+                                    tint = if (showCategoryFilter) MeTontRed else MeTontGrey,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
                         Icon(Icons.Default.Menu, null, tint = Color.White)
                     }
                 },
-                actions = {
-                    IconButton(onClick = {
-                        showSearch = !showSearch
-                        if (!showSearch) viewModel.onSearchQueryChange("")
-                    }) {
-                        Icon(
-                            if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                            null,
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MeTontRed
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
             )
 
-            // ── BOTTOM SHEET SCAFFOLD (MAP + NEAR YOU SHEET) ─────────
+            // ── BOTTOM SHEET SCAFFOLD ─────────────────────────────────
             BottomSheetScaffold(
                 scaffoldState = sheetState,
                 sheetPeekHeight = 140.dp,
@@ -384,10 +409,7 @@ fun MapScreen(
                             .padding(vertical = 12.dp)
                             .width(40.dp)
                             .height(4.dp)
-                            .background(
-                                MeTontGrey.copy(alpha = 0.3f),
-                                RoundedCornerShape(2.dp)
-                            )
+                            .background(MeTontGrey.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
                     )
                 },
                 sheetContent = {
@@ -397,6 +419,39 @@ fun MapScreen(
                             .heightIn(min = 400.dp)
                             .padding(bottom = 24.dp)
                     ) {
+
+                        // ── TOP PICKS ─────────────────────────────────────────────
+                        if (topPicksBusinesses.isNotEmpty()) {
+                            Text(
+                                "Top Recommended",
+                                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(topPicksBusinesses.take(3)) { business ->
+                                    val categoryIcon = BusinessCategory.entries
+                                        .find {
+                                            it.name.equals(
+                                                business.category,
+                                                ignoreCase = true
+                                            )
+                                        }
+                                        ?.icon ?: Icons.Default.Business
+                                    TopPickCard(
+                                        business = business,
+                                        categoryIcon = categoryIcon,
+                                        onClick = { onBusinessClick(business.id) }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+                        // ── NEAR YOU ──────────────────────────────────
                         Text(
                             "Near You",
                             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -404,7 +459,6 @@ fun MapScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
-
                         if (nearMeBusinesses.isEmpty()) {
                             Text(
                                 "Enable location to see businesses near you",
@@ -417,73 +471,25 @@ fun MapScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(nearMeBusinesses) { business ->
+                                items(nearMeBusinesses.take(3)) { business ->
                                     val categoryIcon = BusinessCategory.entries
                                         .find { it.name.equals(business.category, ignoreCase = true) }
                                         ?.icon ?: Icons.Default.Business
-
-                                    Card(
-                                        modifier = Modifier
-                                            .width(220.dp)
-                                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                                            .clickable { onBusinessClick(business.id) },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                modifier = Modifier.size(40.dp),
-                                                shape = CircleShape,
-                                                color = MeTontRed.copy(alpha = 0.1f)
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Icon(
-                                                        categoryIcon,
-                                                        null,
-                                                        tint = MeTontRed,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    business.name,
-                                                    maxLines = 1,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.Black
-                                                )
-                                                Text(
-                                                    business.category,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MeTontRed,
-                                                    fontSize = 11.sp
-                                                )
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(
-                                                        Icons.Default.Star, null,
-                                                        tint = Color(0xFFFFC107),
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                    Text(
-                                                        " ${business.rating} (${business.reviewCount})",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MeTontGrey
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    NearYouBusinessCard(
+                                        business = business,
+                                        categoryIcon = categoryIcon,
+                                        onClick = { onBusinessClick(business.id) }
+                                    )
+                                }
+                                item {
+                                    SeeMoreCard(onClick = { onSeeMoreClick("nearMe") })
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
+                        // ── COMMUNITY ANNOUNCEMENTS ───────────────────
                         Text(
                             "Community Announcements",
                             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -491,7 +497,6 @@ fun MapScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
-
                         if (announcements.isEmpty()) {
                             Text(
                                 "No upcoming events right now",
@@ -504,70 +509,23 @@ fun MapScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(announcements) { event ->
-                                    Card(
-                                        modifier = Modifier
-                                            .width(220.dp)
-                                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                                            .clickable { onEventsClick() },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                modifier = Modifier.size(40.dp),
-                                                shape = CircleShape,
-                                                color = MeTontRed.copy(alpha = 0.1f)
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Icon(
-                                                        Icons.Default.Event,
-                                                        null,
-                                                        tint = MeTontRed,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    event.title,
-                                                    maxLines = 1,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.Black
-                                                )
-                                                Text(
-                                                    event.category,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MeTontRed,
-                                                    fontSize = 11.sp
-                                                )
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(
-                                                        Icons.Default.LocationOn, null,
-                                                        tint = MeTontGrey,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                    Text(
-                                                        " ${event.locationName}",
-                                                        maxLines = 1,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MeTontGrey
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                items(announcements.take(3)) { event ->
+                                    AnnouncementCard(
+                                        title = event.title,
+                                        category = event.category,
+                                        locationName = event.locationName,
+                                        onClick = { onEventsClick() }
+                                    )
+                                }
+                                item {
+                                    SeeMoreCard(onClick = { onEventsClick() })
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
+                        // ── MOST FAVORITED WORLDWIDE ──────────────────
                         Text(
                             "Most Favorited Worldwide",
                             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -575,7 +533,6 @@ fun MapScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
-
                         if (topRatedBusinesses.isEmpty()) {
                             Text(
                                 "No businesses yet",
@@ -588,67 +545,18 @@ fun MapScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(topRatedBusinesses) { business ->
+                                items(topRatedBusinesses.take(3)) { business ->
                                     val categoryIcon = BusinessCategory.entries
                                         .find { it.name.equals(business.category, ignoreCase = true) }
                                         ?.icon ?: Icons.Default.Business
-
-                                    Card(
-                                        modifier = Modifier
-                                            .width(220.dp)
-                                            .shadow(2.dp, RoundedCornerShape(14.dp))
-                                            .clickable { onBusinessClick(business.id) },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                modifier = Modifier.size(40.dp),
-                                                shape = CircleShape,
-                                                color = MeTontRed.copy(alpha = 0.1f)
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Icon(
-                                                        categoryIcon,
-                                                        null,
-                                                        tint = MeTontRed,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    business.name,
-                                                    maxLines = 1,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.Black
-                                                )
-                                                Text(
-                                                    business.category,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MeTontRed,
-                                                    fontSize = 11.sp
-                                                )
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Icon(
-                                                        Icons.Default.Star, null,
-                                                        tint = Color(0xFFFFC107),
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                    Text(
-                                                        " ${business.rating} (${business.reviewCount})",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MeTontGrey
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    NearYouBusinessCard(
+                                        business = business,
+                                        categoryIcon = categoryIcon,
+                                        onClick = { onBusinessClick(business.id) }
+                                    )
+                                }
+                                item {
+                                    SeeMoreCard(onClick = { onSeeMoreClick("topRated") })
                                 }
                             }
                         }
@@ -685,129 +593,94 @@ fun MapScreen(
                         )
                     }
 
-                    // ── CATEGORY FILTERS ──────────────────────────────
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(0.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    // ── CATEGORY FILTERS (animated) ───────────────────
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showCategoryFilter,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
                     ) {
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(0.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
-                            items(categories) { category ->
-                                FilterChip(
-                                    selected = selectedCategoryLabel == category,
-                                    onClick = {
-                                        selectedCategoryLabel = category
-                                        viewModel.onCategoryChange(
-                                            if (category == "All") "" else category
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(categories) { category ->
+                                    FilterChip(
+                                        selected = selectedCategoryLabel == category,
+                                        onClick = {
+                                            selectedCategoryLabel = category
+                                            viewModel.onCategoryChange(
+                                                if (category == "All") "" else category
+                                            )
+                                        },
+                                        label = { Text(category, fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MeTontRed,
+                                            selectedLabelColor = Color.White
                                         )
-                                    },
-                                    label = { Text(category, fontSize = 12.sp) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MeTontRed,
-                                        selectedLabelColor = Color.White
                                     )
-                                )
+                                }
                             }
                         }
                     }
 
-                    // ── SEARCH BAR ────────────────────────────────────
-                    if (showSearch) {
+                    // ── SEARCH DROPDOWN ───────────────────────────────
+                    if (searchQuery.isNotEmpty()) {
                         Card(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .fillMaxWidth()
-                                .padding(top = 64.dp, start = 16.dp, end = 16.dp),
+                                .padding(top = 8.dp, start = 16.dp, end = 16.dp),
                             shape = RoundedCornerShape(16.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White)
                         ) {
-                            Column {
-                                OutlinedTextField(
-                                    value = searchQuery,
-                                    onValueChange = { viewModel.onSearchQueryChange(it) },
+                            if (businesses.isNotEmpty()) {
+                                LazyColumn(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(8.dp),
-                                    placeholder = { Text(strings.searchPlaceholder) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Search, null, tint = MeTontRed)
-                                    },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MeTontRed,
-                                        cursorColor = MeTontRed
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    singleLine = true,
-                                    keyboardActions = KeyboardActions(
-                                        onSearch = { keyboardController?.hide() }
-                                    )
-                                )
-
-                                if (searchQuery.isNotEmpty()) {
-                                    if (businesses.isNotEmpty()) {
-                                        HorizontalDivider()
-                                        LazyColumn(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .heightIn(max = 250.dp)
-                                        ) {
-                                            items(businesses) { business ->
-                                                ListItem(
-                                                    headlineContent = {
-                                                        Text(
-                                                            business.name,
-                                                            fontWeight = FontWeight.Medium
+                                        .heightIn(max = 250.dp)
+                                ) {
+                                    items(businesses) { business ->
+                                        ListItem(
+                                            headlineContent = {
+                                                Text(business.name, fontWeight = FontWeight.Medium)
+                                            },
+                                            supportingContent = {
+                                                Text(business.category, color = MeTontRed, fontSize = 12.sp)
+                                            },
+                                            leadingContent = {
+                                                Icon(Icons.Default.Business, null, tint = MeTontRed)
+                                            },
+                                            modifier = Modifier.clickable {
+                                                selectedBusiness = business
+                                                business.location?.let { geoPoint ->
+                                                    cameraPositionState.position =
+                                                        CameraPosition.fromLatLngZoom(
+                                                            LatLng(geoPoint.latitude, geoPoint.longitude),
+                                                            15f
                                                         )
-                                                    },
-                                                    supportingContent = {
-                                                        Text(
-                                                            business.category,
-                                                            color = MeTontRed,
-                                                            fontSize = 12.sp
-                                                        )
-                                                    },
-                                                    leadingContent = {
-                                                        Icon(
-                                                            Icons.Default.Business,
-                                                            null,
-                                                            tint = MeTontRed
-                                                        )
-                                                    },
-                                                    modifier = Modifier.clickable {
-                                                        selectedBusiness = business
-                                                        business.location?.let { geoPoint ->
-                                                            cameraPositionState.position =
-                                                                CameraPosition.fromLatLngZoom(
-                                                                    LatLng(
-                                                                        geoPoint.latitude,
-                                                                        geoPoint.longitude
-                                                                    ),
-                                                                    15f
-                                                                )
-                                                        }
-                                                        keyboardController?.hide()
-                                                    }
-                                                )
+                                                }
+                                                keyboardController?.hide()
                                             }
-                                        }
-                                    } else {
-                                        Text(
-                                            strings.noSearchResults,
-                                            modifier = Modifier.padding(16.dp),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MeTontGrey
                                         )
                                     }
                                 }
+                            } else {
+                                Text(
+                                    strings.noSearchResults,
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MeTontGrey
+                                )
                             }
                         }
                     }
@@ -864,6 +737,156 @@ fun MapScreen(
     }
 }
 
+// ── REUSABLE COMPOSABLES ──────────────────────────────────────────────
+
+@Composable
+fun NearYouBusinessCard(
+    business: Business,
+    categoryIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(220.dp)
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = MeTontRed.copy(alpha = 0.1f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    business.name,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    business.category,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontRed,
+                    fontSize = 11.sp
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
+                    Text(
+                        " ${business.rating} (${business.reviewCount})",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MeTontGrey
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AnnouncementCard(
+    title: String,
+    category: String,
+    locationName: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(220.dp)
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = MeTontRed.copy(alpha = 0.1f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Event, null, tint = MeTontRed, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    title,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(category, style = MaterialTheme.typography.labelSmall, color = MeTontRed, fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, null, tint = MeTontGrey, modifier = Modifier.size(12.dp))
+                    Text(
+                        " $locationName",
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MeTontGrey
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SeeMoreCard(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .width(80.dp)
+            .height(56.dp)
+            .shadow(4.dp, RoundedCornerShape(28.dp))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFFFF6B6B),
+                        Color(0xFFE41E20)
+                    )
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.ArrowForward,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                "See More",
+                color = Color.White,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
 @Composable
 fun BusinessDetailCard(
     business: Business,
@@ -873,6 +896,7 @@ fun BusinessDetailCard(
     onViewDetails: () -> Unit
 ) {
     val strings = LocalAppStrings.current
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -913,21 +937,31 @@ fun BusinessDetailCard(
                     }
                 }
                 Row {
+                    IconButton(onClick = {
+                        val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                    }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = MeTontGrey
+                        )
+                    }
                     IconButton(onClick = onToggleFavorite) {
                         Icon(
-                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            if (isFavorite) Icons.Default.Favorite
+                            else Icons.Default.FavoriteBorder,
                             null,
                             tint = if (isFavorite) MeTontRed else MeTontGrey
                         )
                     }
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, null, tint = MeTontGrey)
-                    }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Button(
                 onClick = onViewDetails,
                 modifier = Modifier.fillMaxWidth(),
@@ -956,5 +990,96 @@ fun BadgeChip(label: String, color: Color) {
             color = color,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+@Composable
+fun TopPickCard(
+    business: Business,
+    categoryIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    val tierColor = when {
+        business.isSponsored -> Color(0xFFC7BF3F) // Gold
+        business.isFeatured -> Color(0xFFC0C0C0)  // Silver
+        else -> Color(0xFFCD7F32)                  // Bronze
+    }
+    val tierLabel = when {
+        business.isSponsored -> "Sponsored"
+        business.isFeatured -> "Featured"
+        else -> "Premium"
+    }
+
+    Card(
+        modifier = Modifier
+            .width(220.dp)
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tierColor.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = tierColor.copy(alpha = 0.1f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(categoryIcon, null, tint = tierColor, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    business.name,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    business.category,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontRed,
+                    fontSize = 11.sp
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        color = tierColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            tierLabel,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tierColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.sp
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = Color(0xFFFFC107),
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Text(
+                            " ${business.rating}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MeTontGrey,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }

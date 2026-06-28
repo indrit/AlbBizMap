@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import com.albbiz.map.data.Reply
 
 class ReviewViewModel(
     private val repo: ReviewRepository = ReviewRepository()
@@ -103,5 +104,56 @@ class ReviewViewModel(
 
     fun clearReportMessage() {
         _reportMessage.value = null
+    }
+
+    // GET REPLIES FOR A REVIEW
+    private val _replies = MutableStateFlow<Map<String, List<Reply>>>(emptyMap())
+    val replies: StateFlow<Map<String, List<Reply>>> = _replies
+
+    fun loadReplies(businessId: String, reviewId: String) {
+        viewModelScope.launch {
+            repo.getReplies(businessId, reviewId)
+                .catch { e -> _error.value = e.message }
+                .collect { replyList ->
+                    _replies.value = _replies.value.toMutableMap().also {
+                        it[reviewId] = replyList
+                    }
+                }
+        }
+    }
+
+    // ADD A REPLY
+    fun addReply(
+        businessId: String,
+        reviewId: String,
+        comment: String,
+        userId: String,
+        userName: String,
+        onSuccess: () -> Unit
+    ) {
+        val reply = Reply(
+            reviewId = reviewId,
+            userId = userId,
+            userName = userName,
+            comment = comment
+        )
+        viewModelScope.launch {
+            repo.addReply(businessId, reviewId, reply)
+                .onSuccess { onSuccess() }
+                .onFailure { e -> _error.value = e.message }
+        }
+    }
+
+    // TOGGLE LIKE ON A REPLY
+    fun toggleReplyLike(
+        businessId: String,
+        reviewId: String,
+        replyId: String,
+        userId: String
+    ) {
+        viewModelScope.launch {
+            repo.toggleReplyLike(businessId, reviewId, replyId, userId)
+                .onFailure { e -> _error.value = e.message }
+        }
     }
 }

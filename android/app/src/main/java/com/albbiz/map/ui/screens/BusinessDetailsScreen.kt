@@ -44,6 +44,8 @@ import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.utils.AuthGate
+import com.albbiz.map.data.Reply
+import androidx.compose.foundation.layout.PaddingValues
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +67,8 @@ fun BusinessDetailScreen(
     val isLoading by reviewViewModel.isLoading.collectAsState()
     val favoriteIds by mapViewModel.favoriteIds.collectAsState()
     val isFavorite = favoriteIds.contains(business.id)
+    val liveBusiness by mapViewModel.getBusinessByIdFlow(business.id).collectAsState()
+    val currentBusiness = liveBusiness ?: business
 
     LaunchedEffect(business.id) {
         reviewViewModel.loadReviews(business.id)
@@ -421,7 +425,33 @@ fun BusinessDetailScreen(
 
             // ── ACTION BUTTONS ────────────────────────────────────
             item {
+                val currentUserId2 = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                val isLiked = currentUserId2 != null && currentUserId2 in business.likedBy
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // ── LIKE BUTTON ───────────────────────────────────
+                    OutlinedButton(
+                        onClick = {
+                            com.albbiz.map.utils.AuthGate.requireLogin(
+                                onNotLoggedIn = onNavigateToAuth,
+                                action = { mapViewModel.toggleBusinessLike(business.id) {} }
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (isLiked) MeTontRed else MeTontGrey
+                        ),
+                        border = BorderStroke(1.dp, if (isLiked) MeTontRed else MeTontGrey)
+                    ) {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
+                            contentDescription = "Like",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("${business.likeCount}", fontWeight = FontWeight.Bold)
+                    }
+
                     if (currentUserId == business.ownerId) {
                         OutlinedButton(
                             onClick = onEditClick,
@@ -450,7 +480,6 @@ fun BusinessDetailScreen(
                     }
                 }
             }
-
             // ── REVIEWS SECTION ───────────────────────────────────
             item {
                 Text(
@@ -634,7 +663,20 @@ fun DetailReviewItem(
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+    val currentUserName = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@") ?: ""
     val isLiked = currentUserId != null && currentUserId in review.likedBy
+    val repliesMap by reviewViewModel.replies.collectAsState()
+    val replies = repliesMap[review.id] ?: emptyList()
+
+    var showReplies by remember { mutableStateOf(false) }
+    var showReplyInput by remember { mutableStateOf(false) }
+    var replyText by remember { mutableStateOf("") }
+
+    LaunchedEffect(showReplies, replies.size) {
+        if (showReplies) {
+            reviewViewModel.loadReplies(businessId, review.id)
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -643,6 +685,7 @@ fun DetailReviewItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
+            // ── REVIEWER HEADER ───────────────────────────────────
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -680,16 +723,24 @@ fun DetailReviewItem(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
+
+            // ── REVIEW COMMENT ────────────────────────────────────
             Text(
                 review.comment,
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Black.copy(alpha = 0.8f)
             )
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ── LIKE BUTTON ───────────────────────────────────────
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // ── ACTION ROW (like, reply) ───────────────────────────
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Like button
                 IconButton(
                     onClick = {
                         AuthGate.requireLogin(
@@ -704,7 +755,8 @@ fun DetailReviewItem(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,                        contentDescription = "Like",
+                        imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
+                        contentDescription = "Like",
                         tint = if (isLiked) MeTontRed else MeTontGrey,
                         modifier = Modifier.size(18.dp)
                     )
@@ -714,10 +766,191 @@ fun DetailReviewItem(
                     style = MaterialTheme.typography.labelSmall,
                     color = MeTontGrey
                 )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                // Reply button
+                TextButton(
+                    onClick = {
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = onNavigateToAuth,
+                            action = { showReplyInput = !showReplyInput }
+                        )
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Reply,
+                        null,
+                        tint = MeTontGrey,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Reply",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MeTontGrey
+                    )
+                }
+
+                // View replies toggle
+                if (replies.isNotEmpty() || showReplies) {
+                    TextButton(
+                        onClick = { showReplies = !showReplies },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            if (showReplies) "Hide replies"
+                            else "View ${replies.size} ${if (replies.size == 1) "reply" else "replies"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MeTontRed
+                        )
+                    }
+                }
+            }
+
+            // ── REPLY INPUT ───────────────────────────────────────
+            if (showReplyInput) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = replyText,
+                        onValueChange = { replyText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = {
+                            Text("Write a reply...", color = MeTontGrey, fontSize = 12.sp)
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        ),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                    IconButton(
+                        onClick = {
+                            if (replyText.isNotBlank() && currentUserId != null) {
+                                reviewViewModel.addReply(
+                                    businessId = businessId,
+                                    reviewId = review.id,
+                                    comment = replyText.trim(),
+                                    userId = currentUserId,
+                                    userName = currentUserName,
+                                    onSuccess = {
+                                        replyText = ""
+                                        showReplyInput = false
+                                        showReplies = true
+                                        reviewViewModel.loadReplies(businessId, review.id)
+                                    }
+                                )
+                            }
+                        },
+                        enabled = replyText.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.Default.Send,
+                            null,
+                            tint = if (replyText.isNotBlank()) MeTontRed else MeTontGrey
+                        )
+                    }
+                }
+            }
+
+            // ── REPLIES LIST ──────────────────────────────────────
+            if (showReplies && replies.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = Color(0xFFF0F0F0))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                replies.forEach { reply ->
+                    val isReplyLiked = currentUserId != null && currentUserId in reply.likedBy
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // Avatar
+                        Surface(
+                            modifier = Modifier.size(28.dp),
+                            shape = CircleShape,
+                            color = MeTontGrey.copy(alpha = 0.15f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    reply.userName.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
+                                    color = MeTontGrey,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    reply.userName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(reply.createdAt)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MeTontGrey
+                                )
+                            }
+                            Text(
+                                reply.comment,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Black.copy(alpha = 0.8f)
+                            )
+                            // Reply like button
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = {
+                                        AuthGate.requireLogin(
+                                            onNotLoggedIn = onNavigateToAuth,
+                                            action = {
+                                                currentUserId?.let { uid ->
+                                                    reviewViewModel.toggleReplyLike(
+                                                        businessId, review.id, reply.id, uid
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isReplyLiked) Icons.Default.ThumbUp
+                                        else Icons.Default.ThumbUpOffAlt,
+                                        contentDescription = "Like reply",
+                                        tint = if (isReplyLiked) MeTontRed else MeTontGrey,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                Text(
+                                    "${reply.likedBy.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MeTontGrey
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
+
 @Composable
 private fun DetailBadgeChip(label: String, color: Color, icon: ImageVector) {
     Surface(

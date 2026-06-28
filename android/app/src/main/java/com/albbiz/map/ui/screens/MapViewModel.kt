@@ -68,6 +68,17 @@ class MapViewModel : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    val topPicks = _businesses.map { list ->
+        list.filter { it.isSponsored || it.isFeatured || it.isPremium }
+            .sortedWith(
+                compareByDescending<Business> { it.isSponsored }
+                    .thenByDescending { it.isFeatured }
+                    .thenByDescending { it.isPremium }
+                    .thenByDescending { it.rating }
+            )
+            .take(10)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     private var locationCallback: LocationCallback? = null
 
     init {
@@ -124,6 +135,16 @@ class MapViewModel : ViewModel() {
         }
     }
 
+    fun toggleBusinessLike(businessId: String, onNotLoggedIn: () -> Unit) {
+        val userId = Firebase.auth.currentUser?.uid
+        if (userId == null) {
+            onNotLoggedIn()
+            return
+        }
+        viewModelScope.launch {
+            repository.toggleBusinessLike(userId, businessId)
+        }
+    }
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
         filterBusinesses()
@@ -134,6 +155,10 @@ class MapViewModel : ViewModel() {
         filterBusinesses()
     }
 
+    fun getBusinessByIdFlow(id: String): StateFlow<Business?> {
+        return _businesses.map { list -> list.find { it.id == id } }
+            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+    }
     private fun filterBusinesses() {
         val query = _searchQuery.value.trim().lowercase()
         val category = _selectedCategory.value.lowercase()
