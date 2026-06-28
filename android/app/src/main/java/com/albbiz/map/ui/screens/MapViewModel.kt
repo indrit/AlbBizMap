@@ -68,15 +68,19 @@ class MapViewModel : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val topPicks = _businesses.map { list ->
-        list.filter { it.isSponsored || it.isFeatured || it.isPremium }
-            .sortedWith(
-                compareByDescending<Business> { it.isSponsored }
-                    .thenByDescending { it.isFeatured }
-                    .thenByDescending { it.isPremium }
-                    .thenByDescending { it.rating }
-            )
-            .take(10)
+    val topPicks = combine(_businesses, _userLocation) { list, location ->
+        if (location == null) emptyList()
+        else {
+            val userPoint = GeoPoint(location.latitude, location.longitude)
+            list.filter { it.isSponsored || it.isFeatured || it.isPremium }
+                .sortedWith(
+                    compareByDescending<Business> { it.isSponsored }
+                        .thenByDescending { it.isFeatured }
+                        .thenByDescending { it.isPremium }
+                        .thenBy { repository.calculateDistance(userPoint, it.location ?: GeoPoint(0.0, 0.0)) }
+                )
+                .take(10)
+        }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private var locationCallback: LocationCallback? = null
