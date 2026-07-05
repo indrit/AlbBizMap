@@ -27,20 +27,7 @@ class AuthViewModel : ViewModel() {
     private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
-    fun register(email: String, password: String) {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            try {
-                auth.createUserWithEmailAndPassword(email, password).await()
-                _currentUser.value = auth.currentUser
-                _uiState.value = AuthUiState.Success
-            } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error(e.message ?: "Registration failed")
-            }
-        }
-    }
-
-    fun login(email: String, password: String) {
+    fun login(email: String, password: String, isAlbanian: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             try {
@@ -48,11 +35,23 @@ class AuthViewModel : ViewModel() {
                 _currentUser.value = auth.currentUser
                 _uiState.value = AuthUiState.Success
             } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error(e.message ?: "Login failed")
+                _uiState.value = AuthUiState.Error(mapFirebaseError(e, isAlbanian))
             }
         }
     }
 
+    fun register(email: String, password: String, isAlbanian: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            try {
+                auth.createUserWithEmailAndPassword(email, password).await()
+                _currentUser.value = auth.currentUser
+                _uiState.value = AuthUiState.Success
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(mapFirebaseError(e, isAlbanian))
+            }
+        }
+    }
     fun logout() {
         auth.signOut()
         _currentUser.value = null
@@ -65,5 +64,52 @@ class AuthViewModel : ViewModel() {
 
     fun isLoggedIn(): Boolean {
         return auth.currentUser != null
+    }
+
+    fun refreshCurrentUser() {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
+            auth.currentUser?.reload()?.await()
+            _currentUser.value = null
+            _currentUser.value = auth.currentUser
+        }
+    }
+
+    private val _displayName = MutableStateFlow(auth.currentUser?.displayName ?: "")
+    val displayName: StateFlow<String> = _displayName.asStateFlow()
+
+    fun updateDisplayName(name: String) {
+        _displayName.value = name
+    }
+
+    private fun mapFirebaseError(e: Exception, isAlbanian: Boolean): String {
+        val errorCode = (e as? com.google.firebase.auth.FirebaseAuthException)?.errorCode ?: ""
+        return if (isAlbanian) {
+            when (errorCode) {
+                "ERROR_INVALID_EMAIL" -> "Formati i emailit është i pavlefshëm."
+                "ERROR_WRONG_PASSWORD" -> "Fjalëkalimi është i gabuar. Ju lutemi provoni përsëri."
+                "ERROR_USER_NOT_FOUND" -> "Nuk u gjet asnjë llogari me këtë email."
+                "ERROR_USER_DISABLED" -> "Kjo llogari është çaktivizuar."
+                "ERROR_EMAIL_ALREADY_IN_USE" -> "Ky email është tashmë i regjistruar."
+                "ERROR_WEAK_PASSWORD" -> "Fjalëkalimi duhet të ketë të paktën 6 karaktere."
+                "ERROR_NETWORK_REQUEST_FAILED" -> "Gabim rrjeti. Kontrolloni lidhjen tuaj."
+                "ERROR_TOO_MANY_REQUESTS" -> "Shumë tentativa. Ju lutemi provoni më vonë."
+                "ERROR_INVALID_CREDENTIAL" -> "Email ose fjalëkalim i gabuar. Provoni përsëri."
+                else -> "Diçka shkoi keq. Ju lutemi provoni përsëri."
+            }
+        } else {
+            when (errorCode) {
+                "ERROR_INVALID_EMAIL" -> "Invalid email address format."
+                "ERROR_WRONG_PASSWORD" -> "Incorrect password. Please try again."
+                "ERROR_USER_NOT_FOUND" -> "No account found with this email."
+                "ERROR_USER_DISABLED" -> "This account has been disabled."
+                "ERROR_EMAIL_ALREADY_IN_USE" -> "This email is already registered."
+                "ERROR_WEAK_PASSWORD" -> "Password must be at least 6 characters."
+                "ERROR_NETWORK_REQUEST_FAILED" -> "Network error. Check your connection."
+                "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts. Please try again later."
+                "ERROR_INVALID_CREDENTIAL" -> "Incorrect email or password. Please try again."
+                else -> "Something went wrong. Please try again."
+            }
+        }
     }
 }

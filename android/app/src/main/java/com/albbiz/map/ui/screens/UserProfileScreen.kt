@@ -241,11 +241,10 @@ fun UserProfileScreen(
                                 ?.addOnCompleteListener { task ->
                                     isSaving = false
                                     if (task.isSuccessful) {
-                                        Toast.makeText(
-                                            context,
-                                            strings.profileSaved,
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        // Force refresh the Firebase user so MainActivity picks up the new displayName
+                                        viewModel.updateDisplayName("$firstName $lastName".trim())
+                                        viewModel.refreshCurrentUser()
+                                        Toast.makeText(context, strings.profileSaved, Toast.LENGTH_SHORT).show()
                                     } else {
                                         Toast.makeText(
                                             context,

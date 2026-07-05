@@ -46,8 +46,13 @@ class MainActivity : ComponentActivity() {
                         val currentUser by authViewModel.currentUser.collectAsState()
 
                         val currentUserId = currentUser?.uid ?: ""
-                        val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
-
+                        val displayName by authViewModel.displayName.collectAsState()
+                        val currentUserName = displayName
+                            .takeIf { it.isNotBlank() }
+                            ?.split(" ")
+                            ?.firstOrNull()
+                            ?: currentUser?.email?.substringBefore("@")
+                            ?: "User"
                         NavHost(
                             navController = navController,
                             startDestination = "splash"
@@ -72,6 +77,8 @@ class MainActivity : ComponentActivity() {
                                             popUpTo("auth") { inclusive = true }
                                         }
                                     },
+                                    currentLanguage = currentLanguage,
+                                    onLanguageChange = { currentLanguage = it },
                                     viewModel = authViewModel
                                 )
                             }
@@ -94,9 +101,7 @@ class MainActivity : ComponentActivity() {
                                     onEventsClick = {
                                         navController.navigate("events")
                                     },
-                                    onSeeMoreClick = { sortBy ->
-                                        navController.navigate("business_list?sortBy=$sortBy")
-                                    },
+
                                     onLogout = {
                                         navController.navigate("auth") {
                                             popUpTo(0) { inclusive = true }

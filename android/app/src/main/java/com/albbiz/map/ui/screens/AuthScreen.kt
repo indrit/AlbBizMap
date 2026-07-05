@@ -38,14 +38,17 @@ import com.albbiz.map.viewmodel.AuthUiState
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.MeTontWhite
-import com.albbiz.map.ui.MeTontLightRed
 import com.albbiz.map.ui.MeTontGrey
+import com.albbiz.map.ui.AppLanguage
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
     onAuthSuccess: () -> Unit,
+    currentLanguage: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -269,8 +272,9 @@ fun AuthScreen(
                                     Toast.makeText(context, strings.passwordTooShort, Toast.LENGTH_SHORT).show()
                                 }
                                 else -> {
-                                    if (isLoginMode) viewModel.login(email, password)
-                                    else viewModel.register(email, password)
+                                    if (isLoginMode) viewModel.login(email, password, isAlbanian = currentLanguage == AppLanguage.SQ)
+                                    else viewModel.register(email, password, isAlbanian = currentLanguage == AppLanguage.SQ
+                                    )
                                 }
                             }
                         },
@@ -297,6 +301,45 @@ fun AuthScreen(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { onLanguageChange(AppLanguage.EN) },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (currentLanguage == AppLanguage.EN)
+                                    MeTontRed else MeTontGrey
+                            )
+                        ) {
+                            Text(
+                                "🇬🇧 EN",
+                                fontWeight = if (currentLanguage == AppLanguage.EN)
+                                    FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                        Text("|", color = MeTontGrey)
+                        TextButton(
+                            onClick = { onLanguageChange(AppLanguage.SQ) },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (currentLanguage == AppLanguage.SQ)
+                                    MeTontRed else MeTontGrey
+                            )
+                        ) {
+                            Text(
+                                "🇦🇱 SQ",
+                                fontWeight = if (currentLanguage == AppLanguage.SQ)
+                                    FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
                     }
 
                     // Toggle login/register
