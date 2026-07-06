@@ -1,10 +1,7 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Looper
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Business
@@ -15,193 +12,200 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 class MapViewModel : ViewModel() {
+
     private val repository = BusinessRepository()
 
     private val _businesses = MutableStateFlow<List<Business>>(emptyList())
     val businesses: StateFlow<List<Business>> = _businesses
 
-    private val _filteredBusinesses = MutableStateFlow<List<Business>>(emptyList())
-    val filteredBusinesses: StateFlow<List<Business>> = _filteredBusinesses
-
-    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
-    val favoriteIds: StateFlow<Set<String>> = _favoriteIds
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _selectedCategory = MutableStateFlow("")
+    val selectedCategory: StateFlow<String> = _selectedCategory
 
     private val _userLocation = MutableStateFlow<LatLng?>(null)
     val userLocation: StateFlow<LatLng?> = _userLocation
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteIds
 
-    private val _selectedCategory = MutableStateFlow("")
+    // ── DISCOVERY FLOWS ───────────────────────────────────────────
+    val featured: StateFlow<List<Business>> = _businesses
+        .mapLatest { list -> list.filter { it.isFeatured || it.isSponsored }.take(5) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-    // ── DISCOVERY FLOWS (Section 9) ──────────────────────────────
-    val recentlyAdded = _businesses.map { list ->
-        list.sortedByDescending { it.id }.take(10) 
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val recentlyAdded: StateFlow<List<Business>> = _businesses
+        .mapLatest { list -> list.sortedByDescending { it.id }.take(5) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-    val topRated = _businesses.map { list ->
-        list.sortedByDescending { it.rating }.take(10)
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val topRated: StateFlow<List<Business>> = _businesses
+        .mapLatest { list -> list.sortedByDescending { it.rating }.take(10) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-    val featured = _businesses.map { list ->
-        list.filter { it.isFeatured || it.isSponsored || it.isPremium }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val nearMe = combine(_businesses, _userLocation) { list, location ->
-        if (location == null) emptyList()
+    val nearMe = combine(
+        _businesses, _userLocation
+    ) { list: List<Business>, location: LatLng? ->
+        if (location == null) emptyList<Business>()
         else {
             val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.sortedBy { repository.calculateDistance(userPoint, it.location ?: GeoPoint(0.0, 0.0)) }.take(10)
-        }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val topPicks = combine(_businesses, _userLocation) { list, location ->
-        if (location == null) emptyList()
-        else {
-            val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.filter { it.isSponsored || it.isFeatured || it.isPremium }
-                .sortedWith(
-                    compareByDescending<Business> { it.isSponsored }
-                        .thenByDescending { it.isFeatured }
-                        .thenByDescending { it.isPremium }
-                        .thenBy { repository.calculateDistance(userPoint, it.location ?: GeoPoint(0.0, 0.0)) }
+            list.filter { business ->
+                val distance = repository.calculateDistance(
+                    userPoint,
+                    business.location ?: GeoPoint(0.0, 0.0)
                 )
-                .take(10)
+                distance <= 50.0
+            }.sortedWith(
+                compareByDescending<Business> { it.isSponsored }
+                    .thenByDescending { it.isFeatured }
+                    .thenBy {
+                        repository.calculateDistance(
+                            userPoint,
+                            it.location ?: GeoPoint(0.0, 0.0)
+                        )
+                    }
+            ).take(10)
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList<Business>())
 
-    private var locationCallback: LocationCallback? = null
+
+    val topPicks = combine(
+        _businesses, _userLocation
+    ) { list: List<Business>, location: LatLng? ->
+        if (location == null) emptyList<Business>()
+        else {
+            val userPoint = GeoPoint(location.latitude, location.longitude)
+            list.filter { business ->
+                val distance = repository.calculateDistance(
+                    userPoint,
+                    business.location ?: GeoPoint(0.0, 0.0)
+                )
+                (business.isSponsored || business.isFeatured || business.isPremium) && distance <= 50.0
+            }.sortedWith(
+                compareByDescending<Business> { it.isSponsored }
+                    .thenByDescending { it.isFeatured }
+                    .thenByDescending { it.isPremium }
+                    .thenBy {
+                        repository.calculateDistance(
+                            userPoint,
+                            it.location ?: GeoPoint(0.0, 0.0)
+                        )
+                    }
+            ).take(10)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList<Business>())
+
+    val filteredBusinesses: StateFlow<List<Business>> = combine(
+        _businesses,
+        _searchQuery,
+        _selectedCategory
+    ) { list, query, category ->
+        list.filter { business ->
+            val matchesQuery = query.isEmpty() ||
+                    business.name.contains(query, ignoreCase = true) ||
+                    business.category.contains(query, ignoreCase = true) ||
+                    business.address.contains(query, ignoreCase = true)
+            val matchesCategory = category.isEmpty() ||
+                    business.category.equals(category, ignoreCase = true)
+            matchesQuery && matchesCategory
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     init {
-        Log.d("AlbBizMap", "ViewModel initialized")
-        testFirestoreAndLoad()
+        loadBusinesses()
         loadFavorites()
     }
 
-    private fun testFirestoreAndLoad() {
-        viewModelScope.launch {
-            val connected = repository.testConnection()
-            if (connected) {
-                loadBusinesses()
-            } else {
-                _isLoading.value = false
-                Log.e("AlbBizMap", "Firestore connection failed")
-            }
-        }
-    }
-
     private fun loadBusinesses() {
+        _isLoading.value = true
         repository.getActiveBusinesses()
-            .onEach { firestoreBusinesses ->
-                _businesses.value = firestoreBusinesses
-                filterBusinesses()
+            .onEach { list ->
+                _businesses.value = list
                 _isLoading.value = false
             }
-            .catch { e ->
-                Log.e("AlbBizMap", "Error loading from Firestore: ${e.message}")
-                _error.value = e.message
-                _isLoading.value = false
-            }
+            .catch { _isLoading.value = false }
             .launchIn(viewModelScope)
     }
 
-    fun loadFavorites() {
-        val userId = Firebase.auth.currentUser?.uid ?: return
+    private fun loadFavorites() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
-            repository.getFavoriteIds(userId).onSuccess { ids ->
-                _favoriteIds.value = ids.toSet()
-            }
+            repository.getFavoriteIds(userId)
+                .onSuccess { ids ->
+                    _favoriteIds.value = ids.toSet()
+                }
+                .onFailure { e ->
+                    android.util.Log.e("MapViewModel", "Error loading favorites", e)
+                }
         }
     }
-
     fun toggleFavorite(businessId: String) {
-        val userId = Firebase.auth.currentUser?.uid ?: return
-        val currentlyFavorite = _favoriteIds.value.contains(businessId)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
-            repository.toggleFavorite(userId, businessId, !currentlyFavorite).onSuccess {
-                val newFavorites = _favoriteIds.value.toMutableSet()
-                if (currentlyFavorite) newFavorites.remove(businessId) else newFavorites.add(businessId)
-                _favoriteIds.value = newFavorites
+            val current = _favoriteIds.value.toMutableSet()
+            val isCurrentlyFavorite = businessId in current
+            if (isCurrentlyFavorite) {
+                current.remove(businessId)
+            } else {
+                current.add(businessId)
             }
+            _favoriteIds.value = current
+            repository.toggleFavorite(userId, businessId, isCurrentlyFavorite)
         }
     }
 
-    fun toggleBusinessLike(businessId: String, onNotLoggedIn: () -> Unit) {
-        val userId = Firebase.auth.currentUser?.uid
-        if (userId == null) {
-            onNotLoggedIn()
-            return
-        }
-        viewModelScope.launch {
-            repository.toggleBusinessLike(userId, businessId)
-        }
-    }
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
-        filterBusinesses()
     }
 
     fun onCategoryChange(category: String) {
         _selectedCategory.value = category
-        filterBusinesses()
     }
 
-    fun getBusinessByIdFlow(id: String): StateFlow<Business?> {
-        return _businesses.map { list -> list.find { it.id == id } }
-            .stateIn(viewModelScope, SharingStarted.Lazily, null)
-    }
-    private fun filterBusinesses() {
-        val query = _searchQuery.value.trim().lowercase()
-        val category = _selectedCategory.value.lowercase()
-        
-        _filteredBusinesses.value = _businesses.value.filter { business ->
-            val matchesQuery = if (query.isEmpty()) true else {
-                val searchTerms = query.split(" ").filter { it.isNotEmpty() }
-                val searchableText = (business.name + " " + 
-                                    business.category + " " + 
-                                    business.address + " " + 
-                                    business.description).lowercase()
-                searchTerms.all { term -> searchableText.contains(term) }
-            }
-            
-            val matchesCategory = if (category.isEmpty()) true else business.category.lowercase().contains(category)
-            
-            matchesQuery && matchesCategory
-        }
+    fun getBusinessById(id: String): Business? {
+        return _businesses.value.find { it.id == id }
     }
 
-    fun sortByNearMe() {
-        val location = _userLocation.value ?: return
-        val userGeoPoint = GeoPoint(location.latitude, location.longitude)
-        
-        _filteredBusinesses.value = _filteredBusinesses.value.sortedBy { business ->
-            business.location?.let { repository.calculateDistance(userGeoPoint, it) } ?: Double.MAX_VALUE
-        }
-    }
-
-    @SuppressLint("MissingPermission")
     fun startLocationUpdates(context: Context) {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        val fusedClient = LocationServices.getFusedLocationProviderClient(context)
 
+        // ── GET LAST KNOWN LOCATION IMMEDIATELY ───────────────────
+        try {
+            fusedClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    _userLocation.value = LatLng(it.latitude, it.longitude)
+                }
+            }
+        } catch (e: SecurityException) {
+            android.util.Log.e("MapViewModel", "Location permission missing", e)
+        }
+
+        // ── CONTINUOUS UPDATES ────────────────────────────────────
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            10000L
-        ).build()
+            10_000L
+        ).apply {
+            setMinUpdateIntervalMillis(5_000L)
+            setWaitForAccurateLocation(false)
+        }.build()
 
-        locationCallback = object : LocationCallback() {
+        val locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.lastLocation?.let { location ->
                     _userLocation.value = LatLng(location.latitude, location.longitude)
@@ -210,24 +214,13 @@ class MapViewModel : ViewModel() {
         }
 
         try {
-            fusedLocationClient.requestLocationUpdates(
+            fusedClient.requestLocationUpdates(
                 locationRequest,
-                locationCallback!!,
-                Looper.getMainLooper()
+                locationCallback,
+                android.os.Looper.getMainLooper()
             )
-        } catch (e: Exception) {
-            _error.value = "Location error: ${e.message}"
+        } catch (e: SecurityException) {
+            android.util.Log.e("MapViewModel", "Location permission missing", e)
         }
-    }
-
-    fun stopLocationUpdates(context: Context) {
-        locationCallback?.let {
-            LocationServices.getFusedLocationProviderClient(context)
-                .removeLocationUpdates(it)
-        }
-    }
-
-    fun getBusinessById(id: String): Business? {
-        return _businesses.value.find { it.id == id }
     }
 }

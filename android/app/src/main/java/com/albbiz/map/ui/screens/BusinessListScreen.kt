@@ -43,6 +43,7 @@ import com.google.firebase.firestore.GeoPoint
 fun BusinessListScreen(
     onBackClick: () -> Unit,
     onBusinessClick: (String) -> Unit,
+    onNavigateToAuth: () -> Unit = {},
     viewModel: MapViewModel = viewModel(),
     sortBy: String = "default"
 ) {
@@ -238,7 +239,7 @@ fun BusinessListScreen(
                             userLocation = userLocation,
                             isFavorite = favoriteIds.contains(business.id),
                             onToggleFavorite = { viewModel.toggleFavorite(business.id) },
-                            onToggleLike = { viewModel.toggleBusinessLike(business.id) {} },
+                            onToggleLike = { viewModel.toggleFavorite(business.id) },
                             onClick = { onBusinessClick(business.id) }
                         )
                     }

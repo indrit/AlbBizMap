@@ -67,8 +67,7 @@ fun BusinessDetailScreen(
     val isLoading by reviewViewModel.isLoading.collectAsState()
     val favoriteIds by mapViewModel.favoriteIds.collectAsState()
     val isFavorite = favoriteIds.contains(business.id)
-    val liveBusiness by mapViewModel.getBusinessByIdFlow(business.id).collectAsState()
-    val currentBusiness = liveBusiness ?: business
+    val currentBusiness = business
 
     LaunchedEffect(business.id) {
         reviewViewModel.loadReviews(business.id)
@@ -434,7 +433,7 @@ fun BusinessDetailScreen(
                         onClick = {
                             com.albbiz.map.utils.AuthGate.requireLogin(
                                 onNotLoggedIn = onNavigateToAuth,
-                                action = { mapViewModel.toggleBusinessLike(business.id) {} }
+                                action = { mapViewModel.toggleFavorite(business.id) }
                             )
                         },
                         shape = RoundedCornerShape(12.dp),

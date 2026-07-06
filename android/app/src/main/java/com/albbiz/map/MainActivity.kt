@@ -23,6 +23,7 @@ import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
+import com.albbiz.map.viewmodel.StoriesViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,16 +44,12 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         val mapViewModel: MapViewModel = viewModel()
                         val authViewModel: AuthViewModel = viewModel()
+                        val storiesViewModel: StoriesViewModel = viewModel()
                         val currentUser by authViewModel.currentUser.collectAsState()
 
                         val currentUserId = currentUser?.uid ?: ""
-                        val displayName by authViewModel.displayName.collectAsState()
-                        val currentUserName = displayName
-                            .takeIf { it.isNotBlank() }
-                            ?.split(" ")
-                            ?.firstOrNull()
-                            ?: currentUser?.email?.substringBefore("@")
-                            ?: "User"
+                        val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
+
                         NavHost(
                             navController = navController,
                             startDestination = "splash"
@@ -101,7 +98,12 @@ class MainActivity : ComponentActivity() {
                                     onEventsClick = {
                                         navController.navigate("events")
                                     },
-
+                                    onAddStoryClick = {
+                                        navController.navigate("add_story")
+                                    },
+                                    onStoryClick = { index: Int ->
+                                        navController.navigate("story_viewer/$index")
+                                    },
                                     onLogout = {
                                         navController.navigate("auth") {
                                             popUpTo(0) { inclusive = true }
@@ -123,7 +125,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            // ── BUSINESS LIST (with sortBy) ───────────────────────
+                            // ── BUSINESS LIST ─────────────────────────────────────
                             composable(
                                 route = "business_list?sortBy={sortBy}",
                                 arguments = listOf(
@@ -139,6 +141,7 @@ class MainActivity : ComponentActivity() {
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },
+                                    onNavigateToAuth = { navController.navigate("auth") },
                                     viewModel = mapViewModel,
                                     sortBy = sortBy
                                 )
@@ -160,7 +163,6 @@ class MainActivity : ComponentActivity() {
                                     viewModel = authViewModel
                                 )
                             }
-
                             // ── ADMIN ─────────────────────────────────────────────
                             composable("admin") {
                                 AdminScreen(
@@ -271,6 +273,37 @@ class MainActivity : ComponentActivity() {
                                     )
                                 } else {
                                     Text("Business not found.")
+                                }
+                            }
+
+                            // ── ADD STORY ─────────────────────────────────────────
+                            composable("add_story") {
+                                AddStoryScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onStoryPosted = { navController.popBackStack() },
+                                    mapViewModel = mapViewModel
+                                )
+                            }
+
+                            // ── STORY VIEWER ──────────────────────────────────────
+                            composable(
+                                route = "story_viewer/{storyIndex}",
+                                arguments = listOf(
+                                    navArgument("storyIndex") { type = NavType.IntType }
+                                )
+                            ) { backStackEntry ->
+                                val storyIndex = backStackEntry.arguments?.getInt("storyIndex") ?: 0
+                                val stories by storiesViewModel.stories.collectAsState()
+                                if (stories.isNotEmpty()) {
+                                    StoryViewerScreen(
+                                        stories = stories,
+                                        initialIndex = storyIndex,
+                                        onClose = { navController.popBackStack() },
+                                        onBusinessClick = { businessId ->
+                                            navController.navigate("business_detail/$businessId")
+                                        },
+                                        storiesViewModel = storiesViewModel
+                                    )
                                 }
                             }
                         }

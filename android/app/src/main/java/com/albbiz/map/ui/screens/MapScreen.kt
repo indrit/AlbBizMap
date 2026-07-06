@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -52,8 +54,11 @@ import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.ui.theme.TierSilver
+import com.albbiz.map.viewmodel.StoriesViewModel
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
@@ -101,6 +106,8 @@ fun MapScreen(
     onLogout: () -> Unit = {},
     currentUserName: String = "",
     onBusinessClick: (String) -> Unit,
+    onAddStoryClick: () -> Unit = {},
+    onStoryClick: (Int) -> Unit = {},
     viewModel: MapViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -120,14 +127,20 @@ fun MapScreen(
     val eventsRepository = remember { EventsRepository() }
     val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
 
-    // selectedSheetBusiness = shown inside the bottom sheet when marker tapped
+    // Stories
+    val storiesViewModel: StoriesViewModel = viewModel()
+    val stories by storiesViewModel.stories.collectAsState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val groupedStories = remember(stories) {
+        stories.groupBy { it.businessId ?: it.userId }
+    }
+
     var selectedSheetBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
     var markerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     val sheetState = rememberBottomSheetScaffoldState()
 
-    // Expand sheet when business selected, collapse when dismissed
     LaunchedEffect(selectedSheetBusiness) {
         if (selectedSheetBusiness != null) {
             sheetState.bottomSheetState.expand()
@@ -186,7 +199,10 @@ fun MapScreen(
                 val isGoogleHQ = (location.latitude in 37.42..37.43) &&
                         (location.longitude in -122.09..-122.07)
                 if (!isGoogleHQ) {
-                    cameraPositionState.position = CameraPosition.fromLatLngZoom(location, 14f)
+                    cameraPositionState.animate(
+                        update = CameraUpdateFactory.newLatLngZoom(location, 14f),
+                        durationMs = 1000
+                    )
                     hasMovedToInitialLocation = true
                 }
             }
@@ -204,7 +220,7 @@ fun MapScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = Color.White) {
-                // ── RED HEADER ─────────────────────────────────────────
+                // RED HEADER
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -233,7 +249,7 @@ fun MapScreen(
                     }
                 }
 
-                // ── WELCOME BAR ────────────────────────────────────────
+                // WELCOME BAR
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -317,7 +333,7 @@ fun MapScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── TOP APP BAR ───────────────────────────────────────────
+            // TOP APP BAR
             TopAppBar(
                 title = { Text(strings.appName, fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
@@ -340,7 +356,7 @@ fun MapScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
             )
 
-            // ── BOTTOM SHEET SCAFFOLD ─────────────────────────────────
+            // BOTTOM SHEET SCAFFOLD
             BottomSheetScaffold(
                 scaffoldState = sheetState,
                 sheetPeekHeight = 120.dp,
@@ -357,7 +373,7 @@ fun MapScreen(
                 },
                 sheetContent = {
                     if (selectedSheetBusiness != null) {
-                        // ── BUSINESS DETAIL IN SHEET ──────────────────────
+                        // BUSINESS DETAIL IN SHEET
                         val biz = selectedSheetBusiness!!
                         Column(
                             modifier = Modifier
@@ -365,52 +381,29 @@ fun MapScreen(
                                 .wrapContentHeight()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            // Back button
                             TextButton(
                                 onClick = { selectedSheetBusiness = null },
                                 contentPadding = PaddingValues(0.dp)
                             ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    null,
-                                    tint = MeTontRed,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MeTontRed, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Back", color = MeTontRed, fontWeight = FontWeight.Medium)
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Name + Category
-                            Text(
-                                biz.name,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                            Text(
-                                biz.category,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MeTontRed,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Text(biz.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(biz.category, style = MaterialTheme.typography.bodySmall, color = MeTontRed, fontWeight = FontWeight.Medium)
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Rating
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
-                                Text(
-                                    " ${biz.rating} (${biz.reviewCount} reviews)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MeTontGrey
-                                )
+                                Text(" ${biz.rating} (${biz.reviewCount} reviews)", style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Address
                             if (biz.address.isNotBlank()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.LocationOn, null, tint = MeTontRed, modifier = Modifier.size(14.dp))
@@ -419,19 +412,12 @@ fun MapScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
 
-                            // Description
                             if (biz.description.isNotBlank()) {
-                                Text(
-                                    biz.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Black.copy(alpha = 0.7f),
-                                    maxLines = 2
-                                )
+                                Text(biz.description, style = MaterialTheme.typography.bodySmall, color = Color.Black.copy(alpha = 0.7f), maxLines = 2)
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Get Directions button
                             Button(
                                 onClick = {
                                     val uri = Uri.parse("google.navigation:q=${biz.location?.latitude},${biz.location?.longitude}&mode=d")
@@ -448,7 +434,6 @@ fun MapScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // View Full Profile text button
                             TextButton(
                                 onClick = { onBusinessClick(biz.id) },
                                 modifier = Modifier.fillMaxWidth()
@@ -460,13 +445,128 @@ fun MapScreen(
                         }
 
                     } else {
-                        // ── CAROUSELS ─────────────────────────────────────
+                        // CAROUSELS
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 400.dp)
                                 .padding(bottom = 24.dp)
                         ) {
+                            // ── STORIES BAR ───────────────────────────────────────
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Add Story circle
+                                item {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .clip(CircleShape)
+                                                .background(MeTontRed.copy(alpha = 0.1f))
+                                                .border(2.dp, MeTontRed, CircleShape)
+                                                .clickable { onAddStoryClick() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = "Add Story",
+                                                tint = MeTontRed,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
+                                        Text(
+                                            "Your Story",
+                                            fontSize = 10.sp,
+                                            color = MeTontGrey,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                // Story circles
+                                items(groupedStories.entries.toList()) { (_, storyGroup) ->
+                                    val hasViewed = storiesViewModel.hasViewedAllStories(storyGroup)
+                                    val firstStory = storyGroup.first()
+                                    val displayName = firstStory.businessName ?: firstStory.userName
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier.clickable {
+                                            val allStories = stories
+                                            val clickedStory = storyGroup.first()
+                                            val index = allStories.indexOfFirst { it.id == clickedStory.id }
+                                            onStoryClick(index.coerceAtLeast(0))
+                                        }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .border(
+                                                    width = 2.5.dp,
+                                                    color = if (hasViewed) MeTontGrey.copy(alpha = 0.4f) else MeTontRed,
+                                                    shape = CircleShape
+                                                )
+                                                .padding(3.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier.fillMaxSize(),
+                                                shape = CircleShape,
+                                                color = when (firstStory.type) {
+                                                    "sponsored" -> TierGold.copy(alpha = 0.2f)
+                                                    "community" -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                                                    "business" -> MeTontRed.copy(alpha = 0.1f)
+                                                    else -> MeTontGrey.copy(alpha = 0.1f)
+                                                }
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text(
+                                                        displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                        fontSize = 22.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = when (firstStory.type) {
+                                                            "sponsored" -> TierGold
+                                                            "community" -> Color(0xFF2196F3)
+                                                            "business" -> MeTontRed
+                                                            else -> MeTontGrey
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            displayName.take(8),
+                                            fontSize = 10.sp,
+                                            color = if (hasViewed) MeTontGrey.copy(alpha = 0.5f) else Color.Black,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                        if (firstStory.isSponsored) {
+                                            Text(
+                                                "Sponsored",
+                                                fontSize = 8.sp,
+                                                color = TierGold,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFFF0F0F0)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             // TOP RECOMMENDED
                             val sponsored = businesses.filter { it.isSponsored || it.isFeatured }
                             if (sponsored.isNotEmpty()) {
@@ -539,7 +639,17 @@ fun MapScreen(
                                 color = Color.Black
                             )
                             if (nearMeBusinesses.isEmpty()) {
-                                Text("Enable location to see businesses near you", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(Icons.Default.LocationOff, null, tint = MeTontGrey.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("No businesses near you yet", style = MaterialTheme.typography.bodySmall, color = MeTontGrey, fontWeight = FontWeight.Medium)
+                                    Text("MeTont is growing — check back soon!", style = MaterialTheme.typography.labelSmall, color = MeTontGrey.copy(alpha = 0.7f))
+                                }
                             } else {
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(nearMeBusinesses) { business ->
@@ -765,7 +875,12 @@ fun MapScreen(
                         FloatingActionButton(
                             onClick = {
                                 val target = userLocation ?: TIRANA_LOCATION
-                                cameraPositionState.position = CameraPosition.fromLatLngZoom(target, 15f)
+                                scope.launch {
+                                    cameraPositionState.animate(
+                                        update = CameraUpdateFactory.newLatLngZoom(target, 15f),
+                                        durationMs = 800
+                                    )
+                                }
                             },
                             containerColor = Color.White,
                             contentColor = MeTontRed,
