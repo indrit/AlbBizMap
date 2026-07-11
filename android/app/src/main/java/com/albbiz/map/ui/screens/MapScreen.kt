@@ -520,10 +520,11 @@ fun MapScreen(
                                                 modifier = Modifier.fillMaxSize(),
                                                 shape = CircleShape,
                                                 color = when (firstStory.type) {
-                                                    "sponsored" -> TierGold.copy(alpha = 0.2f)
-                                                    "community" -> Color(0xFF2196F3).copy(alpha = 0.2f)
-                                                    "business" -> MeTontRed.copy(alpha = 0.1f)
-                                                    else -> MeTontGrey.copy(alpha = 0.1f)
+                                                    "sponsored" -> TierGold
+                                                    "community" -> Color(0xFF2196F3)
+                                                    "business" -> MeTontRed
+                                                    "new_business" -> Color(0xFF4CAF50) // Green
+                                                    else -> MeTontGrey
                                                 }
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {

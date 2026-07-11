@@ -44,6 +44,23 @@ class AddBusinessViewModel(
 
                         result.fold(
                             onSuccess = {
+                                // Auto-create "Just opened" story
+                                viewModelScope.launch {
+                                    val storiesRepository = com.albbiz.map.data.StoriesRepository()
+                                    val newBusinessStory = com.albbiz.map.data.Story(
+                                        userId = businessWithImages.ownerId,
+                                        userName = businessWithImages.name,
+                                        businessId = businessWithImages.id,
+                                        businessName = businessWithImages.name,
+                                        type = "new_business",
+                                        category = businessWithImages.category,
+                                        location = businessWithImages.address,
+                                        text = "🆕 Just opened in ${businessWithImages.address}! Come visit us.",
+                                        photos = businessWithImages.photos,
+                                        isSponsored = false
+                                    )
+                                    storiesRepository.addStory(newBusinessStory, emptyList())
+                                }
                                 _uiState.value = AddBusinessUiState.Success
                             },
                             onFailure = { e ->
