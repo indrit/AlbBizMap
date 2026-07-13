@@ -228,6 +228,18 @@ fun MapScreen(
         }
     }
     var locateMeJob by remember { mutableStateOf<Job?>(null) }
+    var drawerJob by remember { mutableStateOf<Job?>(null) }
+    val closeDrawer: () -> Unit = {
+        // Same interruption risk as open() — guard it the same way.
+        drawerJob?.cancel()
+        drawerJob = scope.launch {
+            try {
+                drawerState.close()
+            } catch (e: Exception) {
+                drawerState.snapTo(DrawerValue.Closed)
+            }
+        }
+    }
 
     var selectedCategoryLabel by remember { mutableStateOf("All") }
     val categories = listOf(
@@ -290,7 +302,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.profile, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onProfileClick() },
+                    onClick = { closeDrawer(); onProfileClick() },
                     icon = { Icon(Icons.Default.AccountCircle, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -298,7 +310,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.favorites, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onFavoritesClick() },
+                    onClick = { closeDrawer(); onFavoritesClick() },
                     icon = { Icon(Icons.Default.Favorite, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -306,7 +318,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.communityEvents, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onEventsClick() },
+                    onClick = { closeDrawer(); onEventsClick() },
                     icon = { Icon(Icons.Default.Event, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -314,7 +326,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.addBusiness, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onAddBusinessClick() },
+                    onClick = { closeDrawer(); onAddBusinessClick() },
                     icon = { Icon(Icons.Default.AddBusiness, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -322,7 +334,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.listView, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onListClick() },
+                    onClick = { closeDrawer(); onListClick() },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -334,7 +346,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.logout, fontWeight = FontWeight.Bold, color = MeTontRed) },
                     selected = false,
-                    onClick = { scope.launch { drawerState.close() }; onLogout() },
+                    onClick = { closeDrawer(); onLogout() },
                     icon = { Icon(Icons.Default.Logout, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -357,7 +369,21 @@ fun MapScreen(
             TopAppBar(
                 title = { Text(strings.appName, fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                    IconButton(onClick = {
+                        // Cancel any open()/close() animation already in flight so a burst
+                        // of rapid taps can't fire overlapping animations on the same
+                        // DrawerState (which interrupt each other and can throw).
+                        drawerJob?.cancel()
+                        drawerJob = scope.launch {
+                            try {
+                                drawerState.open()
+                            } catch (e: Exception) {
+                                // Interrupted mid-animation — snap straight to open instead
+                                // of leaving the drawer state stuck or crashing.
+                                drawerState.snapTo(DrawerValue.Open)
+                            }
+                        }
+                    }) {
                         Icon(Icons.Default.Menu, null, tint = Color.White)
                     }
                 },
