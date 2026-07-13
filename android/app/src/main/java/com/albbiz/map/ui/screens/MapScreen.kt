@@ -54,6 +54,7 @@ import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.ui.theme.TierSilver
+import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.viewmodel.StoriesViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
@@ -62,6 +63,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,17 +106,26 @@ fun MapScreen(
     onFavoritesClick: () -> Unit = {},
     onEventsClick: () -> Unit = {},
     onLogout: () -> Unit = {},
-    currentUserName: String = "",
     onBusinessClick: (String) -> Unit,
     onAddStoryClick: () -> Unit = {},
     onStoryClick: (Int) -> Unit = {},
-    viewModel: MapViewModel = viewModel()
+    viewModel: MapViewModel = viewModel(),
+    storiesViewModel: StoriesViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val strings = LocalAppStrings.current
+
+    // Read reactively from AuthViewModel instead of a value passed down through
+    // NavHost's route builder — that builder only runs once (cached via remember),
+    // so a plain String parameter here would freeze at its first-composition value
+    // and never reflect later profile changes.
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val currentUserName = currentUser?.displayName?.takeIf { it.isNotBlank() }
+        ?: currentUser?.email?.substringBefore("@") ?: "User"
 
     val businesses by viewModel.filteredBusinesses.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -128,7 +139,6 @@ fun MapScreen(
     val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
 
     // Stories
-    val storiesViewModel: StoriesViewModel = viewModel()
     val stories by storiesViewModel.stories.collectAsState()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val groupedStories = remember(stories) {
@@ -199,15 +209,25 @@ fun MapScreen(
                 val isGoogleHQ = (location.latitude in 37.42..37.43) &&
                         (location.longitude in -122.09..-122.07)
                 if (!isGoogleHQ) {
-                    cameraPositionState.animate(
-                        update = CameraUpdateFactory.newLatLngZoom(location, 14f),
-                        durationMs = 1000
-                    )
+                    try {
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngZoom(location, 14f),
+                            durationMs = 1000
+                        )
+                    } catch (e: Exception) {
+                        // Maps Compose signals an interrupted animation (e.g. the user
+                        // touched the map mid-transition) by throwing out of animate().
+                        // Snap straight to the target instead of letting the exception
+                        // escape the composition and blank the screen.
+                        cameraPositionState.position =
+                            CameraPosition.fromLatLngZoom(location, 14f)
+                    }
                     hasMovedToInitialLocation = true
                 }
             }
         }
     }
+    var locateMeJob by remember { mutableStateOf<Job?>(null) }
 
     var selectedCategoryLabel by remember { mutableStateOf("All") }
     val categories = listOf(
@@ -258,7 +278,7 @@ fun MapScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${strings.welcomeUser}, $currentUserName",
+                        text = "${strings.welcomeUser}, ${currentUserName.substringBefore(" ")}",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
@@ -372,6 +392,7 @@ fun MapScreen(
                     )
                 },
                 sheetContent = {
+                  Column(modifier = Modifier.navigationBarsPadding()) {
                     if (selectedSheetBusiness != null) {
                         // BUSINESS DETAIL IN SHEET
                         val biz = selectedSheetBusiness!!
@@ -753,6 +774,7 @@ fun MapScreen(
                             Spacer(modifier = Modifier.height(24.dp))
                         }
                     }
+                  }
                 }
             ) { padding ->
                 Box(
@@ -876,11 +898,20 @@ fun MapScreen(
                         FloatingActionButton(
                             onClick = {
                                 val target = userLocation ?: TIRANA_LOCATION
-                                scope.launch {
-                                    cameraPositionState.animate(
-                                        update = CameraUpdateFactory.newLatLngZoom(target, 15f),
-                                        durationMs = 800
-                                    )
+                                // Cancel any animation already in flight so tapping this
+                                // button again mid-transition can't fire a second,
+                                // overlapping animate() call on the same camera state.
+                                locateMeJob?.cancel()
+                                locateMeJob = scope.launch {
+                                    try {
+                                        cameraPositionState.animate(
+                                            update = CameraUpdateFactory.newLatLngZoom(target, 15f),
+                                            durationMs = 800
+                                        )
+                                    } catch (e: Exception) {
+                                        cameraPositionState.position =
+                                            CameraPosition.fromLatLngZoom(target, 15f)
+                                    }
                                 }
                             },
                             containerColor = Color.White,

@@ -30,8 +30,6 @@ import com.albbiz.map.viewmodel.ReviewViewModel
 @Composable
 fun AddReviewScreen(
     businessId: String,
-    userId: String,
-    userName: String,
     onReviewSubmitted: () -> Unit,
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
@@ -199,6 +197,10 @@ fun AddReviewScreen(
                         Toast.makeText(context, strings.pleaseWriteReview, Toast.LENGTH_SHORT).show()
                         return@Button
                     }
+                    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                    val userId = firebaseUser?.uid ?: ""
+                    val userName = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
+                        ?: firebaseUser?.email?.substringBefore("@") ?: "User"
                     reviewViewModel.addReview(
                         businessId = businessId,
                         rating = rating,

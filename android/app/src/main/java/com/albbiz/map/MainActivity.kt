@@ -5,10 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -48,7 +51,6 @@ class MainActivity : ComponentActivity() {
                         val currentUser by authViewModel.currentUser.collectAsState()
 
                         val currentUserId = currentUser?.uid ?: ""
-                        val currentUserName = currentUser?.email?.substringBefore("@") ?: "User"
 
                         NavHost(
                             navController = navController,
@@ -109,11 +111,12 @@ class MainActivity : ComponentActivity() {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
-                                    currentUserName = currentUserName,
                                     onBusinessClick = { businessId ->
                                         navController.navigate("business_detail/$businessId")
                                     },
-                                    viewModel = mapViewModel
+                                    viewModel = mapViewModel,
+                                    storiesViewModel = storiesViewModel,
+                                    authViewModel = authViewModel
                                 )
                             }
 
@@ -242,8 +245,6 @@ class MainActivity : ComponentActivity() {
                                 val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
                                 AddReviewScreen(
                                     businessId = businessId,
-                                    userId = currentUserId,
-                                    userName = currentUserName,
                                     onReviewSubmitted = { navController.popBackStack() }
                                 )
                             }
@@ -294,16 +295,36 @@ class MainActivity : ComponentActivity() {
                             ) { backStackEntry ->
                                 val storyIndex = backStackEntry.arguments?.getInt("storyIndex") ?: 0
                                 val stories by storiesViewModel.stories.collectAsState()
-                                if (stories.isNotEmpty()) {
-                                    StoryViewerScreen(
-                                        stories = stories,
-                                        initialIndex = storyIndex,
-                                        onClose = { navController.popBackStack() },
-                                        onBusinessClick = { businessId ->
-                                            navController.navigate("business_detail/$businessId")
-                                        },
-                                        storiesViewModel = storiesViewModel
-                                    )
+                                val isLoading by storiesViewModel.isLoading.collectAsState()
+
+                                when {
+                                    stories.isNotEmpty() -> {
+                                        StoryViewerScreen(
+                                            stories = stories,
+                                            initialIndex = storyIndex.coerceIn(0, stories.lastIndex),
+                                            onClose = { navController.popBackStack() },
+                                            onBusinessClick = { businessId ->
+                                                navController.navigate("business_detail/$businessId")
+                                            },
+                                            storiesViewModel = storiesViewModel
+                                        )
+                                    }
+                                    isLoading -> {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                    else -> {
+                                        // Stories finished loading but came back empty (or list changed
+                                        // out from under us, e.g. expired) — bail out instead of
+                                        // rendering a blank screen.
+                                        LaunchedEffect(Unit) {
+                                            navController.popBackStack()
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -67,19 +67,14 @@ class AuthViewModel : ViewModel() {
     }
 
     fun refreshCurrentUser() {
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(500)
-            auth.currentUser?.reload()?.await()
-            _currentUser.value = null
-            _currentUser.value = auth.currentUser
-        }
-    }
-
-    private val _displayName = MutableStateFlow(auth.currentUser?.displayName ?: "")
-    val displayName: StateFlow<String> = _displayName.asStateFlow()
-
-    fun updateDisplayName(name: String) {
-        _displayName.value = name
+        // Firebase's updateProfile() already updates the local cached FirebaseUser
+        // synchronously on success, so we don't need to wait or hit the network here —
+        // just re-publish it. The null-then-reassign forces a distinct emission since
+        // Firebase reuses the same FirebaseUser reference internally (reload() mutates
+        // it in place), which would otherwise be deduped by StateFlow and not trigger
+        // recomposition.
+        _currentUser.value = null
+        _currentUser.value = auth.currentUser
     }
 
     private fun mapFirebaseError(e: Exception, isAlbanian: Boolean): String {

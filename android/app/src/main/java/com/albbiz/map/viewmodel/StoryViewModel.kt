@@ -88,7 +88,8 @@ class StoriesViewModel(
 
             val story = Story(
                 userId = currentUser.uid,
-                userName = currentUser.email?.substringBefore("@") ?: "User",
+                userName = currentUser.displayName?.takeIf { it.isNotBlank() }
+                    ?: currentUser.email?.substringBefore("@") ?: "User",
                 businessId = businessId,
                 businessName = businessName,
                 type = type,

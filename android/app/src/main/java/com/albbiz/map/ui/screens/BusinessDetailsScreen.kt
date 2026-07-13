@@ -661,8 +661,10 @@ fun DetailReviewItem(
     onNavigateToAuth: () -> Unit,
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
-    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-    val currentUserName = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@") ?: ""
+    val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+    val currentUserId = firebaseUser?.uid
+    val currentUserName = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
+        ?: firebaseUser?.email?.substringBefore("@") ?: ""
     val isLiked = currentUserId != null && currentUserId in review.likedBy
     val repliesMap by reviewViewModel.replies.collectAsState()
     val replies = repliesMap[review.id] ?: emptyList()
