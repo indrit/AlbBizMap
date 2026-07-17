@@ -68,6 +68,15 @@ class StoriesViewModel(
         businessName: String? = null,
         isSponsored: Boolean = false
     ) {
+        // AddStoryScreen has two buttons (top-bar "Post" and bottom "Post Story")
+        // that both call this, and _addStoryState only used to flip to Loading
+        // *inside* the launched coroutine below — so both buttons' onClick could
+        // fire and both pass the UI's "enabled" check before either recomposition
+        // disabled them, creating two duplicate story documents. Checking and
+        // setting Loading synchronously, before returning to the caller, closes
+        // that window: the second call sees Loading already set and bails here.
+        if (_addStoryState.value == AddStoryUiState.Loading) return
+
         val currentUser = FirebaseAuth.getInstance().currentUser ?: run {
             _addStoryState.value = AddStoryUiState.Error("You must be logged in to post a story")
             return
@@ -83,9 +92,9 @@ class StoriesViewModel(
             return
         }
 
-        viewModelScope.launch {
-            _addStoryState.value = AddStoryUiState.Loading
+        _addStoryState.value = AddStoryUiState.Loading
 
+        viewModelScope.launch {
             val story = Story(
                 userId = currentUser.uid,
                 userName = currentUser.displayName?.takeIf { it.isNotBlank() }

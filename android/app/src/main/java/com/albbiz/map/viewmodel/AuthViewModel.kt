@@ -28,8 +28,15 @@ class AuthViewModel : ViewModel() {
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     fun login(email: String, password: String, isAlbanian: Boolean = false) {
+        // AuthScreen's Sign In button only disables once uiState becomes Loading,
+        // and Compose doesn't recompose synchronously with a StateFlow write — a
+        // second very-fast tap can invoke login() again before that recomposition
+        // lands, firing two concurrent sign-in calls to Firebase Auth. Checking and
+        // setting Loading synchronously, before launch, rejects the second call here.
+        if (_uiState.value == AuthUiState.Loading) return
+        _uiState.value = AuthUiState.Loading
+
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
                 _currentUser.value = auth.currentUser
@@ -41,8 +48,11 @@ class AuthViewModel : ViewModel() {
     }
 
     fun register(email: String, password: String, isAlbanian: Boolean = false) {
+        // Same double-submit gap as login() above.
+        if (_uiState.value == AuthUiState.Loading) return
+        _uiState.value = AuthUiState.Loading
+
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
             try {
                 auth.createUserWithEmailAndPassword(email, password).await()
                 _currentUser.value = auth.currentUser

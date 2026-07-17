@@ -673,7 +673,11 @@ fun DetailReviewItem(
     var showReplyInput by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
 
-    LaunchedEffect(showReplies, replies.size) {
+    // Keyed on showReplies alone (not replies.size): loadReplies() attaches a live
+    // Firestore listener that updates `replies` itself, so keying on its own output
+    // size caused this effect to retrigger on every emission — restarting the
+    // listener in a loop and piling up concurrent collectors on the same query.
+    LaunchedEffect(showReplies) {
         if (showReplies) {
             reviewViewModel.loadReplies(businessId, review.id)
         }
@@ -844,8 +848,11 @@ fun DetailReviewItem(
                                     onSuccess = {
                                         replyText = ""
                                         showReplyInput = false
+                                        // No need to call loadReplies() again here — it's a live
+                                        // Firestore listener (started by the LaunchedEffect above
+                                        // once showReplies flips true) that will pick up the new
+                                        // reply on its own.
                                         showReplies = true
-                                        reviewViewModel.loadReplies(businessId, review.id)
                                     }
                                 )
                             }

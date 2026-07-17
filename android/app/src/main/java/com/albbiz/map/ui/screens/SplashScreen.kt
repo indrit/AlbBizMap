@@ -27,6 +27,12 @@ fun SplashScreen(
     val context = LocalContext.current
     var videoEnded by remember { mutableStateOf(false) }
     var showLoading by remember { mutableStateOf(false) }
+    // Two independent effects below can each call onSplashFinished() — the normal
+    // "video ended" path and the 8s fallback timeout — and if the video finishes
+    // close to the 8s mark, both can fire. This is currently harmless only because
+    // MainActivity's navigateSafe() happens to debounce the resulting double
+    // navigation; guarding it here directly means that's no longer relied upon.
+    var hasFinished by remember { mutableStateOf(false) }
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -62,14 +68,20 @@ fun SplashScreen(
     LaunchedEffect(videoEnded) {
         if (videoEnded) {
             delay(500)
-            onSplashFinished()
+            if (!hasFinished) {
+                hasFinished = true
+                onSplashFinished()
+            }
         }
     }
 
     // Fallback
     LaunchedEffect(Unit) {
         delay(8000)
-        onSplashFinished()
+        if (!hasFinished) {
+            hasFinished = true
+            onSplashFinished()
+        }
     }
 
     DisposableEffect(Unit) {

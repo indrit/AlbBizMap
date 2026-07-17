@@ -29,9 +29,13 @@ class EditBusinessViewModel(
         business: Business,
         newPhotoUri: Uri?
     ) {
-        viewModelScope.launch {
-            _uiState.value = EditBusinessUiState.Loading
+        // Same double-submit gap as AddBusinessViewModel: set/check Loading
+        // synchronously, before launch, so a second fast tap on Save is rejected
+        // here rather than racing a real second update through.
+        if (_uiState.value == EditBusinessUiState.Loading) return
+        _uiState.value = EditBusinessUiState.Loading
 
+        viewModelScope.launch {
             try {
                 // Upload new photo if user picked one
                 val finalBusiness = if (newPhotoUri != null) {

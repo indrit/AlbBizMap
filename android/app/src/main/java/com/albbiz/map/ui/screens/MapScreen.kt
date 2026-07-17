@@ -9,6 +9,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -56,14 +57,12 @@ import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.viewmodel.StoriesViewModel
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
 import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.clustering.ClusterItem
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -136,7 +135,11 @@ fun MapScreen(
     val topRatedBusinesses by viewModel.topRated.collectAsState()
 
     val eventsRepository = remember { EventsRepository() }
-    val announcements by eventsRepository.getEvents().collectAsState(initial = emptyList())
+    // Must remember() the Flow itself, not just the repository — see EventsScreen.kt
+    // for why calling .getEvents() fresh inline here would otherwise tear down and
+    // reattach a live Firestore listener on every recomposition of this screen.
+    val eventsFlow = remember { eventsRepository.getEvents() }
+    val announcements by eventsFlow.collectAsState(initial = emptyList())
 
     // Stories
     val stories by storiesViewModel.stories.collectAsState()
@@ -152,10 +155,19 @@ fun MapScreen(
     val sheetState = rememberBottomSheetScaffoldState()
 
     LaunchedEffect(selectedSheetBusiness) {
-        if (selectedSheetBusiness != null) {
-            sheetState.bottomSheetState.expand()
-        } else {
-            sheetState.bottomSheetState.partialExpand()
+        try {
+            if (selectedSheetBusiness != null) {
+                sheetState.bottomSheetState.expand()
+            } else {
+                sheetState.bottomSheetState.partialExpand()
+            }
+        } catch (e: Exception) {
+            // Interrupted mid-animation (e.g. a drag gesture, or racing another
+            // animation like the camera move). SheetState doesn't expose a public
+            // snapTo() to force the target state here, but this LaunchedEffect
+            // re-runs on every selectedSheetBusiness change anyway, so simply
+            // swallowing the exception is enough to stop it from crashing the
+            // screen instead of leaving it uncaught.
         }
     }
 
@@ -199,46 +211,82 @@ fun MapScreen(
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
+        // If we've already done the one-time move-to-location this session (e.g. we're
+        // returning from Profile, not launching fresh), seed the camera directly at the
+        // user's last known location instead of the Tirana default — avoids both a
+        // jarring flash back to the default position AND re-running the animation below.
+        position = if (viewModel.hasMovedToInitialLocation) {
+            userLocation?.let { CameraPosition.fromLatLngZoom(it, 14f) }
+                ?: CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
+        } else {
+            CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
+        }
     }
 
-    var hasMovedToInitialLocation by remember { mutableStateOf(false) }
+    // Snap directly to the user's location instead of animate()-ing to it — animate()
+    // is interruptible and throws if a gesture or recomposition cuts it off mid-flight,
+    // which was a real source of exceptions here before. A direct position assignment
+    // can't be interrupted, so there's nothing to catch.
     LaunchedEffect(userLocation) {
-        if (!hasMovedToInitialLocation) {
+        if (!viewModel.hasMovedToInitialLocation) {
             userLocation?.let { location ->
                 val isGoogleHQ = (location.latitude in 37.42..37.43) &&
                         (location.longitude in -122.09..-122.07)
                 if (!isGoogleHQ) {
-                    try {
-                        cameraPositionState.animate(
-                            update = CameraUpdateFactory.newLatLngZoom(location, 14f),
-                            durationMs = 1000
-                        )
-                    } catch (e: Exception) {
-                        // Maps Compose signals an interrupted animation (e.g. the user
-                        // touched the map mid-transition) by throwing out of animate().
-                        // Snap straight to the target instead of letting the exception
-                        // escape the composition and blank the screen.
-                        cameraPositionState.position =
-                            CameraPosition.fromLatLngZoom(location, 14f)
-                    }
-                    hasMovedToInitialLocation = true
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(location, 14f)
+                    viewModel.hasMovedToInitialLocation = true
                 }
             }
         }
     }
-    var locateMeJob by remember { mutableStateOf<Job?>(null) }
-    var drawerJob by remember { mutableStateOf<Job?>(null) }
-    val closeDrawer: () -> Unit = {
-        // Same interruption risk as open() — guard it the same way.
-        drawerJob?.cancel()
-        drawerJob = scope.launch {
-            try {
-                drawerState.close()
-            } catch (e: Exception) {
-                drawerState.snapTo(DrawerValue.Closed)
+
+    // Instead of cancelling an in-flight drawer animation and retrying (which broke on
+    // rapid taps — a cancelled coroutine can't run further suspend cleanup code, so the
+    // recovery call threw too), simply ignore clicks while an animation is already
+    // running. The IconButton below also disables itself while this is true, so rapid
+    // taps are dropped at the source instead of racing each other.
+    var isDrawerBusy by remember { mutableStateOf(false) }
+
+    val openDrawer: () -> Unit = {
+        if (!isDrawerBusy) {
+            scope.launch {
+                isDrawerBusy = true
+                try {
+                    drawerState.open()
+                } catch (e: Exception) {
+                    // Interrupted (e.g. by a gesture) — nothing to recover, the drawer
+                    // will settle on whatever state it's already in.
+                } finally {
+                    isDrawerBusy = false
+                }
             }
         }
+    }
+
+    val closeDrawer: () -> Unit = {
+        if (!isDrawerBusy) {
+            scope.launch {
+                isDrawerBusy = true
+                try {
+                    drawerState.close()
+                } catch (e: Exception) {
+                    // Same as above — ignore, don't attempt further suspend calls here.
+                } finally {
+                    isDrawerBusy = false
+                }
+            }
+        }
+    }
+
+    // ModalNavigationDrawer only auto-intercepts the system back button once the drawer
+    // has FULLY settled at Open (drawerState.isOpen). While it's still mid-animation
+    // opening — exactly the window where a quick back-tap right after the hamburger tap
+    // lands — that interception isn't active yet, so the back press falls through to
+    // Navigation's own back handling and pops the nav back stack instead of just closing
+    // the drawer. Covering isDrawerBusy too closes that gap for the whole
+    // opening/open/closing duration, not just once settled.
+    BackHandler(enabled = isDrawerBusy || drawerState.isOpen) {
+        closeDrawer()
     }
 
     var selectedCategoryLabel by remember { mutableStateOf("All") }
@@ -369,21 +417,7 @@ fun MapScreen(
             TopAppBar(
                 title = { Text(strings.appName, fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        // Cancel any open()/close() animation already in flight so a burst
-                        // of rapid taps can't fire overlapping animations on the same
-                        // DrawerState (which interrupt each other and can throw).
-                        drawerJob?.cancel()
-                        drawerJob = scope.launch {
-                            try {
-                                drawerState.open()
-                            } catch (e: Exception) {
-                                // Interrupted mid-animation — snap straight to open instead
-                                // of leaving the drawer state stuck or crashing.
-                                drawerState.snapTo(DrawerValue.Open)
-                            }
-                        }
-                    }) {
+                    IconButton(onClick = openDrawer, enabled = !isDrawerBusy) {
                         Icon(Icons.Default.Menu, null, tint = Color.White)
                     }
                 },
@@ -923,22 +957,11 @@ fun MapScreen(
                         }
                         FloatingActionButton(
                             onClick = {
+                                // Snap directly instead of animate()-ing — no risk of an
+                                // interrupted-animation exception from a second tap, and
+                                // no job bookkeeping needed either.
                                 val target = userLocation ?: TIRANA_LOCATION
-                                // Cancel any animation already in flight so tapping this
-                                // button again mid-transition can't fire a second,
-                                // overlapping animate() call on the same camera state.
-                                locateMeJob?.cancel()
-                                locateMeJob = scope.launch {
-                                    try {
-                                        cameraPositionState.animate(
-                                            update = CameraUpdateFactory.newLatLngZoom(target, 15f),
-                                            durationMs = 800
-                                        )
-                                    } catch (e: Exception) {
-                                        cameraPositionState.position =
-                                            CameraPosition.fromLatLngZoom(target, 15f)
-                                    }
-                                }
+                                cameraPositionState.position = CameraPosition.fromLatLngZoom(target, 15f)
                             },
                             containerColor = Color.White,
                             contentColor = MeTontRed,

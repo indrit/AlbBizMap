@@ -15,7 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,6 +30,34 @@ import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.viewmodel.StoriesViewModel
+
+// This is the whole fix for the blank-screen bug: rapid taps (hamburger items, FABs,
+// list rows, back navigation) were firing navigate()/popBackStack() multiple times
+// before the previous one had settled, pushing duplicate/overlapping entries onto the
+// back stack. That churn was what tore MapScreen's GoogleMap surface down mid-init and
+// produced the blank/white screen — not anything about how or where the map itself was
+// rendered. A simple time-based debounce plus a "destination fully resumed" check on
+// every single navigate() and popBackStack() call in this file closes that gap at the
+// source, everywhere, without needing to change how any screen (including the map) is
+// built.
+private var lastNavigationTime = 0L
+private const val NAVIGATION_DEBOUNCE_MS = 500L
+
+private fun NavController.navigateSafe(route: String, builder: NavOptionsBuilder.() -> Unit = {}) {
+    val now = System.currentTimeMillis()
+    if (now - lastNavigationTime < NAVIGATION_DEBOUNCE_MS) return
+    if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+        lastNavigationTime = now
+        navigate(route, builder)
+    }
+}
+
+private fun NavController.popBackStackSafe(): Boolean {
+    val now = System.currentTimeMillis()
+    if (now - lastNavigationTime < NAVIGATION_DEBOUNCE_MS) return false
+    lastNavigationTime = now
+    return popBackStack()
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +92,7 @@ class MainActivity : ComponentActivity() {
                                 SplashScreen(
                                     onSplashFinished = {
                                         val destination = if (authViewModel.isLoggedIn()) "map" else "auth"
-                                        navController.navigate(destination) {
+                                        navController.navigateSafe(destination) {
                                             popUpTo("splash") { inclusive = true }
                                         }
                                     }
@@ -72,7 +103,7 @@ class MainActivity : ComponentActivity() {
                             composable("auth") {
                                 AuthScreen(
                                     onAuthSuccess = {
-                                        navController.navigate("map") {
+                                        navController.navigateSafe("map") {
                                             popUpTo("auth") { inclusive = true }
                                         }
                                     },
@@ -86,33 +117,33 @@ class MainActivity : ComponentActivity() {
                             composable("map") {
                                 MapScreen(
                                     onListClick = {
-                                        navController.navigate("business_list?sortBy=default")
+                                        navController.navigateSafe("business_list?sortBy=default")
                                     },
                                     onAddBusinessClick = {
-                                        navController.navigate("add_business")
+                                        navController.navigateSafe("add_business")
                                     },
                                     onProfileClick = {
-                                        navController.navigate("profile")
+                                        navController.navigateSafe("profile")
                                     },
                                     onFavoritesClick = {
-                                        navController.navigate("favorites")
+                                        navController.navigateSafe("favorites")
                                     },
                                     onEventsClick = {
-                                        navController.navigate("events")
+                                        navController.navigateSafe("events")
                                     },
                                     onAddStoryClick = {
-                                        navController.navigate("add_story")
+                                        navController.navigateSafe("add_story")
                                     },
                                     onStoryClick = { index: Int ->
-                                        navController.navigate("story_viewer/$index")
+                                        navController.navigateSafe("story_viewer/$index")
                                     },
                                     onLogout = {
-                                        navController.navigate("auth") {
+                                        navController.navigateSafe("auth") {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     onBusinessClick = { businessId ->
-                                        navController.navigate("business_detail/$businessId")
+                                        navController.navigateSafe("business_detail/$businessId")
                                     },
                                     viewModel = mapViewModel,
                                     storiesViewModel = storiesViewModel,
@@ -123,8 +154,8 @@ class MainActivity : ComponentActivity() {
                             // ── ADD BUSINESS ──────────────────────────────────────
                             composable("add_business") {
                                 AddBusinessScreen(
-                                    onBackClick = { navController.popBackStack() },
-                                    onBusinessAdded = { navController.popBackStack() }
+                                    onBackClick = { navController.popBackStackSafe() },
+                                    onBusinessAdded = { navController.popBackStackSafe() }
                                 )
                             }
 
@@ -140,11 +171,11 @@ class MainActivity : ComponentActivity() {
                             ) { backStackEntry ->
                                 val sortBy = backStackEntry.arguments?.getString("sortBy") ?: "default"
                                 BusinessListScreen(
-                                    onBackClick = { navController.popBackStack() },
+                                    onBackClick = { navController.popBackStackSafe() },
                                     onBusinessClick = { businessId ->
-                                        navController.navigate("business_detail/$businessId")
+                                        navController.navigateSafe("business_detail/$businessId")
                                     },
-                                    onNavigateToAuth = { navController.navigate("auth") },
+                                    onNavigateToAuth = { navController.navigateSafe("auth") },
                                     viewModel = mapViewModel,
                                     sortBy = sortBy
                                 )
@@ -153,14 +184,14 @@ class MainActivity : ComponentActivity() {
                             // ── PROFILE ───────────────────────────────────────────
                             composable("profile") {
                                 UserProfileScreen(
-                                    onBackClick = { navController.popBackStack() },
+                                    onBackClick = { navController.popBackStackSafe() },
                                     onLogout = {
-                                        navController.navigate("auth") {
+                                        navController.navigateSafe("auth") {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
-                                    onUpgradeClick = { navController.navigate("subscription") },
-                                    onAdminClick = { navController.navigate("admin") },
+                                    onUpgradeClick = { navController.navigateSafe("subscription") },
+                                    onAdminClick = { navController.navigateSafe("admin") },
                                     currentLanguage = currentLanguage,
                                     onLanguageChange = { currentLanguage = it },
                                     viewModel = authViewModel
@@ -170,16 +201,16 @@ class MainActivity : ComponentActivity() {
                             composable("admin") {
                                 AdminScreen(
                                     currentUserId = currentUserId,
-                                    onBackClick = { navController.popBackStack() }
+                                    onBackClick = { navController.popBackStackSafe() }
                                 )
                             }
 
                             // ── FAVORITES ─────────────────────────────────────────
                             composable("favorites") {
                                 FavoritesScreen(
-                                    onBackClick = { navController.popBackStack() },
+                                    onBackClick = { navController.popBackStackSafe() },
                                     onBusinessClick = { businessId ->
-                                        navController.navigate("business_detail/$businessId")
+                                        navController.navigateSafe("business_detail/$businessId")
                                     },
                                     viewModel = mapViewModel
                                 )
@@ -188,16 +219,16 @@ class MainActivity : ComponentActivity() {
                             // ── EVENTS ────────────────────────────────────────────
                             composable("events") {
                                 EventsScreen(
-                                    onBackClick = { navController.popBackStack() },
-                                    onAddEventClick = { navController.navigate("add_event") }
+                                    onBackClick = { navController.popBackStackSafe() },
+                                    onAddEventClick = { navController.navigateSafe("add_event") }
                                 )
                             }
 
                             // ── ADD EVENT ─────────────────────────────────────────
                             composable("add_event") {
                                 AddEventScreen(
-                                    onBackClick = { navController.popBackStack() },
-                                    onEventAdded = { navController.popBackStack() }
+                                    onBackClick = { navController.popBackStackSafe() },
+                                    onEventAdded = { navController.popBackStackSafe() }
                                 )
                             }
 
@@ -217,17 +248,17 @@ class MainActivity : ComponentActivity() {
                                         currentUserId = currentUserId,
                                         onWriteReviewClick = {
                                             if (currentUserId.isEmpty()) {
-                                                navController.navigate("auth")
+                                                navController.navigateSafe("auth")
                                             } else {
-                                                navController.navigate("add_review/$businessId")
+                                                navController.navigateSafe("add_review/$businessId")
                                             }
                                         },
                                         onEditClick = {
-                                            navController.navigate("edit_business/$businessId")
+                                            navController.navigateSafe("edit_business/$businessId")
                                         },
-                                        onBackClick = { navController.popBackStack() },
-                                        onUpgradeClick = { navController.navigate("subscription") },
-                                        onNavigateToAuth = { navController.navigate("auth") },
+                                        onBackClick = { navController.popBackStackSafe() },
+                                        onUpgradeClick = { navController.navigateSafe("subscription") },
+                                        onNavigateToAuth = { navController.navigateSafe("auth") },
                                         mapViewModel = mapViewModel
                                     )
                                 } else {
@@ -245,14 +276,14 @@ class MainActivity : ComponentActivity() {
                                 val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
                                 AddReviewScreen(
                                     businessId = businessId,
-                                    onReviewSubmitted = { navController.popBackStack() }
+                                    onReviewSubmitted = { navController.popBackStackSafe() }
                                 )
                             }
 
                             // ── SUBSCRIPTION ──────────────────────────────────────
                             composable("subscription") {
                                 SubscriptionScreen(
-                                    onBackClick = { navController.popBackStack() }
+                                    onBackClick = { navController.popBackStackSafe() }
                                 )
                             }
 
@@ -269,8 +300,8 @@ class MainActivity : ComponentActivity() {
                                 if (business != null) {
                                     EditBusinessScreen(
                                         business = business,
-                                        onBackClick = { navController.popBackStack() },
-                                        onBusinessUpdated = { navController.popBackStack() }
+                                        onBackClick = { navController.popBackStackSafe() },
+                                        onBusinessUpdated = { navController.popBackStackSafe() }
                                     )
                                 } else {
                                     Text("Business not found.")
@@ -280,8 +311,8 @@ class MainActivity : ComponentActivity() {
                             // ── ADD STORY ─────────────────────────────────────────
                             composable("add_story") {
                                 AddStoryScreen(
-                                    onBackClick = { navController.popBackStack() },
-                                    onStoryPosted = { navController.popBackStack() },
+                                    onBackClick = { navController.popBackStackSafe() },
+                                    onStoryPosted = { navController.popBackStackSafe() },
                                     mapViewModel = mapViewModel
                                 )
                             }
@@ -302,9 +333,9 @@ class MainActivity : ComponentActivity() {
                                         StoryViewerScreen(
                                             stories = stories,
                                             initialIndex = storyIndex.coerceIn(0, stories.lastIndex),
-                                            onClose = { navController.popBackStack() },
+                                            onClose = { navController.popBackStackSafe() },
                                             onBusinessClick = { businessId ->
-                                                navController.navigate("business_detail/$businessId")
+                                                navController.navigateSafe("business_detail/$businessId")
                                             },
                                             storiesViewModel = storiesViewModel
                                         )
@@ -322,7 +353,7 @@ class MainActivity : ComponentActivity() {
                                         // out from under us, e.g. expired) — bail out instead of
                                         // rendering a blank screen.
                                         LaunchedEffect(Unit) {
-                                            navController.popBackStack()
+                                            navController.popBackStackSafe()
                                         }
                                     }
                                 }

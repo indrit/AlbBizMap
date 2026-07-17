@@ -14,6 +14,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -45,6 +46,14 @@ class MapViewModel : ViewModel() {
 
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds
+
+    // Whether we've already done the one-time "animate camera to the user's location"
+    // move this session. Deliberately NOT a StateFlow/Compose state — this ViewModel
+    // outlives MapScreen's composition (it's hoisted at the Activity/NavHost level), so
+    // storing this flag here means it survives navigating away from and back to the map,
+    // instead of resetting (and re-triggering the animation) every single time, which is
+    // what a plain `remember` in MapScreen was doing before.
+    var hasMovedToInitialLocation: Boolean = false
 
     // ── DISCOVERY FLOWS ───────────────────────────────────────────
     val featured: StateFlow<List<Business>> = _businesses
@@ -143,9 +152,13 @@ class MapViewModel : ViewModel() {
             .launchIn(viewModelScope)
     }
 
+    // Tracked so toggleFavorite() (below) can wait for this one-shot initial fetch to
+    // land before applying its own optimistic update on top of it.
+    private var loadFavoritesJob: Job? = null
+
     private fun loadFavorites() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        viewModelScope.launch {
+        loadFavoritesJob = viewModelScope.launch {
             repository.getFavoriteIds(userId)
                 .onSuccess { ids ->
                     _favoriteIds.value = ids.toSet()
@@ -158,6 +171,15 @@ class MapViewModel : ViewModel() {
     fun toggleFavorite(businessId: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
+            // If the user taps a favorite icon before the initial getFavoriteIds()
+            // fetch (started once, from init) has resolved, this optimistic update
+            // could otherwise get silently clobbered when that fetch finally lands
+            // and overwrites _favoriteIds wholesale with the (now-stale) server
+            // snapshot. Waiting here means this always applies on top of the real
+            // starting state instead of racing it. join() returns immediately if the
+            // load already finished.
+            loadFavoritesJob?.join()
+
             val current = _favoriteIds.value.toMutableSet()
             val isCurrentlyFavorite = businessId in current
             if (isCurrentlyFavorite) {

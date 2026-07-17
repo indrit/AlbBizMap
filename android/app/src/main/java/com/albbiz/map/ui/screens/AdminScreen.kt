@@ -190,6 +190,7 @@ fun AdminScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = { viewModel.seedBusinesses(context) },
+                            enabled = !isLoading,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(

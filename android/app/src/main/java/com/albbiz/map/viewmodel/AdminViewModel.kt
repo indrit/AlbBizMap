@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.BusinessRepository
 import com.albbiz.map.data.ClaimRequest
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class AdminViewModel(
     private val repository: BusinessRepository = BusinessRepository()
@@ -28,6 +30,14 @@ class AdminViewModel(
     private val _isAdmin = MutableStateFlow(false)
     val isAdmin: StateFlow<Boolean> = _isAdmin
 
+    // checkAdminStatus can be called more than once for the same ViewModel instance
+    // (e.g. AdminScreen's LaunchedEffect(currentUserId) re-running because
+    // currentUserId briefly flips through "" while auth state settles). Without
+    // tracking the claims listener's Job, each call would attach a brand-new
+    // addSnapshotListener on top of any still-active one, and all of them would
+    // keep racing to write _claimRequests.
+    private var claimRequestsJob: Job? = null
+
     fun checkAdminStatus(userId: String) {
         viewModelScope.launch {
             _isAdmin.value = repository.isUserAdmin(userId)
@@ -36,8 +46,9 @@ class AdminViewModel(
     }
 
     private fun loadClaimRequests() {
+        claimRequestsJob?.cancel()
         _isLoading.value = true
-        repository.getClaimRequests()
+        claimRequestsJob = repository.getClaimRequests()
             .onEach { claims ->
                 _claimRequests.value = claims.sortedByDescending { it.createdAt }
                 _isLoading.value = false
@@ -77,17 +88,30 @@ class AdminViewModel(
         _message.value = null
     }
 
+    // "Import Sample Businesses" had no disabled state at all in the UI (unlike the
+    // other admin actions), so a double-tap while the import is running — which can
+    // take a while, it writes many documents — would kick off two full imports
+    // concurrently and duplicate every sample business. tryLock rejects the second
+    // tap outright instead of queueing it.
+    private val seedMutex = Mutex()
+
     fun seedBusinesses(context: android.content.Context) {
+        if (!seedMutex.tryLock()) return
+
         viewModelScope.launch {
-            _isLoading.value = true
-            repository.seedBusinessesFromJson(context)
-                .onSuccess { count ->
-                    _message.value = "Successfully imported $count businesses!"
-                }
-                .onFailure { e ->
-                    _message.value = "Import failed: ${e.message}"
-                }
-            _isLoading.value = false
+            try {
+                _isLoading.value = true
+                repository.seedBusinessesFromJson(context)
+                    .onSuccess { count ->
+                        _message.value = "Successfully imported $count businesses!"
+                    }
+                    .onFailure { e ->
+                        _message.value = "Import failed: ${e.message}"
+                    }
+                _isLoading.value = false
+            } finally {
+                seedMutex.unlock()
+            }
         }
     }
 }

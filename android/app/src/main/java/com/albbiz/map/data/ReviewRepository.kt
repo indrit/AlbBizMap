@@ -76,22 +76,31 @@ class ReviewRepository {
                 .collection("reviews")
                 .document(reviewId)
 
-            val snapshot = reviewRef.get().await()
-            val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
-                ?: return Result.failure(Exception("Review not found"))
+            // The read (checking reportedBy) and the write (increment + arrayUnion)
+            // need to happen atomically — otherwise two near-simultaneous reports (or
+            // one report double-fired by a rapid double-tap) can both read "not yet
+            // reported" before either write lands, and reportCount gets incremented
+            // twice for what should count as a single report from that user. A
+            // transaction makes Firestore retry the whole read-check-write as one
+            // unit if it detects a conflicting write in between.
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(reviewRef)
+                val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
+                    ?: throw Exception("Review not found")
 
-            // Check if user already reported this review
-            if (userId in review.reportedBy) {
-                return Result.failure(Exception("You have already reported this review"))
-            }
+                if (userId in review.reportedBy) {
+                    throw Exception("You have already reported this review")
+                }
 
-            // Increment reportCount and add userId to reportedBy list
-            reviewRef.update(
-                mapOf(
-                    "reportCount" to FieldValue.increment(1),
-                    "reportedBy" to FieldValue.arrayUnion(userId)
+                transaction.update(
+                    reviewRef,
+                    mapOf(
+                        "reportCount" to FieldValue.increment(1),
+                        "reportedBy" to FieldValue.arrayUnion(userId)
+                    )
                 )
-            ).await()
+                null
+            }.await()
 
             Log.d(TAG, "Review $reviewId reported by $userId")
             Result.success(Unit)
@@ -111,17 +120,23 @@ class ReviewRepository {
                 .collection("reviews")
                 .document(reviewId)
 
-            val snapshot = reviewRef.get().await()
-            val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
-                ?: return Result.failure(Exception("Review not found"))
+            // Same TOCTOU concern as reportReview: without a transaction, two rapid
+            // taps (like-then-unlike, or the same tap double-firing) can both read
+            // the same stale "not liked" state and both decide to arrayUnion,
+            // leaving the review liked when the user actually meant to end up
+            // unliked. The transaction makes the read-then-decide-then-write atomic.
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(reviewRef)
+                val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
+                    ?: throw Exception("Review not found")
 
-            if (userId in review.likedBy) {
-                // already liked → unlike
-                reviewRef.update("likedBy", FieldValue.arrayRemove(userId)).await()
-            } else {
-                // not liked → like
-                reviewRef.update("likedBy", FieldValue.arrayUnion(userId)).await()
-            }
+                if (userId in review.likedBy) {
+                    transaction.update(reviewRef, "likedBy", FieldValue.arrayRemove(userId))
+                } else {
+                    transaction.update(reviewRef, "likedBy", FieldValue.arrayUnion(userId))
+                }
+                null
+            }.await()
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -218,15 +233,19 @@ class ReviewRepository {
                 .collection("replies")
                 .document(replyId)
 
-            val snapshot = replyRef.get().await()
-            val reply = snapshot.data?.let { Reply.fromMap(replyId, it) }
-                ?: return Result.failure(Exception("Reply not found"))
+            // Same TOCTOU concern as Review.toggleLike above.
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(replyRef)
+                val reply = snapshot.data?.let { Reply.fromMap(replyId, it) }
+                    ?: throw Exception("Reply not found")
 
-            if (userId in reply.likedBy) {
-                replyRef.update("likedBy", FieldValue.arrayRemove(userId)).await()
-            } else {
-                replyRef.update("likedBy", FieldValue.arrayUnion(userId)).await()
-            }
+                if (userId in reply.likedBy) {
+                    transaction.update(replyRef, "likedBy", FieldValue.arrayRemove(userId))
+                } else {
+                    transaction.update(replyRef, "likedBy", FieldValue.arrayUnion(userId))
+                }
+                null
+            }.await()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error toggling reply like", e)

@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Review
 import com.albbiz.map.data.ReviewRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import com.albbiz.map.data.Reply
 
 class ReviewViewModel(
@@ -28,6 +30,13 @@ class ReviewViewModel(
 
     private val _reportMessage = MutableStateFlow<String?>(null)
     val reportMessage: StateFlow<String?> = _reportMessage
+
+    // Guards addReview/addReply against double-submit: the UI's "enabled = !isLoading"
+    // only takes effect once Compose recomposes, which isn't guaranteed to happen
+    // before a second very-fast tap is already dispatched. This makes the ViewModel
+    // itself refuse a second submit while one is still in flight, instead of relying
+    // solely on UI lag.
+    private val submitMutex = Mutex()
 
     // LOAD REVIEWS FOR A BUSINESS
     fun loadReviews(businessId: String) {
@@ -62,12 +71,21 @@ class ReviewViewModel(
             comment = comment
         )
 
+        // tryLock (not withLock/launch-then-wait) so a second rapid tap is dropped
+        // immediately instead of queueing up to run right after the first — we want
+        // "ignore the duplicate", not "submit it too, just slightly later".
+        if (!submitMutex.tryLock()) return
+
         viewModelScope.launch {
-            _isLoading.value = true
-            repo.addReview(businessId, review)
-                .onSuccess { onSuccess() }
-                .onFailure { e -> _error.value = e.message }
-            _isLoading.value = false
+            try {
+                _isLoading.value = true
+                repo.addReview(businessId, review)
+                    .onSuccess { onSuccess() }
+                    .onFailure { e -> _error.value = e.message }
+                _isLoading.value = false
+            } finally {
+                submitMutex.unlock()
+            }
         }
     }
 
@@ -110,8 +128,16 @@ class ReviewViewModel(
     private val _replies = MutableStateFlow<Map<String, List<Reply>>>(emptyMap())
     val replies: StateFlow<Map<String, List<Reply>>> = _replies
 
+    // One live Firestore listener job per reviewId. Without this, calling
+    // loadReplies() again for a reviewId that's already being listened to (e.g. the
+    // caller's LaunchedEffect re-firing) would attach a second concurrent listener
+    // on the same query instead of replacing the first — both then race to write the
+    // same _replies map entry indefinitely.
+    private val replyJobs = mutableMapOf<String, Job>()
+
     fun loadReplies(businessId: String, reviewId: String) {
-        viewModelScope.launch {
+        replyJobs[reviewId]?.cancel()
+        replyJobs[reviewId] = viewModelScope.launch {
             repo.getReplies(businessId, reviewId)
                 .catch { e -> _error.value = e.message }
                 .collect { replyList ->
@@ -123,6 +149,8 @@ class ReviewViewModel(
     }
 
     // ADD A REPLY
+    private val replyMutex = Mutex()
+
     fun addReply(
         businessId: String,
         reviewId: String,
@@ -131,6 +159,8 @@ class ReviewViewModel(
         userName: String,
         onSuccess: () -> Unit
     ) {
+        if (!replyMutex.tryLock()) return
+
         val reply = Reply(
             reviewId = reviewId,
             userId = userId,
@@ -138,9 +168,13 @@ class ReviewViewModel(
             comment = comment
         )
         viewModelScope.launch {
-            repo.addReply(businessId, reviewId, reply)
-                .onSuccess { onSuccess() }
-                .onFailure { e -> _error.value = e.message }
+            try {
+                repo.addReply(businessId, reviewId, reply)
+                    .onSuccess { onSuccess() }
+                    .onFailure { e -> _error.value = e.message }
+            } finally {
+                replyMutex.unlock()
+            }
         }
     }
 

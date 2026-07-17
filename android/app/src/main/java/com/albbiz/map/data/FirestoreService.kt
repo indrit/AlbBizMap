@@ -121,25 +121,38 @@ class FirestoreService {
     suspend fun toggleBusinessLike(userId: String, businessId: String): Result<Unit> {
         return try {
             val businessRef = businessesRef.document(businessId)
-            val snapshot = businessRef.get().await()
-            val likedBy = (snapshot.get("likedBy") as? List<*>)
-                ?.filterIsInstance<String>() ?: emptyList()
+            // A plain get()-then-update() reads a stale snapshot: two rapid taps (or
+            // two devices) can both read "not liked" before either write lands, so
+            // both then run arrayUnion + increment(1) — likeCount ends up incremented
+            // twice while likedBy (a set) only actually gained the one user, leaving
+            // the count and the array permanently out of sync. Doing the read and the
+            // decision inside a transaction makes Firestore retry the whole
+            // read-decide-write atomically if another write lands in between, so only
+            // one of two racing calls actually toggles the like.
+            db.runTransaction { transaction ->
+                val snapshot = transaction.get(businessRef)
+                val likedBy = (snapshot.get("likedBy") as? List<*>)
+                    ?.filterIsInstance<String>() ?: emptyList()
 
-            if (userId in likedBy) {
-                businessRef.update(
-                    mapOf(
-                        "likedBy" to FieldValue.arrayRemove(userId),
-                        "likeCount" to FieldValue.increment(-1)
+                if (userId in likedBy) {
+                    transaction.update(
+                        businessRef,
+                        mapOf(
+                            "likedBy" to FieldValue.arrayRemove(userId),
+                            "likeCount" to FieldValue.increment(-1)
+                        )
                     )
-                ).await()
-            } else {
-                businessRef.update(
-                    mapOf(
-                        "likedBy" to FieldValue.arrayUnion(userId),
-                        "likeCount" to FieldValue.increment(1)
+                } else {
+                    transaction.update(
+                        businessRef,
+                        mapOf(
+                            "likedBy" to FieldValue.arrayUnion(userId),
+                            "likeCount" to FieldValue.increment(1)
+                        )
                     )
-                ).await()
-            }
+                }
+                null
+            }.await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

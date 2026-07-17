@@ -27,9 +27,15 @@ class AddBusinessViewModel(
     val uiState: StateFlow<AddBusinessUiState> = _uiState.asStateFlow()
 
     fun addBusiness(business: Business, imageUris: List<Uri>) {
-        viewModelScope.launch {
-            _uiState.value = AddBusinessUiState.Loading
+        // The screen's Save button only disables once uiState becomes Loading, but
+        // that used to happen *inside* the launched coroutine — after this function
+        // had already returned to the caller. A second very-fast tap could invoke
+        // this again before that recomposition landed. Checking and setting Loading
+        // synchronously here, before launch, closes that window.
+        if (_uiState.value == AddBusinessUiState.Loading) return
+        _uiState.value = AddBusinessUiState.Loading
 
+        viewModelScope.launch {
             try {
                 val imageUrls = if (imageUris.isNotEmpty()) {
                     repository.uploadBusinessImages(business.id, imageUris)

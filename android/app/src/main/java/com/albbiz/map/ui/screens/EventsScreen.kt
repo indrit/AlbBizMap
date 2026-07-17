@@ -37,7 +37,13 @@ fun EventsScreen(
     onAddEventClick: () -> Unit
 ) {
     val repository = remember { EventsRepository() }
-    val events by repository.getEvents().collectAsState(initial = emptyList())
+    // getEvents() must be remember()'d too, not just the repository — calling it
+    // fresh inline on every recomposition hands collectAsState() a brand-new Flow
+    // object each time, and it treats a new Flow instance as a reason to cancel the
+    // old collection and start over. That was tearing down and reattaching a live
+    // Firestore listener on every recomposition of this screen instead of once.
+    val eventsFlow = remember { repository.getEvents() }
+    val events by eventsFlow.collectAsState(initial = emptyList())
     val strings = LocalAppStrings.current
 
     Scaffold(
