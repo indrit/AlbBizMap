@@ -68,30 +68,36 @@ class MapViewModel : ViewModel() {
         .mapLatest { list -> list.sortedByDescending { it.rating }.take(10) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
+    // Both combine() blocks below re-run on every _userLocation tick (every 5s while
+    // location updates are active — see startLocationUpdates). SharingStarted.Lazily
+    // meant that once started (the first time the map screen was ever visited), this
+    // kept recomputing forever in the background — filtering + sorting the whole
+    // business list, calculating distance TWICE per business (once to filter, again
+    // in the sort comparator) — even while the user was on a completely unrelated
+    // screen. That's a steady stream of allocations every 5 seconds for the rest of
+    // the app session, which is exactly the kind of thing that shows up later as GC
+    // pause pressure landing at an unrelated, unlucky moment (confirmed via System
+    // Trace: HeapTaskDaemon doing multiple seconds of concurrent mark-compact GC,
+    // main thread stalling on ART's ClassLinker/InternTable locks it holds mid-GC).
+    // WhileSubscribed(5000) stops the recomputation once nobody's actually collecting
+    // it (e.g. navigated away from the map), instead of running unconditionally for
+    // the whole app lifetime. The distance is also now computed once per business and
+    // reused for both the filter and the sort, instead of twice.
     val nearMe = combine(
         _businesses, _userLocation
     ) { list: List<Business>, location: LatLng? ->
         if (location == null) emptyList<Business>()
         else {
             val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.filter { business ->
-                val distance = repository.calculateDistance(
-                    userPoint,
-                    business.location ?: GeoPoint(0.0, 0.0)
-                )
-                distance <= 50.0
-            }.sortedWith(
-                compareByDescending<Business> { it.isSponsored }
-                    .thenByDescending { it.isFeatured }
-                    .thenBy {
-                        repository.calculateDistance(
-                            userPoint,
-                            it.location ?: GeoPoint(0.0, 0.0)
-                        )
-                    }
-            ).take(10)
+            list.map { business -> business to repository.calculateDistance(userPoint, business.location ?: GeoPoint(0.0, 0.0)) }
+                .filter { (_, distance) -> distance <= 50.0 }
+                .sortedWith(
+                    compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
+                        .thenByDescending { it.first.isFeatured }
+                        .thenBy { it.second }
+                ).take(10).map { it.first }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList<Business>())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())
 
 
     val topPicks = combine(
@@ -100,25 +106,16 @@ class MapViewModel : ViewModel() {
         if (location == null) emptyList<Business>()
         else {
             val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.filter { business ->
-                val distance = repository.calculateDistance(
-                    userPoint,
-                    business.location ?: GeoPoint(0.0, 0.0)
-                )
-                (business.isSponsored || business.isFeatured || business.isPremium) && distance <= 50.0
-            }.sortedWith(
-                compareByDescending<Business> { it.isSponsored }
-                    .thenByDescending { it.isFeatured }
-                    .thenByDescending { it.isPremium }
-                    .thenBy {
-                        repository.calculateDistance(
-                            userPoint,
-                            it.location ?: GeoPoint(0.0, 0.0)
-                        )
-                    }
-            ).take(10)
+            list.map { business -> business to repository.calculateDistance(userPoint, business.location ?: GeoPoint(0.0, 0.0)) }
+                .filter { (business, distance) -> (business.isSponsored || business.isFeatured || business.isPremium) && distance <= 50.0 }
+                .sortedWith(
+                    compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
+                        .thenByDescending { it.first.isFeatured }
+                        .thenByDescending { it.first.isPremium }
+                        .thenBy { it.second }
+                ).take(10).map { it.first }
         }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList<Business>())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())
 
     val filteredBusinesses: StateFlow<List<Business>> = combine(
         _businesses,

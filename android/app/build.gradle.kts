@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -78,6 +79,7 @@ dependencies {
     implementation("com.google.maps.android:maps-compose-utils:6.4.0")
     implementation("com.google.maps.android:android-maps-utils:3.8.2")
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.androidx.profileinstaller)
 
 
     testImplementation(libs.junit)
@@ -85,6 +87,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    "baselineProfile"(project(":baselineprofile"))
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 

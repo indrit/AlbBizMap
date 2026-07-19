@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AlbBizMap"
 include(":app")
+include(":baselineprofile")

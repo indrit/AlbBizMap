@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -170,7 +171,11 @@ fun AuthScreen(
                                 tint = MeTontRed
                             )
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        // Tagged for the Baseline Profile benchmark test (UiAutomator) to
+                        // find this field regardless of the active display language.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("authEmailField"),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
@@ -210,7 +215,9 @@ fun AuthScreen(
                             VisualTransformation.None
                         else
                             PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("authPasswordField"),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
@@ -280,7 +287,8 @@ fun AuthScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(52.dp)
+                            .testTag("authSubmitButton"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MeTontRed,

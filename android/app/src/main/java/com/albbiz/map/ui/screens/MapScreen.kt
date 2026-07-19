@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -151,6 +152,18 @@ fun MapScreen(
     var selectedSheetBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
     var markerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    // GoogleMap takes real time to initialize (EGL surface/context creation) — flips
+    // true only once it reports its first frame via onMapLoaded below. Because this
+    // is a plain remember (not hoisted), it naturally resets to false every time this
+    // screen is freshly composed, i.e. every time the map is navigated to. Used for
+    // two things: showing a loading overlay instead of a blank map area, and — more
+    // importantly — refusing to navigate away from this screen until it's true, so a
+    // burst of rapid taps can't tear GoogleMap's view down mid-initialization (that
+    // was the actual cause of the blank-screen bug on rapid clicks: navigateSafe's
+    // debounce only checks that the destination has been *composed*, not that this
+    // slow-to-initialize child has actually finished rendering).
+    var mapReady by remember { mutableStateOf(false) }
 
     val sheetState = rememberBottomSheetScaffoldState()
 
@@ -350,7 +363,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.profile, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); onProfileClick() },
+                    onClick = { closeDrawer(); if (mapReady) onProfileClick() },
                     icon = { Icon(Icons.Default.AccountCircle, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -358,15 +371,20 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.favorites, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); onFavoritesClick() },
+                    onClick = { closeDrawer(); if (mapReady) onFavoritesClick() },
                     icon = { Icon(Icons.Default.Favorite, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    // Tagged so the Baseline Profile benchmark can reproduce the actual
+                    // reported trigger: navigate to another screen, back out, then spam
+                    // the hamburger — not just open/close the drawer in isolation.
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawerFavoritesItem")
                 )
                 NavigationDrawerItem(
                     label = { Text(strings.communityEvents, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); onEventsClick() },
+                    onClick = { closeDrawer(); if (mapReady) onEventsClick() },
                     icon = { Icon(Icons.Default.Event, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -374,7 +392,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.addBusiness, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); onAddBusinessClick() },
+                    onClick = { closeDrawer(); if (mapReady) onAddBusinessClick() },
                     icon = { Icon(Icons.Default.AddBusiness, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -382,7 +400,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.listView, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); onListClick() },
+                    onClick = { closeDrawer(); if (mapReady) onListClick() },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -394,7 +412,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.logout, fontWeight = FontWeight.Bold, color = MeTontRed) },
                     selected = false,
-                    onClick = { closeDrawer(); onLogout() },
+                    onClick = { closeDrawer(); if (mapReady) onLogout() },
                     icon = { Icon(Icons.Default.Logout, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -417,8 +435,12 @@ fun MapScreen(
             TopAppBar(
                 title = { Text(strings.appName, fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = openDrawer, enabled = !isDrawerBusy) {
-                        Icon(Icons.Default.Menu, null, tint = Color.White)
+                    IconButton(
+                        onClick = openDrawer,
+                        enabled = !isDrawerBusy,
+                        modifier = Modifier.testTag("mapHamburgerButton")
+                    ) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
                     }
                 },
                 actions = {
@@ -516,7 +538,7 @@ fun MapScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             TextButton(
-                                onClick = { onBusinessClick(biz.id) },
+                                onClick = { if (mapReady) onBusinessClick(biz.id) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("View Full Profile", color = Color.Black, fontWeight = FontWeight.Medium)
@@ -550,7 +572,7 @@ fun MapScreen(
                                                 .clip(CircleShape)
                                                 .background(MeTontRed.copy(alpha = 0.1f))
                                                 .border(2.dp, MeTontRed, CircleShape)
-                                                .clickable { onAddStoryClick() },
+                                                .clickable { if (mapReady) onAddStoryClick() },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -583,7 +605,7 @@ fun MapScreen(
                                             val allStories = stories
                                             val clickedStory = storyGroup.first()
                                             val index = allStories.indexOfFirst { it.id == clickedStory.id }
-                                            onStoryClick(index.coerceAtLeast(0))
+                                            if (mapReady) onStoryClick(index.coerceAtLeast(0))
                                         }
                                     ) {
                                         Box(
@@ -772,7 +794,7 @@ fun MapScreen(
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(announcements) { event ->
                                         Card(
-                                            modifier = Modifier.width(220.dp).shadow(2.dp, RoundedCornerShape(14.dp)).clickable { onEventsClick() },
+                                            modifier = Modifier.width(220.dp).shadow(2.dp, RoundedCornerShape(14.dp)).clickable { if (mapReady) onEventsClick() },
                                             shape = RoundedCornerShape(14.dp),
                                             colors = CardDefaults.cardColors(containerColor = Color.White)
                                         ) {
@@ -842,16 +864,40 @@ fun MapScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
+                    // A System Trace of a hamburger-triggered freeze showed Maps SDK doing
+                    // real re-initialization work (MapContainer.ensureMapStarted,
+                    // GmmEventBusImpl.register, PhoenixGoogleMapActivityEnvironment.getMap/
+                    // getGmmCamera/createGmmCamera) directly inside a Compose applyChanges
+                    // pass — i.e. triggered BY a recomposition, not by navigation. onMapLoaded
+                    // and onMapClick below were plain inline lambdas, so GoogleMap saw a brand
+                    // new callback reference on every recomposition (including whichever one
+                    // the drawer's own state/animation was causing), and appears to redo
+                    // listener registration each time it does. rememberUpdatedState +
+                    // remember gives GoogleMap one stable callback reference for the whole
+                    // composable's lifetime, while still always running the latest logic
+                    // inside it — same fix shape as the MapProperties/MapUiSettings remember
+                    // above, just for callbacks instead of data objects.
+                    val currentOnMapLoaded by rememberUpdatedState { mapReady = true }
+                    val stableOnMapLoaded = remember { { currentOnMapLoaded() } }
+
+                    val currentOnMapClick by rememberUpdatedState<(LatLng) -> Unit> {
+                        selectedSheetBusiness = null
+                        keyboardController?.hide()
+                    }
+                    val stableOnMapClick = remember { { latLng: LatLng -> currentOnMapClick(latLng) } }
+
                     // MAP
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
-                        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
-                        onMapClick = {
-                            selectedSheetBusiness = null
-                            keyboardController?.hide()
-                        }
+                        // remember'd so these keep stable identity across recompositions —
+                        // constructing new instances every recomposition was one of the
+                        // triggers behind Maps SDK repeatedly re-resolving the map instance
+                        // (PhoenixGoogleMapActivityEnvironment.getMap(), seen 91x in one trace).
+                        properties = remember(hasLocationPermission) { MapProperties(isMyLocationEnabled = hasLocationPermission) },
+                        uiSettings = remember { MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false) },
+                        onMapLoaded = stableOnMapLoaded,
+                        onMapClick = stableOnMapClick
                     ) {
                         val clusterItems = remember(businesses) {
                             businesses.mapNotNull { business ->
@@ -865,6 +911,21 @@ fun MapScreen(
                                 true
                             }
                         )
+                    }
+
+                    // LOADING OVERLAY — covers the map area with an intentional
+                    // loading state instead of leaving it blank while GoogleMap
+                    // initializes. See the mapReady comment above for why this
+                    // matters beyond just cosmetics.
+                    if (!mapReady) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MeTontRed)
+                        }
                     }
 
                     // CATEGORY FILTERS
@@ -952,7 +1013,7 @@ fun MapScreen(
                             .padding(end = 16.dp, bottom = 140.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        FloatingActionButton(onClick = { onAddBusinessClick() }, containerColor = MeTontRed, contentColor = Color.White, shape = CircleShape) {
+                        FloatingActionButton(onClick = { if (mapReady) onAddBusinessClick() }, containerColor = MeTontRed, contentColor = Color.White, shape = CircleShape) {
                             Icon(Icons.Default.Add, null)
                         }
                         FloatingActionButton(
