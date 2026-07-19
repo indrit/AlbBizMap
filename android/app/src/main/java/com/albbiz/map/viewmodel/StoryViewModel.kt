@@ -139,9 +139,18 @@ class StoriesViewModel(
     }
 
     // ── CLEAN EXPIRED STORIES ─────────────────────────────────────────
+    // Scoped to the current user's own stories only — see the comment on
+    // StoriesRepository.deleteExpiredStories() for why. This means each
+    // user's expired stories get cleaned up next time they open the app,
+    // rather than all expired stories getting cleaned up by whoever
+    // happens to load the stories bar first.
     private fun cleanExpiredStories() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
-            repository.deleteExpiredStories()
+            repository.deleteExpiredStories(userId)
+                .onFailure { e ->
+                    _error.value = e.message
+                }
         }
     }
 

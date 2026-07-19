@@ -23,11 +23,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.albbiz.map.ui.AppLanguage
 import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
@@ -139,27 +137,24 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // ── MAP ───────────────────────────────────────────────
-                            // Favorites and Profile render as overlays inside this same
-                            // NavHost entry instead of as separate destinations. A System
-                            // Trace of the reported "blank screen on rapid hamburger
-                            // clicks" bug found the real cost: navigating to "favorites"
-                            // or "profile" as a NavHost destination fully disposes the
-                            // "map" composable (and with it GoogleMap's underlying
-                            // SurfaceView), which then has to be torn down and
-                            // reconstructed from scratch — a genuinely expensive,
-                            // synchronous main-thread operation — every single time the
-                            // user comes back. That reconstruction was landing exactly in
-                            // the window where rapid taps arrived. Keeping "map" as one
-                            // NavHost entry for the whole logged-in session, and just
-                            // toggling every hamburger-drawer destination (Favorites,
-                            // Profile, Events, Add Business, List View) on top of it as
-                            // plain Compose state, means GoogleMap is created once and
-                            // never rebuilt for any of these round trips. Deeper
-                            // destinations reached from within those overlays (Admin,
-                            // Subscription, Add Event, business detail, etc.) stay as
-                            // regular NavHost destinations — they're not reached directly
-                            // from the drawer, so they're not part of the rapid-tap
-                            // pattern this is fixing.
+                            // Every other logged-in screen (Favorites, Profile, Events,
+                            // Add Business, List View, Admin, business detail,
+                            // Subscription, Add Event, Write a Review, Edit Business,
+                            // Add Story, Story Viewer) renders as an overlay inside this
+                            // one NavHost entry instead of as a separate destination. A
+                            // System Trace of the reported "blank screen" bug found the
+                            // real cost: navigating to any of these as their own NavHost
+                            // destination fully disposes the "map" composable (and with
+                            // it GoogleMap's underlying SurfaceView), which then has to
+                            // be torn down and reconstructed from scratch — a genuinely
+                            // expensive, synchronous main-thread operation — every
+                            // single time the user comes back. That reconstruction was
+                            // landing exactly in the window where rapid taps (hamburger
+                            // clicks, story taps, etc.) arrived. Keeping "map" as one
+                            // NavHost entry for the entire logged-in session, and
+                            // toggling everything else on top of it as plain Compose
+                            // state, means GoogleMap is created once at login and never
+                            // rebuilt again until logout.
                             composable("map") {
                                 var showFavoritesOverlay by remember { mutableStateOf(false) }
                                 var showProfileOverlay by remember { mutableStateOf(false) }
@@ -182,24 +177,57 @@ class MainActivity : ComponentActivity() {
                                 // there underneath, exactly as if Admin had been popped
                                 // back to Profile in a real nav stack.
                                 var showAdminOverlay by remember { mutableStateOf(false) }
+                                // "View Full Profile" on a map marker's preview sheet,
+                                // and business taps from the Favorites/List View
+                                // overlays, all used to navigate to a real
+                                // "business_detail/{id}" NavHost destination — which
+                                // disposes "map" (and GoogleMap) exactly like the
+                                // drawer items used to, just reached by a different
+                                // button. Same fix: hold the tapped business's id as
+                                // local state and render it as an overlay instead.
+                                var selectedBusinessId by remember { mutableStateOf<String?>(null) }
+                                // The remaining pieces reached from inside these
+                                // overlays (Subscription, Add Event, Write a Review,
+                                // Edit Business) plus Add Story / Story Viewer off the
+                                // map itself — same cost, same fix. Stories in
+                                // particular get tapped through quickly in normal use,
+                                // so they're just as exposed as the drawer items were.
+                                var showSubscriptionOverlay by remember { mutableStateOf(false) }
+                                var showAddEventOverlay by remember { mutableStateOf(false) }
+                                var showAddReviewOverlay by remember { mutableStateOf(false) }
+                                var showEditBusinessOverlay by remember { mutableStateOf(false) }
+                                var showAddStoryOverlay by remember { mutableStateOf(false) }
+                                var selectedStoryIndex by remember { mutableStateOf<Int?>(null) }
 
-                                // System back button closes whichever overlay is open
-                                // (innermost first) instead of falling through to
-                                // MapScreen's own back handling (which is for the
-                                // drawer, not these overlays).
+                                // System back button closes whichever overlay is open,
+                                // innermost/most-recently-opened first, instead of
+                                // falling through to MapScreen's own back handling
+                                // (which is for the drawer, not these overlays).
                                 BackHandler(
                                     enabled = showFavoritesOverlay || showProfileOverlay ||
                                         showEventsOverlay || showAddBusinessOverlay ||
-                                        showBusinessListOverlay || showAdminOverlay
+                                        showBusinessListOverlay || showAdminOverlay ||
+                                        selectedBusinessId != null || showSubscriptionOverlay ||
+                                        showAddEventOverlay || showAddReviewOverlay ||
+                                        showEditBusinessOverlay || showAddStoryOverlay ||
+                                        selectedStoryIndex != null
                                 ) {
-                                    if (showAdminOverlay) {
-                                        showAdminOverlay = false
-                                    } else {
-                                        showFavoritesOverlay = false
-                                        showProfileOverlay = false
-                                        showEventsOverlay = false
-                                        showAddBusinessOverlay = false
-                                        showBusinessListOverlay = false
+                                    when {
+                                        showAddReviewOverlay -> showAddReviewOverlay = false
+                                        showEditBusinessOverlay -> showEditBusinessOverlay = false
+                                        showSubscriptionOverlay -> showSubscriptionOverlay = false
+                                        showAddEventOverlay -> showAddEventOverlay = false
+                                        selectedBusinessId != null -> selectedBusinessId = null
+                                        showAdminOverlay -> showAdminOverlay = false
+                                        selectedStoryIndex != null -> selectedStoryIndex = null
+                                        showAddStoryOverlay -> showAddStoryOverlay = false
+                                        else -> {
+                                            showFavoritesOverlay = false
+                                            showProfileOverlay = false
+                                            showEventsOverlay = false
+                                            showAddBusinessOverlay = false
+                                            showBusinessListOverlay = false
+                                        }
                                     }
                                 }
 
@@ -210,12 +238,8 @@ class MainActivity : ComponentActivity() {
                                         onProfileClick = { showProfileOverlay = true },
                                         onFavoritesClick = { showFavoritesOverlay = true },
                                         onEventsClick = { showEventsOverlay = true },
-                                        onAddStoryClick = {
-                                            navController.navigateSafe("add_story")
-                                        },
-                                        onStoryClick = { index: Int ->
-                                            navController.navigateSafe("story_viewer/$index")
-                                        },
+                                        onAddStoryClick = { showAddStoryOverlay = true },
+                                        onStoryClick = { index: Int -> selectedStoryIndex = index },
                                         onLogout = {
                                             showFavoritesOverlay = false
                                             showProfileOverlay = false
@@ -223,12 +247,19 @@ class MainActivity : ComponentActivity() {
                                             showAddBusinessOverlay = false
                                             showBusinessListOverlay = false
                                             showAdminOverlay = false
+                                            selectedBusinessId = null
+                                            showSubscriptionOverlay = false
+                                            showAddEventOverlay = false
+                                            showAddReviewOverlay = false
+                                            showEditBusinessOverlay = false
+                                            showAddStoryOverlay = false
+                                            selectedStoryIndex = null
                                             navController.navigateSafe("auth") {
                                                 popUpTo(0) { inclusive = true }
                                             }
                                         },
                                         onBusinessClick = { businessId ->
-                                            navController.navigateSafe("business_detail/$businessId")
+                                            selectedBusinessId = businessId
                                         },
                                         viewModel = mapViewModel,
                                         storiesViewModel = storiesViewModel,
@@ -239,7 +270,7 @@ class MainActivity : ComponentActivity() {
                                         FavoritesScreen(
                                             onBackClick = { showFavoritesOverlay = false },
                                             onBusinessClick = { businessId ->
-                                                navController.navigateSafe("business_detail/$businessId")
+                                                selectedBusinessId = businessId
                                             },
                                             viewModel = mapViewModel
                                         )
@@ -255,11 +286,18 @@ class MainActivity : ComponentActivity() {
                                                 showAddBusinessOverlay = false
                                                 showBusinessListOverlay = false
                                                 showAdminOverlay = false
+                                                selectedBusinessId = null
+                                                showSubscriptionOverlay = false
+                                                showAddEventOverlay = false
+                                                showAddReviewOverlay = false
+                                                showEditBusinessOverlay = false
+                                                showAddStoryOverlay = false
+                                                selectedStoryIndex = null
                                                 navController.navigateSafe("auth") {
                                                     popUpTo(0) { inclusive = true }
                                                 }
                                             },
-                                            onUpgradeClick = { navController.navigateSafe("subscription") },
+                                            onUpgradeClick = { showSubscriptionOverlay = true },
                                             onAdminClick = { showAdminOverlay = true },
                                             currentLanguage = currentLanguage,
                                             onLanguageChange = { currentLanguage = it },
@@ -280,7 +318,16 @@ class MainActivity : ComponentActivity() {
                                     if (showEventsOverlay) {
                                         EventsScreen(
                                             onBackClick = { showEventsOverlay = false },
-                                            onAddEventClick = { navController.navigateSafe("add_event") }
+                                            onAddEventClick = { showAddEventOverlay = true }
+                                        )
+                                    }
+
+                                    // Drawn after Events so it layers above it, same as
+                                    // Admin layers above Profile.
+                                    if (showAddEventOverlay) {
+                                        AddEventScreen(
+                                            onBackClick = { showAddEventOverlay = false },
+                                            onEventAdded = { showAddEventOverlay = false }
                                         )
                                     }
 
@@ -295,153 +342,122 @@ class MainActivity : ComponentActivity() {
                                         BusinessListScreen(
                                             onBackClick = { showBusinessListOverlay = false },
                                             onBusinessClick = { businessId ->
-                                                navController.navigateSafe("business_detail/$businessId")
+                                                selectedBusinessId = businessId
                                             },
                                             onNavigateToAuth = { navController.navigateSafe("auth") },
                                             viewModel = mapViewModel,
                                             sortBy = "default"
                                         )
                                     }
-                                }
-                            }
 
-                            // ── ADD EVENT ─────────────────────────────────────────
-                            // Popping back here lands on "map" with the Events overlay
-                            // flag still set, so Events reappears — same pattern as
-                            // Admin returning to the Profile overlay above.
-                            composable("add_event") {
-                                AddEventScreen(
-                                    onBackClick = { navController.popBackStackSafe() },
-                                    onEventAdded = { navController.popBackStackSafe() }
-                                )
-                            }
-
-                            // ── BUSINESS DETAIL ───────────────────────────────────
-                            composable(
-                                route = "business_detail/{businessId}",
-                                arguments = listOf(
-                                    navArgument("businessId") { type = NavType.StringType }
-                                )
-                            ) { backStackEntry ->
-                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                                val business = mapViewModel.getBusinessById(businessId)
-
-                                if (business != null) {
-                                    BusinessDetailScreen(
-                                        business = business,
-                                        currentUserId = currentUserId,
-                                        onWriteReviewClick = {
-                                            if (currentUserId.isEmpty()) {
-                                                navController.navigateSafe("auth")
-                                            } else {
-                                                navController.navigateSafe("add_review/$businessId")
-                                            }
-                                        },
-                                        onEditClick = {
-                                            navController.navigateSafe("edit_business/$businessId")
-                                        },
-                                        onBackClick = { navController.popBackStackSafe() },
-                                        onUpgradeClick = { navController.navigateSafe("subscription") },
-                                        onNavigateToAuth = { navController.navigateSafe("auth") },
-                                        mapViewModel = mapViewModel
-                                    )
-                                } else {
-                                    Text("Business not found.")
-                                }
-                            }
-
-                            // ── ADD REVIEW ────────────────────────────────────────
-                            composable(
-                                route = "add_review/{businessId}",
-                                arguments = listOf(
-                                    navArgument("businessId") { type = NavType.StringType }
-                                )
-                            ) { backStackEntry ->
-                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                                AddReviewScreen(
-                                    businessId = businessId,
-                                    onReviewSubmitted = { navController.popBackStackSafe() }
-                                )
-                            }
-
-                            // ── SUBSCRIPTION ──────────────────────────────────────
-                            composable("subscription") {
-                                SubscriptionScreen(
-                                    onBackClick = { navController.popBackStackSafe() }
-                                )
-                            }
-
-                            // ── EDIT BUSINESS ─────────────────────────────────────
-                            composable(
-                                route = "edit_business/{businessId}",
-                                arguments = listOf(
-                                    navArgument("businessId") { type = NavType.StringType }
-                                )
-                            ) { backStackEntry ->
-                                val businessId = backStackEntry.arguments?.getString("businessId") ?: ""
-                                val business = mapViewModel.getBusinessById(businessId)
-
-                                if (business != null) {
-                                    EditBusinessScreen(
-                                        business = business,
-                                        onBackClick = { navController.popBackStackSafe() },
-                                        onBusinessUpdated = { navController.popBackStackSafe() }
-                                    )
-                                } else {
-                                    Text("Business not found.")
-                                }
-                            }
-
-                            // ── ADD STORY ─────────────────────────────────────────
-                            composable("add_story") {
-                                AddStoryScreen(
-                                    onBackClick = { navController.popBackStackSafe() },
-                                    onStoryPosted = { navController.popBackStackSafe() },
-                                    mapViewModel = mapViewModel
-                                )
-                            }
-
-                            // ── STORY VIEWER ──────────────────────────────────────
-                            composable(
-                                route = "story_viewer/{storyIndex}",
-                                arguments = listOf(
-                                    navArgument("storyIndex") { type = NavType.IntType }
-                                )
-                            ) { backStackEntry ->
-                                val storyIndex = backStackEntry.arguments?.getInt("storyIndex") ?: 0
-                                val stories by storiesViewModel.stories.collectAsState()
-                                val isLoading by storiesViewModel.isLoading.collectAsState()
-
-                                when {
-                                    stories.isNotEmpty() -> {
-                                        StoryViewerScreen(
-                                            stories = stories,
-                                            initialIndex = storyIndex.coerceIn(0, stories.lastIndex),
-                                            onClose = { navController.popBackStackSafe() },
-                                            onBusinessClick = { businessId ->
-                                                navController.navigateSafe("business_detail/$businessId")
-                                            },
+                                    if (showAddStoryOverlay) {
+                                        AddStoryScreen(
+                                            onBackClick = { showAddStoryOverlay = false },
+                                            onStoryPosted = { showAddStoryOverlay = false },
+                                            mapViewModel = mapViewModel,
                                             storiesViewModel = storiesViewModel
                                         )
                                     }
-                                    isLoading -> {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
+
+                                    // Stories get tapped through quickly in normal use,
+                                    // same reasoning as everything else here — it needs
+                                    // to sit on top of the map without leaving it.
+                                    selectedStoryIndex?.let { storyIndex ->
+                                        val stories by storiesViewModel.stories.collectAsState()
+                                        val isLoading by storiesViewModel.isLoading.collectAsState()
+
+                                        when {
+                                            stories.isNotEmpty() -> {
+                                                StoryViewerScreen(
+                                                    stories = stories,
+                                                    initialIndex = storyIndex.coerceIn(0, stories.lastIndex),
+                                                    onClose = { selectedStoryIndex = null },
+                                                    onBusinessClick = { businessId ->
+                                                        selectedStoryIndex = null
+                                                        selectedBusinessId = businessId
+                                                    },
+                                                    storiesViewModel = storiesViewModel
+                                                )
+                                            }
+                                            isLoading -> {
+                                                Box(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator()
+                                                }
+                                            }
+                                            else -> {
+                                                // Stories finished loading but came back empty (or
+                                                // list changed out from under us, e.g. expired) —
+                                                // bail out instead of rendering a blank overlay.
+                                                LaunchedEffect(Unit) {
+                                                    selectedStoryIndex = null
+                                                }
+                                            }
                                         }
                                     }
-                                    else -> {
-                                        // Stories finished loading but came back empty (or list changed
-                                        // out from under us, e.g. expired) — bail out instead of
-                                        // rendering a blank screen.
-                                        LaunchedEffect(Unit) {
-                                            navController.popBackStackSafe()
+
+                                    // Drawn after Favorites/List View/Story Viewer so it
+                                    // layers above whichever of those a business can be
+                                    // opened from.
+                                    selectedBusinessId?.let { businessId ->
+                                        val business = mapViewModel.getBusinessById(businessId)
+                                        if (business != null) {
+                                            BusinessDetailScreen(
+                                                business = business,
+                                                currentUserId = currentUserId,
+                                                onWriteReviewClick = {
+                                                    if (currentUserId.isEmpty()) {
+                                                        navController.navigateSafe("auth")
+                                                    } else {
+                                                        showAddReviewOverlay = true
+                                                    }
+                                                },
+                                                onEditClick = { showEditBusinessOverlay = true },
+                                                onBackClick = { selectedBusinessId = null },
+                                                onUpgradeClick = { showSubscriptionOverlay = true },
+                                                onNavigateToAuth = { navController.navigateSafe("auth") },
+                                                mapViewModel = mapViewModel
+                                            )
+
+                                            // Layered above Business Detail so "back"
+                                            // closes them first and reveals it again.
+                                            if (showAddReviewOverlay) {
+                                                AddReviewScreen(
+                                                    businessId = businessId,
+                                                    onReviewSubmitted = { showAddReviewOverlay = false }
+                                                )
+                                            }
+
+                                            if (showEditBusinessOverlay) {
+                                                EditBusinessScreen(
+                                                    business = business,
+                                                    onBackClick = { showEditBusinessOverlay = false },
+                                                    onBusinessUpdated = { showEditBusinessOverlay = false }
+                                                )
+                                            }
+                                        } else {
+                                            Text("Business not found.")
                                         }
+                                    }
+
+                                    // Reachable from both Profile and Business Detail,
+                                    // so it's drawn last — above either one.
+                                    if (showSubscriptionOverlay) {
+                                        SubscriptionScreen(
+                                            onBackClick = { showSubscriptionOverlay = false }
+                                        )
                                     }
                                 }
                             }
+
+                            // Add Event, Business Detail, Add Review, Subscription, Edit
+                            // Business, Add Story and Story Viewer all used to be real
+                            // NavHost destinations here. They're now overlays rendered
+                            // inside the "map" destination above (see the comments
+                            // there), so GoogleMap never gets disposed and rebuilt for
+                            // any of them, no matter how they're reached.
                         }
                     }
                 }

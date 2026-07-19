@@ -91,10 +91,26 @@ class StoriesRepository {
     }
 
     // ── DELETE EXPIRED STORIES ────────────────────────────────────────
-    suspend fun deleteExpiredStories(): Result<Unit> {
+    // Only ever attempts to delete the current user's own expired stories.
+    // This used to query every expired story app-wide and try to delete
+    // all of them, but Firestore's security rules correctly block a user
+    // from deleting someone else's document — so any story that wasn't
+    // yours failed with PERMISSION_DENIED. Worse, since a single failed
+    // delete() throws mid-loop, one other person's story appearing before
+    // yours in the results could silently stop your own from being
+    // cleaned up too, depending on document order. Filtering the query to
+    // just this user's stories means every document it returns is one
+    // it's actually allowed to delete, so the loop never aborts partway.
+    // Note: this is a compound query (userId == X AND expiresAt < now) —
+    // if it ever fails with a "requires an index" error, Firestore's own
+    // error message includes a direct link to create that index in the
+    // Firebase Console.
+    suspend fun deleteExpiredStories(userId: String): Result<Unit> {
+        if (userId.isBlank()) return Result.success(Unit)
         return try {
             val now = System.currentTimeMillis()
             val expired = storiesRef
+                .whereEqualTo("userId", userId)
                 .whereLessThan("expiresAt", now)
                 .get()
                 .await()
