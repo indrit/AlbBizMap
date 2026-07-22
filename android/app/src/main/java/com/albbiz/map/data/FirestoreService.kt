@@ -83,15 +83,15 @@ class FirestoreService {
 
     suspend fun addBusiness(business: Business): Result<String> {
         return try {
-            val auth = Firebase.auth
-            var currentUser = auth.currentUser
-            
-            if (currentUser == null) {
-                auth.signInAnonymously().await()
-                currentUser = auth.currentUser
-            }
-
-            if (currentUser == null) return Result.failure(Exception("Authentication failed"))
+            // Used to silently create a throwaway anonymous Firebase account here if
+            // nobody was signed in, so the business would end up permanently owned by
+            // an anonymous uid nobody could ever log back into. That was a workaround
+            // for the app previously forcing login before anyone could reach this
+            // screen at all; now that Add Business is gated with AuthGate.requireLogin
+            // at the UI level (MainActivity), this should never be called without a
+            // real signed-in user — so it fails cleanly instead of masking the gap.
+            val currentUser = Firebase.auth.currentUser
+                ?: return Result.failure(Exception("You must be logged in to add a business"))
 
             val docRef = if (business.id.isEmpty()) businessesRef.document() else businessesRef.document(business.id)
             val finalBusiness = business.copy(id = docRef.id, ownerId = currentUser.uid)

@@ -198,9 +198,18 @@ fun AddReviewScreen(
                         return@Button
                     }
                     val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                    val userId = firebaseUser?.uid ?: ""
-                    val userName = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
-                        ?: firebaseUser?.email?.substringBefore("@") ?: "User"
+                    // Defense-in-depth: this screen is only ever supposed to be reached
+                    // through MainActivity's gated onWriteReviewClick, which already
+                    // checks the user is logged in before opening it. But this check
+                    // costs nothing and means a review can never silently submit with an
+                    // empty userId if some future code path reaches this screen another way.
+                    if (firebaseUser == null) {
+                        Toast.makeText(context, "You must be logged in to submit a review", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val userId = firebaseUser.uid
+                    val userName = firebaseUser.displayName?.takeIf { it.isNotBlank() }
+                        ?: firebaseUser.email?.substringBefore("@") ?: "User"
                     reviewViewModel.addReview(
                         businessId = businessId,
                         rating = rating,

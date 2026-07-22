@@ -48,11 +48,13 @@ fun BusinessListScreen(
     sortBy: String = "default"
 ) {
     val allBusinesses by viewModel.businesses.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    // Own independent copy of search state, not the map's — see the comment above
+    // listSearchQuery in MapViewModel for why these used to be (wrongly) shared.
+    val searchQuery by viewModel.listSearchQuery.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val strings = LocalAppStrings.current
 
-    val filteredBusinesses by viewModel.filteredBusinesses.collectAsState()
+    val filteredBusinesses by viewModel.listFilteredBusinesses.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
 
     val businesses = remember(filteredBusinesses, sortBy, userLocation) {
@@ -154,7 +156,7 @@ fun BusinessListScreen(
                 item {
                     OutlinedTextField(
                         value = searchQuery,
-                        onValueChange = { viewModel.onSearchQueryChange(it) },
+                        onValueChange = { viewModel.onListSearchQueryChange(it) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -191,7 +193,7 @@ fun BusinessListScreen(
                                 selected = selectedCategory == category,
                                 onClick = {
                                     selectedCategory = category
-                                    viewModel.onCategoryChange(
+                                    viewModel.onListCategoryChange(
                                         if (category == "All") "" else category
                                     )
                                 },
@@ -238,8 +240,24 @@ fun BusinessListScreen(
                             business = business,
                             userLocation = userLocation,
                             isFavorite = favoriteIds.contains(business.id),
-                            onToggleFavorite = { viewModel.toggleFavorite(business.id) },
-                            onToggleLike = { viewModel.toggleFavorite(business.id) },
+                            // Was calling viewModel.toggleFavorite directly with no
+                            // login check — MapViewModel.toggleFavorite silently no-ops
+                            // for a guest (no uid to save against), so tapping this used
+                            // to just do nothing with zero feedback. Same AuthGate
+                            // pattern already used for this same action on the business
+                            // detail screen.
+                            onToggleFavorite = {
+                                AuthGate.requireLogin(
+                                    onNotLoggedIn = onNavigateToAuth,
+                                    action = { viewModel.toggleFavorite(business.id) }
+                                )
+                            },
+                            onToggleLike = {
+                                AuthGate.requireLogin(
+                                    onNotLoggedIn = onNavigateToAuth,
+                                    action = { viewModel.toggleFavorite(business.id) }
+                                )
+                            },
                             onClick = { onBusinessClick(business.id) }
                         )
                     }

@@ -38,6 +38,21 @@ class MapViewModel : ViewModel() {
     private val _selectedCategory = MutableStateFlow("")
     val selectedCategory: StateFlow<String> = _selectedCategory
 
+    // A second, independent copy of search/category state for the List View screen.
+    // MapScreen and BusinessListScreen both share this one MapViewModel instance (it's
+    // hoisted once at the top of the app so the businesses list itself doesn't get
+    // refetched every time you switch screens), but search text and category filter
+    // were both wired to the SAME _searchQuery/_selectedCategory above — so typing in
+    // one screen's search bar instantly showed up in the other's, and neither ever
+    // reset when you left that screen, because they were literally the same value.
+    // Keeping List View's copy fully separate fixes both: they can no longer bleed
+    // into each other, and each can be reset independently when its screen closes.
+    private val _listSearchQuery = MutableStateFlow("")
+    val listSearchQuery: StateFlow<String> = _listSearchQuery
+
+    private val _listSelectedCategory = MutableStateFlow("")
+    val listSelectedCategory: StateFlow<String> = _listSelectedCategory
+
     private val _userLocation = MutableStateFlow<LatLng?>(null)
     val userLocation: StateFlow<LatLng?> = _userLocation
 
@@ -133,6 +148,24 @@ class MapViewModel : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
+    // Same filter logic as filteredBusinesses above, just driven by List View's own
+    // independent search/category state instead of the map's.
+    val listFilteredBusinesses: StateFlow<List<Business>> = combine(
+        _businesses,
+        _listSearchQuery,
+        _listSelectedCategory
+    ) { list, query, category ->
+        list.filter { business ->
+            val matchesQuery = query.isEmpty() ||
+                    business.name.contains(query, ignoreCase = true) ||
+                    business.category.contains(query, ignoreCase = true) ||
+                    business.address.contains(query, ignoreCase = true)
+            val matchesCategory = category.isEmpty() ||
+                    business.category.equals(category, ignoreCase = true)
+            matchesQuery && matchesCategory
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+
     init {
         loadBusinesses()
         loadFavorites()
@@ -195,6 +228,23 @@ class MapViewModel : ViewModel() {
 
     fun onCategoryChange(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun onListSearchQueryChange(query: String) {
+        _listSearchQuery.value = query
+    }
+
+    fun onListCategoryChange(category: String) {
+        _listSelectedCategory.value = category
+    }
+
+    // Called when List View closes, so reopening it always starts from a clean
+    // search box and "All" category instead of remembering whatever was typed/
+    // selected last time — same "reset on close" behavior the map's own search
+    // already had, now applied to List View's independent copy too.
+    fun resetListFilters() {
+        _listSearchQuery.value = ""
+        _listSelectedCategory.value = ""
     }
 
     fun getBusinessById(id: String): Business? {

@@ -1,7 +1,11 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -151,6 +156,12 @@ fun EventsScreen(
 @Composable
 fun EventItem(event: Event) {
     val strings = LocalAppStrings.current
+    val context = LocalContext.current
+    // Events don't carry enough extra data (unlike a business's reviews/photos/hours)
+    // to justify a whole separate detail screen — the only thing actually missing
+    // was a way to read a description longer than 3 lines. Expanding in place on tap
+    // covers that without adding a new screen.
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -280,18 +291,42 @@ fun EventItem(event: Event) {
                 Spacer(Modifier.height(10.dp))
 
                 // ── DESCRIPTION ───────────────────────────────────
+                // Tapping the description toggles between a 3-line preview and the
+                // full text, instead of a separate detail screen — see the comment
+                // above the expanded state declaration for why.
                 Text(
                     event.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Black.copy(alpha = 0.7f),
-                    maxLines = 3
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { expanded = !expanded }
+                )
+                Text(
+                    if (expanded) strings.readLess else strings.readMore,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontRed,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .clickable { expanded = !expanded }
                 )
 
                 // ── WEBSITE BUTTON ────────────────────────────────
                 if (event.websiteUrl != null) {
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
-                        onClick = { /* TODO: Open URL */ },
+                        onClick = {
+                            try {
+                                val url = event.websiteUrl.let {
+                                    if (it.startsWith("http://") || it.startsWith("https://")) it
+                                    else "https://$it"
+                                }
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Couldn't open that link", Toast.LENGTH_SHORT).show()
+                            }
+                        },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MeTontRed

@@ -30,6 +30,7 @@ import com.albbiz.map.ui.AppLanguage
 import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
+import com.albbiz.map.utils.AuthGate
 import com.albbiz.map.viewmodel.AuthViewModel
 import com.albbiz.map.viewmodel.StoriesViewModel
 import com.google.android.gms.maps.MapsInitializer
@@ -111,11 +112,18 @@ class MainActivity : ComponentActivity() {
                             startDestination = "splash"
                         ) {
                             // ── SPLASH ────────────────────────────────────────────
+                            // Always lands on "map" now, logged in or not — browsing the
+                            // map, business listings, business detail pages, events, and
+                            // job postings is public. Individual actions that need an
+                            // account (writing a review, adding/editing a business,
+                            // posting a job or story, favoriting, viewing your profile)
+                            // are gated one at a time via AuthGate.requireLogin at the
+                            // point where the user actually tries to do them, instead of
+                            // blocking everyone at the door before they've seen anything.
                             composable("splash") {
                                 SplashScreen(
                                     onSplashFinished = {
-                                        val destination = if (authViewModel.isLoggedIn()) "map" else "auth"
-                                        navController.navigateSafe(destination) {
+                                        navController.navigateSafe("map") {
                                             popUpTo("splash") { inclusive = true }
                                         }
                                     }
@@ -167,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                 var showEventsOverlay by remember { mutableStateOf(false) }
                                 var showAddBusinessOverlay by remember { mutableStateOf(false) }
                                 var showBusinessListOverlay by remember { mutableStateOf(false) }
+                                var showJobsOverlay by remember { mutableStateOf(false) }
                                 // Admin is one level deeper (reached from inside the
                                 // Profile overlay), but it's still the same underlying
                                 // cost — navigating to it as a real NavHost destination
@@ -206,7 +215,7 @@ class MainActivity : ComponentActivity() {
                                 BackHandler(
                                     enabled = showFavoritesOverlay || showProfileOverlay ||
                                         showEventsOverlay || showAddBusinessOverlay ||
-                                        showBusinessListOverlay || showAdminOverlay ||
+                                        showBusinessListOverlay || showJobsOverlay || showAdminOverlay ||
                                         selectedBusinessId != null || showSubscriptionOverlay ||
                                         showAddEventOverlay || showAddReviewOverlay ||
                                         showEditBusinessOverlay || showAddStoryOverlay ||
@@ -226,7 +235,9 @@ class MainActivity : ComponentActivity() {
                                             showProfileOverlay = false
                                             showEventsOverlay = false
                                             showAddBusinessOverlay = false
+                                            if (showBusinessListOverlay) mapViewModel.resetListFilters()
                                             showBusinessListOverlay = false
+                                            showJobsOverlay = false
                                         }
                                     }
                                 }
@@ -234,18 +245,48 @@ class MainActivity : ComponentActivity() {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     MapScreen(
                                         onListClick = { showBusinessListOverlay = true },
-                                        onAddBusinessClick = { showAddBusinessOverlay = true },
-                                        onProfileClick = { showProfileOverlay = true },
-                                        onFavoritesClick = { showFavoritesOverlay = true },
+                                        onAddBusinessClick = {
+                                            AuthGate.requireLogin(
+                                                onNotLoggedIn = { navController.navigateSafe("auth") },
+                                                action = { showAddBusinessOverlay = true }
+                                            )
+                                        },
+                                        // Profile and Favorites are both inherently
+                                        // account-bound — there's no meaningful "guest"
+                                        // version of either (an empty favorites list, a
+                                        // blank profile with a logout button that does
+                                        // nothing), so tapping them sends a guest
+                                        // straight to login instead of opening a
+                                        // screen with nothing real to show.
+                                        onProfileClick = {
+                                            AuthGate.requireLogin(
+                                                onNotLoggedIn = { navController.navigateSafe("auth") },
+                                                action = { showProfileOverlay = true }
+                                            )
+                                        },
+                                        onFavoritesClick = {
+                                            AuthGate.requireLogin(
+                                                onNotLoggedIn = { navController.navigateSafe("auth") },
+                                                action = { showFavoritesOverlay = true }
+                                            )
+                                        },
                                         onEventsClick = { showEventsOverlay = true },
-                                        onAddStoryClick = { showAddStoryOverlay = true },
+                                        onJobsClick = { showJobsOverlay = true },
+                                        onAddStoryClick = {
+                                            AuthGate.requireLogin(
+                                                onNotLoggedIn = { navController.navigateSafe("auth") },
+                                                action = { showAddStoryOverlay = true }
+                                            )
+                                        },
                                         onStoryClick = { index: Int -> selectedStoryIndex = index },
                                         onLogout = {
                                             showFavoritesOverlay = false
                                             showProfileOverlay = false
                                             showEventsOverlay = false
                                             showAddBusinessOverlay = false
+                                            mapViewModel.resetListFilters()
                                             showBusinessListOverlay = false
+                                            showJobsOverlay = false
                                             showAdminOverlay = false
                                             selectedBusinessId = null
                                             showSubscriptionOverlay = false
@@ -284,7 +325,9 @@ class MainActivity : ComponentActivity() {
                                                 showProfileOverlay = false
                                                 showEventsOverlay = false
                                                 showAddBusinessOverlay = false
+                                                mapViewModel.resetListFilters()
                                                 showBusinessListOverlay = false
+                                                showJobsOverlay = false
                                                 showAdminOverlay = false
                                                 selectedBusinessId = null
                                                 showSubscriptionOverlay = false
@@ -318,7 +361,12 @@ class MainActivity : ComponentActivity() {
                                     if (showEventsOverlay) {
                                         EventsScreen(
                                             onBackClick = { showEventsOverlay = false },
-                                            onAddEventClick = { showAddEventOverlay = true }
+                                            onAddEventClick = {
+                                                AuthGate.requireLogin(
+                                                    onNotLoggedIn = { navController.navigateSafe("auth") },
+                                                    action = { showAddEventOverlay = true }
+                                                )
+                                            }
                                         )
                                     }
 
@@ -331,6 +379,16 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    if (showJobsOverlay) {
+                                        JobsScreen(
+                                            onBackClick = { showJobsOverlay = false },
+                                            onBusinessClick = { businessId ->
+                                                selectedBusinessId = businessId
+                                            },
+                                            viewModel = mapViewModel
+                                        )
+                                    }
+
                                     if (showAddBusinessOverlay) {
                                         AddBusinessScreen(
                                             onBackClick = { showAddBusinessOverlay = false },
@@ -340,7 +398,10 @@ class MainActivity : ComponentActivity() {
 
                                     if (showBusinessListOverlay) {
                                         BusinessListScreen(
-                                            onBackClick = { showBusinessListOverlay = false },
+                                            onBackClick = {
+                                                mapViewModel.resetListFilters()
+                                                showBusinessListOverlay = false
+                                            },
                                             onBusinessClick = { businessId ->
                                                 selectedBusinessId = businessId
                                             },

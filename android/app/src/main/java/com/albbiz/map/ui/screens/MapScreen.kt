@@ -105,6 +105,7 @@ fun MapScreen(
     onProfileClick: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
     onEventsClick: () -> Unit = {},
+    onJobsClick: () -> Unit = {},
     onLogout: () -> Unit = {},
     onBusinessClick: (String) -> Unit,
     onAddStoryClick: () -> Unit = {},
@@ -386,6 +387,14 @@ fun MapScreen(
                     selected = false,
                     onClick = { closeDrawer(); if (mapReady) onEventsClick() },
                     icon = { Icon(Icons.Default.Event, null, tint = MeTontRed) },
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text(strings.jobs, fontWeight = FontWeight.Medium) },
+                    selected = false,
+                    onClick = { closeDrawer(); if (mapReady) onJobsClick() },
+                    icon = { Icon(Icons.Default.Work, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -904,6 +913,7 @@ fun MapScreen(
                                 business.location?.let { BusinessClusterItem(business) }
                             }
                         }
+
                         Clustering<BusinessClusterItem>(
                             items = clusterItems,
                             onClusterItemClick = { item ->
