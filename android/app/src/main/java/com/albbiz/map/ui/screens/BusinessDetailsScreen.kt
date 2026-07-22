@@ -57,7 +57,9 @@ fun BusinessDetailScreen(
     onEditClick: () -> Unit,
     onBackClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    onNavigateToAuth: () -> Unit,
+    // Takes the blocked action so it can be resumed automatically right after login,
+    // instead of dropping the user back with nothing having happened.
+    onNavigateToAuth: (() -> Unit) -> Unit,
     mapViewModel: MapViewModel = viewModel(),
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
@@ -92,16 +94,17 @@ fun BusinessDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        AuthGate.requireLogin(
-                            onNotLoggedIn = onNavigateToAuth,
-                            action = {
-                                val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                        val shareAction: () -> Unit = {
+                            val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
                             }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                        }
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = { onNavigateToAuth(shareAction) },
+                            action = shareAction
                         )
                     }) {
                         Icon(
@@ -111,9 +114,10 @@ fun BusinessDetailScreen(
                         )
                     }
                     IconButton(onClick = {
+                        val favoriteAction: () -> Unit = { mapViewModel.toggleFavorite(business.id) }
                         AuthGate.requireLogin(
-                            onNotLoggedIn = onNavigateToAuth,
-                            action = { mapViewModel.toggleFavorite(business.id) }
+                            onNotLoggedIn = { onNavigateToAuth(favoriteAction) },
+                            action = favoriteAction
                         )
                     }) {
                         Icon(
@@ -431,9 +435,10 @@ fun BusinessDetailScreen(
                     // ── LIKE BUTTON ───────────────────────────────────
                     OutlinedButton(
                         onClick = {
+                            val likeAction: () -> Unit = { mapViewModel.toggleFavorite(business.id) }
                             com.albbiz.map.utils.AuthGate.requireLogin(
-                                onNotLoggedIn = onNavigateToAuth,
-                                action = { mapViewModel.toggleFavorite(business.id) }
+                                onNotLoggedIn = { onNavigateToAuth(likeAction) },
+                                action = likeAction
                             )
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -658,7 +663,7 @@ fun ClickableDetailRowItem(icon: ImageVector, text: String, onClick: () -> Unit)
 fun DetailReviewItem(
     review: Review,
     businessId: String,
-    onNavigateToAuth: () -> Unit,
+    onNavigateToAuth: (() -> Unit) -> Unit,
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
@@ -748,13 +753,14 @@ fun DetailReviewItem(
                 // Like button
                 IconButton(
                     onClick = {
-                        AuthGate.requireLogin(
-                            onNotLoggedIn = onNavigateToAuth,
-                            action = {
-                                currentUserId?.let { uid ->
-                                    reviewViewModel.toggleLike(businessId, review.id, uid)
-                                }
+                        val likeAction: () -> Unit = {
+                            currentUserId?.let { uid ->
+                                reviewViewModel.toggleLike(businessId, review.id, uid)
                             }
+                        }
+                        AuthGate.requireLogin(
+                            onNotLoggedIn = { onNavigateToAuth(likeAction) },
+                            action = likeAction
                         )
                     },
                     modifier = Modifier.size(32.dp)
@@ -777,9 +783,10 @@ fun DetailReviewItem(
                 // Reply button
                 TextButton(
                     onClick = {
+                        val replyAction: () -> Unit = { showReplyInput = !showReplyInput }
                         AuthGate.requireLogin(
-                            onNotLoggedIn = onNavigateToAuth,
-                            action = { showReplyInput = !showReplyInput }
+                            onNotLoggedIn = { onNavigateToAuth(replyAction) },
+                            action = replyAction
                         )
                     },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
@@ -924,15 +931,16 @@ fun DetailReviewItem(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
                                     onClick = {
-                                        AuthGate.requireLogin(
-                                            onNotLoggedIn = onNavigateToAuth,
-                                            action = {
-                                                currentUserId?.let { uid ->
-                                                    reviewViewModel.toggleReplyLike(
-                                                        businessId, review.id, reply.id, uid
-                                                    )
-                                                }
+                                        val replyLikeAction: () -> Unit = {
+                                            currentUserId?.let { uid ->
+                                                reviewViewModel.toggleReplyLike(
+                                                    businessId, review.id, reply.id, uid
+                                                )
                                             }
+                                        }
+                                        AuthGate.requireLogin(
+                                            onNotLoggedIn = { onNavigateToAuth(replyLikeAction) },
+                                            action = replyLikeAction
                                         )
                                     },
                                     modifier = Modifier.size(28.dp)

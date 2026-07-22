@@ -131,6 +131,7 @@ data class AppStrings(
     val welcomeBack: String,
     val signInToContinue: String,
     val signUpToGetStarted: String,
+    val notNow: String,
 
     val emailRequired: String,
     val passwordRequired: String,
@@ -294,6 +295,7 @@ val EnglishStrings = AppStrings(
     welcomeBack = "Welcome back!",
     signInToContinue = "Sign in to continue",
     signUpToGetStarted = "Sign up to get started",
+    notNow = "Not now",
 
     emailRequired = "Email is required",
     passwordRequired = "Password is required",
@@ -455,6 +457,7 @@ val AlbanianStrings = AppStrings(
     welcomeBack = "Mirësevini!",
     signInToContinue = "Hyni për të vazhduar",
     signUpToGetStarted = "Regjistrohu për të filluar",
+    notNow = "Jo tani",
 
     emailRequired = "Email është i detyrueshëm",
     passwordRequired = "Fjalëkalimi është i detyrueshëm",

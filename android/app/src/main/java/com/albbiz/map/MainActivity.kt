@@ -8,9 +8,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
 import com.albbiz.map.ui.theme.AlbBizMapTheme
@@ -130,20 +133,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            // ── AUTH ──────────────────────────────────────────────
-                            composable("auth") {
-                                AuthScreen(
-                                    onAuthSuccess = {
-                                        navController.navigateSafe("map") {
-                                            popUpTo("auth") { inclusive = true }
-                                        }
-                                    },
-                                    currentLanguage = currentLanguage,
-                                    onLanguageChange = { currentLanguage = it },
-                                    viewModel = authViewModel
-                                )
-                            }
-
                             // ── MAP ───────────────────────────────────────────────
                             // Every other logged-in screen (Favorites, Profile, Events,
                             // Add Business, List View, Admin, business detail,
@@ -208,12 +197,41 @@ class MainActivity : ComponentActivity() {
                                 var showAddStoryOverlay by remember { mutableStateOf(false) }
                                 var selectedStoryIndex by remember { mutableStateOf<Int?>(null) }
 
+                                // Login used to be a hard, unexplained cut straight to a
+                                // full-screen auth form the instant a guest tapped
+                                // anything gated — no context, and whatever they were
+                                // trying to do was forgotten (you landed back on a plain
+                                // map and had to find the same button again). Now it's a
+                                // small contextual prompt first, and the action that was
+                                // blocked is remembered so it actually runs the moment
+                                // login succeeds. Auth itself is an overlay for the same
+                                // reason everything else above is — it used to be a real
+                                // NavHost destination, which disposed "map" (and
+                                // GoogleMap) every time a guest tried to log in, exactly
+                                // the blank-screen cost this whole architecture exists to
+                                // avoid.
+                                var showAuthOverlay by remember { mutableStateOf(false) }
+                                var showLoginPrompt by remember { mutableStateOf(false) }
+                                var pendingLoginAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+                                val strings = LocalAppStrings.current
+
+                                val requireLoginOrPrompt: (() -> Unit) -> Unit = { action ->
+                                    AuthGate.requireLogin(
+                                        onNotLoggedIn = {
+                                            pendingLoginAction = action
+                                            showLoginPrompt = true
+                                        },
+                                        action = action
+                                    )
+                                }
+
                                 // System back button closes whichever overlay is open,
                                 // innermost/most-recently-opened first, instead of
                                 // falling through to MapScreen's own back handling
                                 // (which is for the drawer, not these overlays).
                                 BackHandler(
-                                    enabled = showFavoritesOverlay || showProfileOverlay ||
+                                    enabled = showLoginPrompt || showAuthOverlay ||
+                                        showFavoritesOverlay || showProfileOverlay ||
                                         showEventsOverlay || showAddBusinessOverlay ||
                                         showBusinessListOverlay || showJobsOverlay || showAdminOverlay ||
                                         selectedBusinessId != null || showSubscriptionOverlay ||
@@ -222,6 +240,11 @@ class MainActivity : ComponentActivity() {
                                         selectedStoryIndex != null
                                 ) {
                                     when {
+                                        showLoginPrompt -> {
+                                            showLoginPrompt = false
+                                            pendingLoginAction = null
+                                        }
+                                        showAuthOverlay -> showAuthOverlay = false
                                         showAddReviewOverlay -> showAddReviewOverlay = false
                                         showEditBusinessOverlay -> showEditBusinessOverlay = false
                                         showSubscriptionOverlay -> showSubscriptionOverlay = false
@@ -246,37 +269,25 @@ class MainActivity : ComponentActivity() {
                                     MapScreen(
                                         onListClick = { showBusinessListOverlay = true },
                                         onAddBusinessClick = {
-                                            AuthGate.requireLogin(
-                                                onNotLoggedIn = { navController.navigateSafe("auth") },
-                                                action = { showAddBusinessOverlay = true }
-                                            )
+                                            requireLoginOrPrompt { showAddBusinessOverlay = true }
                                         },
                                         // Profile and Favorites are both inherently
                                         // account-bound — there's no meaningful "guest"
                                         // version of either (an empty favorites list, a
                                         // blank profile with a logout button that does
-                                        // nothing), so tapping them sends a guest
-                                        // straight to login instead of opening a
-                                        // screen with nothing real to show.
+                                        // nothing), so tapping them prompts a guest to
+                                        // log in instead of opening a screen with
+                                        // nothing real to show.
                                         onProfileClick = {
-                                            AuthGate.requireLogin(
-                                                onNotLoggedIn = { navController.navigateSafe("auth") },
-                                                action = { showProfileOverlay = true }
-                                            )
+                                            requireLoginOrPrompt { showProfileOverlay = true }
                                         },
                                         onFavoritesClick = {
-                                            AuthGate.requireLogin(
-                                                onNotLoggedIn = { navController.navigateSafe("auth") },
-                                                action = { showFavoritesOverlay = true }
-                                            )
+                                            requireLoginOrPrompt { showFavoritesOverlay = true }
                                         },
                                         onEventsClick = { showEventsOverlay = true },
                                         onJobsClick = { showJobsOverlay = true },
                                         onAddStoryClick = {
-                                            AuthGate.requireLogin(
-                                                onNotLoggedIn = { navController.navigateSafe("auth") },
-                                                action = { showAddStoryOverlay = true }
-                                            )
+                                            requireLoginOrPrompt { showAddStoryOverlay = true }
                                         },
                                         onStoryClick = { index: Int -> selectedStoryIndex = index },
                                         onLogout = {
@@ -295,9 +306,7 @@ class MainActivity : ComponentActivity() {
                                             showEditBusinessOverlay = false
                                             showAddStoryOverlay = false
                                             selectedStoryIndex = null
-                                            navController.navigateSafe("auth") {
-                                                popUpTo(0) { inclusive = true }
-                                            }
+                                            showAuthOverlay = true
                                         },
                                         onBusinessClick = { businessId ->
                                             selectedBusinessId = businessId
@@ -336,9 +345,7 @@ class MainActivity : ComponentActivity() {
                                                 showEditBusinessOverlay = false
                                                 showAddStoryOverlay = false
                                                 selectedStoryIndex = null
-                                                navController.navigateSafe("auth") {
-                                                    popUpTo(0) { inclusive = true }
-                                                }
+                                                showAuthOverlay = true
                                             },
                                             onUpgradeClick = { showSubscriptionOverlay = true },
                                             onAdminClick = { showAdminOverlay = true },
@@ -362,10 +369,7 @@ class MainActivity : ComponentActivity() {
                                         EventsScreen(
                                             onBackClick = { showEventsOverlay = false },
                                             onAddEventClick = {
-                                                AuthGate.requireLogin(
-                                                    onNotLoggedIn = { navController.navigateSafe("auth") },
-                                                    action = { showAddEventOverlay = true }
-                                                )
+                                                requireLoginOrPrompt { showAddEventOverlay = true }
                                             }
                                         )
                                     }
@@ -405,7 +409,10 @@ class MainActivity : ComponentActivity() {
                                             onBusinessClick = { businessId ->
                                                 selectedBusinessId = businessId
                                             },
-                                            onNavigateToAuth = { navController.navigateSafe("auth") },
+                                            onNavigateToAuth = { action ->
+                                                pendingLoginAction = action
+                                                showLoginPrompt = true
+                                            },
                                             viewModel = mapViewModel,
                                             sortBy = "default"
                                         )
@@ -469,16 +476,15 @@ class MainActivity : ComponentActivity() {
                                                 business = business,
                                                 currentUserId = currentUserId,
                                                 onWriteReviewClick = {
-                                                    if (currentUserId.isEmpty()) {
-                                                        navController.navigateSafe("auth")
-                                                    } else {
-                                                        showAddReviewOverlay = true
-                                                    }
+                                                    requireLoginOrPrompt { showAddReviewOverlay = true }
                                                 },
                                                 onEditClick = { showEditBusinessOverlay = true },
                                                 onBackClick = { selectedBusinessId = null },
                                                 onUpgradeClick = { showSubscriptionOverlay = true },
-                                                onNavigateToAuth = { navController.navigateSafe("auth") },
+                                                onNavigateToAuth = { action ->
+                                                    pendingLoginAction = action
+                                                    showLoginPrompt = true
+                                                },
                                                 mapViewModel = mapViewModel
                                             )
 
@@ -504,12 +510,63 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     // Reachable from both Profile and Business Detail,
-                                    // so it's drawn last — above either one.
+                                    // so it's drawn above either one.
                                     if (showSubscriptionOverlay) {
                                         SubscriptionScreen(
                                             onBackClick = { showSubscriptionOverlay = false }
                                         )
                                     }
+
+                                    // Reachable from literally any overlay above (any of
+                                    // them can trigger requireLoginOrPrompt), so it's
+                                    // drawn last, on top of everything.
+                                    if (showAuthOverlay) {
+                                        AuthScreen(
+                                            onAuthSuccess = {
+                                                showAuthOverlay = false
+                                                // Run whatever the guest originally
+                                                // tapped — favoriting, adding a business,
+                                                // writing a review, etc. — now that
+                                                // they're logged in, instead of leaving
+                                                // them back where they started with
+                                                // nothing having happened.
+                                                pendingLoginAction?.invoke()
+                                                pendingLoginAction = null
+                                            },
+                                            currentLanguage = currentLanguage,
+                                            onLanguageChange = { currentLanguage = it },
+                                            viewModel = authViewModel
+                                        )
+                                    }
+                                }
+
+                                // Contextual prompt shown in place of an instant redirect
+                                // to the login screen — explains why login is needed
+                                // instead of just yanking the guest away from what they
+                                // were doing. Declining just closes the prompt and
+                                // forgets the pending action; confirming opens the auth
+                                // overlay above, which resumes it on success.
+                                if (showLoginPrompt) {
+                                    AlertDialog(
+                                        onDismissRequest = {
+                                            showLoginPrompt = false
+                                            pendingLoginAction = null
+                                        },
+                                        title = { Text(strings.signIn) },
+                                        text = { Text(strings.signInToContinue) },
+                                        confirmButton = {
+                                            TextButton(onClick = {
+                                                showLoginPrompt = false
+                                                showAuthOverlay = true
+                                            }) { Text(strings.signIn) }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = {
+                                                showLoginPrompt = false
+                                                pendingLoginAction = null
+                                            }) { Text(strings.notNow) }
+                                        }
+                                    )
                                 }
                             }
 

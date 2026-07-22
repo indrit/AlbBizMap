@@ -43,7 +43,10 @@ import com.google.firebase.firestore.GeoPoint
 fun BusinessListScreen(
     onBackClick: () -> Unit,
     onBusinessClick: (String) -> Unit,
-    onNavigateToAuth: () -> Unit = {},
+    // Takes the action that was blocked by the login gate, so the caller (MainActivity)
+    // can remember it and run it automatically the moment login succeeds, instead of
+    // the user having to retap the same button after coming back from the login screen.
+    onNavigateToAuth: (() -> Unit) -> Unit = {},
     viewModel: MapViewModel = viewModel(),
     sortBy: String = "default"
 ) {
@@ -247,17 +250,24 @@ fun BusinessListScreen(
                             // pattern already used for this same action on the business
                             // detail screen.
                             onToggleFavorite = {
+                                val favoriteAction: () -> Unit = { viewModel.toggleFavorite(business.id) }
                                 AuthGate.requireLogin(
-                                    onNotLoggedIn = onNavigateToAuth,
-                                    action = { viewModel.toggleFavorite(business.id) }
+                                    onNotLoggedIn = { onNavigateToAuth(favoriteAction) },
+                                    action = favoriteAction
                                 )
                             },
                             onToggleLike = {
+                                val favoriteAction: () -> Unit = { viewModel.toggleFavorite(business.id) }
                                 AuthGate.requireLogin(
-                                    onNotLoggedIn = onNavigateToAuth,
-                                    action = { viewModel.toggleFavorite(business.id) }
+                                    onNotLoggedIn = { onNavigateToAuth(favoriteAction) },
+                                    action = favoriteAction
                                 )
                             },
+                            // BusinessListItem's own like icon does a second, redundant
+                            // AuthGate check internally around onToggleLike — this was
+                            // never wired up before, so a guest tapping that icon
+                            // silently hit the default no-op instead of the prompt.
+                            onNavigateToAuth = onNavigateToAuth,
                             onClick = { onBusinessClick(business.id) }
                         )
                     }
@@ -356,7 +366,7 @@ fun BusinessListItem(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onToggleLike: () -> Unit = {},
-    onNavigateToAuth: () -> Unit = {},
+    onNavigateToAuth: (() -> Unit) -> Unit = {},
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -415,7 +425,7 @@ fun BusinessListItem(
 
                     IconButton(onClick = {
                         AuthGate.requireLogin(
-                            onNotLoggedIn = onNavigateToAuth,
+                            onNotLoggedIn = { onNavigateToAuth { onToggleLike() } },
                             action = { onToggleLike() }
                         )
                     }) {
