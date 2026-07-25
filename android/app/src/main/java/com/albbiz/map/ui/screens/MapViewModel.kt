@@ -222,6 +222,21 @@ class MapViewModel : ViewModel() {
         }
     }
 
+    // Public like counter — separate from favorites above. This wraps
+    // BusinessRepository.toggleBusinessLike, which does its add/remove +
+    // increment/decrement inside a Firestore transaction (see the comment on
+    // FirestoreService.toggleBusinessLike for why a plain get-then-update isn't
+    // safe here). No optimistic local state needed the way favorites has one:
+    // _businesses is already a live snapshot listener (see loadBusinesses), so
+    // once the transaction commits, the updated likedBy/likeCount on the business
+    // document flows back through that listener on its own.
+    fun toggleBusinessLike(businessId: String) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModelScope.launch {
+            repository.toggleBusinessLike(userId, businessId)
+        }
+    }
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }

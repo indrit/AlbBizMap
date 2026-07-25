@@ -3,8 +3,10 @@ package com.albbiz.map.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -215,8 +217,31 @@ fun BusinessDetailScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Address
-                        Row(verticalAlignment = Alignment.Top) {
+                        // Address — tappable for turn-by-turn directions, same
+                        // google.navigation: pattern already used on the map pin
+                        // preview and List View cards. This was the one place a
+                        // business's address showed up without any way to act on
+                        // it — the main profile page itself.
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.clickable {
+                                val location = business.location
+                                if (location == null) {
+                                    Toast.makeText(context, "No location set for this business", Toast.LENGTH_SHORT).show()
+                                    return@clickable
+                                }
+                                try {
+                                    val uri = Uri.parse("google.navigation:q=${location.latitude},${location.longitude}&mode=d")
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, uri).apply {
+                                            setPackage("com.google.android.apps.maps")
+                                        }
+                                    )
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
                             Icon(
                                 Icons.Default.LocationOn,
                                 null,
@@ -227,7 +252,8 @@ fun BusinessDetailScreen(
                             Text(
                                 business.address,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MeTontGrey
+                                color = MeTontGrey,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
                             )
                         }
                     }
@@ -433,9 +459,16 @@ fun BusinessDetailScreen(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // ── LIKE BUTTON ───────────────────────────────────
+                    // This is the public like counter (business.likedBy /
+                    // likeCount) — separate from the favorite/bookmark heart icon
+                    // in the top bar above, which is a personal saved-list and
+                    // uses toggleFavorite instead. This button used to call
+                    // toggleFavorite too, which meant the icon and count you see
+                    // here never actually changed when tapped, since nothing was
+                    // writing to likedBy/likeCount.
                     OutlinedButton(
                         onClick = {
-                            val likeAction: () -> Unit = { mapViewModel.toggleFavorite(business.id) }
+                            val likeAction: () -> Unit = { mapViewModel.toggleBusinessLike(business.id) }
                             com.albbiz.map.utils.AuthGate.requireLogin(
                                 onNotLoggedIn = { onNavigateToAuth(likeAction) },
                                 action = likeAction

@@ -1,6 +1,9 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -19,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +31,6 @@ import coil.compose.AsyncImage
 import com.albbiz.map.data.Story
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
-import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.viewmodel.StoriesViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
@@ -45,6 +48,7 @@ fun StoryViewerScreen(
 ) {
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Current story index
     var currentStoryIndex by remember { mutableStateOf(initialIndex) }
@@ -112,7 +116,6 @@ fun StoryViewerScreen(
                     .fillMaxSize()
                     .background(
                         when (currentStory.type) {
-                            "sponsored" -> TierGold
                             "community" -> Color(0xFF2196F3)
                             "business" -> MeTontRed
                             else -> Color(0xFF1A1A1A)
@@ -249,7 +252,6 @@ fun StoryViewerScreen(
                     modifier = Modifier.size(36.dp),
                     shape = CircleShape,
                     color = when (currentStory.type) {
-                        "sponsored" -> TierGold.copy(alpha = 0.3f)
                         "community" -> Color(0xFF2196F3).copy(alpha = 0.3f)
                         "business" -> MeTontRed.copy(alpha = 0.3f)
                         else -> Color.White.copy(alpha = 0.2f)
@@ -280,10 +282,29 @@ fun StoryViewerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (currentStory.location.isNotBlank()) {
+                            // This is free text typed by whoever posted the story
+                            // (see the "e.g. Tirana, Albania" field in AddStoryScreen) —
+                            // not a geocoded point, so there's no lat/lng to navigate to
+                            // precisely. A maps search on that text is the right fallback
+                            // here; it's the same thing typing it into Maps' search bar
+                            // would do. ACTION_VIEW with a plain https://maps.google.com
+                            // search URL (rather than the google.navigation: scheme used
+                            // elsewhere in the app) works with whatever maps app — or
+                            // browser — is available, instead of requiring Google Maps
+                            // specifically.
                             Text(
                                 "📍 ${currentStory.location}",
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp
+                                fontSize = 11.sp,
+                                modifier = Modifier.clickable {
+                                    try {
+                                        val query = Uri.encode(currentStory.location)
+                                        val uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$query")
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Couldn't open maps", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             )
                         }
                         Text(
@@ -295,23 +316,6 @@ fun StoryViewerScreen(
                     }
                 }
 
-                // Sponsored badge
-                if (currentStory.isSponsored) {
-                    Surface(
-                        color = TierGold.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            "Sponsored",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            color = TierGold,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
                 // Close button
                 IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, null, tint = Color.White)
@@ -320,24 +324,48 @@ fun StoryViewerScreen(
         }
 
         // ── BOTTOM SECTION ────────────────────────────────────────────
+        // The app renders edge-to-edge (see enableEdgeToEdge() in MainActivity), so
+        // without accounting for it, content here draws underneath the system
+        // navigation bar — fine on gesture-nav phones where that bar is a thin
+        // strip, but on 3-button nav it's tall enough to sit right on top of this
+        // button. navigationBarsPadding() adds exactly however much space that bar
+        // actually needs on this device, instead of guessing a fixed value that's
+        // either not enough on some phones or wastes space on others.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
                 .padding(16.dp)
         ) {
-            // Caption
-            if (currentStory.text.isNotBlank()) {
-                Text(
-                    currentStory.text,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            // Caption — a semi-transparent pill behind the text instead of relying
+            // only on the gradient scrim above, so it stays legible over any photo
+            // regardless of how bright or busy that particular photo is. Bumped up
+            // from 14sp Medium to 20sp Bold so it reads as the story's headline
+            // rather than a small afterthought caption.
+            // Only shown when there's a photo — a photo-less story already shows
+            // this same text as the big centered headline earlier (see "No photo —
+            // show colored background with text" above). Showing it again here too
+            // was the duplicate text visible in the screenshot: same caption once
+            // as the giant centered version, once again as this pill.
+            if (currentStory.text.isNotBlank() && photos.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.Black.copy(alpha = 0.35f)
+                ) {
+                    Text(
+                        currentStory.text,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // View Business button (for business/sponsored stories)
+            // View Business button (shown whenever the story is linked to a business)
             if (currentStory.businessId != null) {
                 Button(
                     onClick = {

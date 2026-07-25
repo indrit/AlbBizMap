@@ -65,7 +65,7 @@ class AddBusinessViewModel(
                                         photos = businessWithImages.photos,
                                         isSponsored = false
                                     )
-                                    storiesRepository.addStory(newBusinessStory, emptyList())
+                                    storiesRepository.addStoryWithHostedPhotos(newBusinessStory)
                                 }
                                 _uiState.value = AddBusinessUiState.Success
                             },

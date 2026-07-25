@@ -36,7 +36,6 @@ import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
-import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.viewmodel.AddStoryUiState
 import com.albbiz.map.viewmodel.StoriesViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -89,11 +88,18 @@ fun AddStoryScreen(
         }
     }
 
+    // "Sponsored" used to be a fourth option here, self-selected by whoever was
+    // posting — but nothing enforced it. A business's real paid tier
+    // (isPremium/isFeatured/isSponsored) can only be set from Firebase Console, not
+    // by the owner from within the app (see EditBusinessScreen), so letting anyone
+    // grant their own story a gold "Sponsored" badge for free was a real
+    // inconsistency, not just a cosmetic option. Removed rather than kept as
+    // decorative — a story pointing at a business the user can already tap through
+    // to see the business's real, admin-controlled tier badges.
     val storyTypes = listOf(
         "user" to "👤 User",
         "business" to "🏢 Business",
-        "community" to "📢 Community",
-        "sponsored" to "⭐ Sponsored"
+        "community" to "📢 Community"
     )
 
     Scaffold(
@@ -115,8 +121,7 @@ fun AddStoryScreen(
                                 location = locationText,
                                 photoUris = selectedPhotos,
                                 businessId = selectedBusiness?.id,
-                                businessName = selectedBusiness?.name,
-                                isSponsored = selectedType == "sponsored"
+                                businessName = selectedBusiness?.name
                             )
                         },
                         enabled = selectedPhotos.isNotEmpty() &&
@@ -266,13 +271,13 @@ fun AddStoryScreen(
                                 selected = selectedType == type,
                                 onClick = {
                                     selectedType = type
-                                    if (type != "business" && type != "sponsored") {
+                                    if (type != "business") {
                                         selectedBusiness = null
                                     }
                                 },
                                 label = { Text(label, fontSize = 12.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (type == "sponsored") TierGold else MeTontRed,
+                                    selectedContainerColor = MeTontRed,
                                     selectedLabelColor = Color.White
                                 )
                             )
@@ -283,8 +288,8 @@ fun AddStoryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── BUSINESS SELECTOR (for business/sponsored types) ──────
-            if (selectedType == "business" || selectedType == "sponsored") {
+            // ── BUSINESS SELECTOR (for business type) ──────────────────
+            if (selectedType == "business") {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -437,8 +442,7 @@ fun AddStoryScreen(
                         location = locationText,
                         photoUris = selectedPhotos,
                         businessId = selectedBusiness?.id,
-                        businessName = selectedBusiness?.name,
-                        isSponsored = selectedType == "sponsored"
+                        businessName = selectedBusiness?.name
                     )
                 },
                 modifier = Modifier

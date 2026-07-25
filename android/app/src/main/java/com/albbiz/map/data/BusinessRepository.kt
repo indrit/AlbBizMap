@@ -83,10 +83,18 @@ class BusinessRepository {
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            // If the user document doesn't exist yet, create it
+            // If the user document doesn't exist yet, create it. Firestore rules
+            // require a create on users/{userId} to explicitly set isAdmin == false
+            // (so a client can never self-grant admin by omitting the field) — this
+            // is the only place in the app that ever creates this document (nothing
+            // does it at signup), so without isAdmin here, this create was silently
+            // rejected for every brand-new user's first-ever favorite tap.
             try {
                 db.collection("users").document(userId).set(
-                    mapOf("favorites" to if (isFavorite) listOf(businessId) else emptyList<String>())
+                    mapOf(
+                        "favorites" to if (isFavorite) listOf(businessId) else emptyList<String>(),
+                        "isAdmin" to false
+                    )
                 ).await()
                 Result.success(Unit)
             } catch (e2: Exception) {

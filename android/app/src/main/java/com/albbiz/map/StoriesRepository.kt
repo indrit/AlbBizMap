@@ -66,6 +66,29 @@ class StoriesRepository {
         }
     }
 
+    // ── ADD STORY WITH ALREADY-HOSTED PHOTO URLS ──────────────────────
+    // addStory() above expects local device URIs it still needs to upload — for
+    // the auto-generated "Just opened" story created right after a business is
+    // registered, the photos are the business's own photos, already uploaded to
+    // Storage as URLs at that point. Calling addStory() with an empty URI list
+    // for that case (as this used to do) meant its upload step ran with nothing
+    // to upload, producing photoUrls = [] — which then overwrote whatever
+    // photos the Story object had already been given via .copy(photos =
+    // photoUrls), so the story silently ended up with zero photos no matter
+    // what. This skips that upload step entirely and just writes the story
+    // as-is, since there's nothing left to upload.
+    suspend fun addStoryWithHostedPhotos(story: Story): Result<String> {
+        return try {
+            val storyRef = storiesRef.document()
+            val finalStory = story.copy(id = storyRef.id)
+            storyRef.set(finalStory.toMap()).await()
+            Result.success(storyRef.id)
+        } catch (e: Exception) {
+            Log.e("AlbBizMap", "StoriesRepo: Error adding story with hosted photos", e)
+            Result.failure(e)
+        }
+    }
+
     // ── MARK STORY AS VIEWED ──────────────────────────────────────────
     suspend fun markStoryViewed(storyId: String, userId: String): Result<Unit> {
         return try {

@@ -470,7 +470,20 @@ class MainActivity : ComponentActivity() {
                                     // layers above whichever of those a business can be
                                     // opened from.
                                     selectedBusinessId?.let { businessId ->
-                                        val business = mapViewModel.getBusinessById(businessId)
+                                        // getBusinessById() reads _businesses.value directly —
+                                        // a one-off synchronous snapshot, not something Compose
+                                        // is subscribed to. That meant this screen never
+                                        // recomposed when the underlying business document
+                                        // changed elsewhere (a like, a new review changing the
+                                        // rating, etc.) — the like button's count and gray/red
+                                        // state stayed frozen at whatever they were when this
+                                        // screen was first opened, even though the write itself
+                                        // was landing in Firestore correctly. collectAsState()
+                                        // here makes this block actually observe the live list,
+                                        // so it recomposes the moment Firestore's snapshot
+                                        // listener picks up the change.
+                                        val allBusinesses by mapViewModel.businesses.collectAsState()
+                                        val business = allBusinesses.find { it.id == businessId }
                                         if (business != null) {
                                             BusinessDetailScreen(
                                                 business = business,

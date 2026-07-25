@@ -3,6 +3,7 @@ package com.albbiz.map.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -525,14 +526,18 @@ fun BusinessListItem(
 
             Button(
                 onClick = {
-                    val uri = Uri.parse(
-                        "google.navigation:q=${business.location?.latitude},${business.location?.longitude}&mode=d"
-                    )
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, uri).apply {
-                            setPackage("com.google.android.apps.maps")
-                        }
-                    )
+                    try {
+                        val uri = Uri.parse(
+                            "google.navigation:q=${business.location?.latitude},${business.location?.longitude}&mode=d"
+                        )
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, uri).apply {
+                                setPackage("com.google.android.apps.maps")
+                            }
+                        )
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),

@@ -300,7 +300,7 @@ val EnglishStrings = AppStrings(
     emailRequired = "Email is required",
     passwordRequired = "Password is required",
     passwordsDoNotMatch = "Passwords don't match",
-    passwordTooShort = "Password must be at least 6 characters",
+    passwordTooShort = "Password must be at least 8 characters",
     registerBusiness = "Register Business",
     requiredInformation = "Required Information",
     businessName = "Business Name *",
@@ -462,7 +462,7 @@ val AlbanianStrings = AppStrings(
     emailRequired = "Email është i detyrueshëm",
     passwordRequired = "Fjalëkalimi është i detyrueshëm",
     passwordsDoNotMatch = "Fjalëkalimet nuk përputhen",
-    passwordTooShort = "Fjalëkalimi duhet të ketë të paktën 6 karaktere",
+    passwordTooShort = "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
 
     registerBusiness = "Regjistro Biznesin",
     requiredInformation = "Informacioni i Detyrueshëm",

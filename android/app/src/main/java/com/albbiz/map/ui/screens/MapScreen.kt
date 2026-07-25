@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.widget.Toast
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
@@ -532,8 +533,12 @@ fun MapScreen(
 
                             Button(
                                 onClick = {
-                                    val uri = Uri.parse("google.navigation:q=${biz.location?.latitude},${biz.location?.longitude}&mode=d")
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") })
+                                    try {
+                                        val uri = Uri.parse("google.navigation:q=${biz.location?.latitude},${biz.location?.longitude}&mode=d")
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") })
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(24.dp),
@@ -632,7 +637,6 @@ fun MapScreen(
                                                 modifier = Modifier.fillMaxSize(),
                                                 shape = CircleShape,
                                                 color = when (firstStory.type) {
-                                                    "sponsored" -> TierGold
                                                     "community" -> Color(0xFF2196F3)
                                                     "business" -> MeTontRed
                                                     "new_business" -> Color(0xFF4CAF50) // Green
@@ -645,7 +649,6 @@ fun MapScreen(
                                                         fontSize = 22.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = when (firstStory.type) {
-                                                            "sponsored" -> TierGold
                                                             "community" -> Color(0xFF2196F3)
                                                             "business" -> MeTontRed
                                                             else -> MeTontGrey
@@ -661,14 +664,6 @@ fun MapScreen(
                                             textAlign = TextAlign.Center,
                                             maxLines = 1
                                         )
-                                        if (firstStory.isSponsored) {
-                                            Text(
-                                                "Sponsored",
-                                                fontSize = 8.sp,
-                                                color = TierGold,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
                                     }
                                 }
                             }

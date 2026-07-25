@@ -275,7 +275,7 @@ fun AuthScreen(
                                 !isLoginMode && password != confirmPassword -> {
                                     Toast.makeText(context, strings.passwordsDoNotMatch, Toast.LENGTH_SHORT).show()
                                 }
-                                !isLoginMode && password.length < 6 -> {
+                                !isLoginMode && password.length < 8 -> {
                                     Toast.makeText(context, strings.passwordTooShort, Toast.LENGTH_SHORT).show()
                                 }
                                 else -> {
