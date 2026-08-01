@@ -150,7 +150,7 @@ fun SubscriptionScreen(
                 buttonText = "Request Upgrade",
                 onButtonClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.al")
+                        data = Uri.parse("mailto:admin@metont.com")
                         putExtra(Intent.EXTRA_SUBJECT, "Premium Upgrade Request - MeTont")
                         putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Premium (\$2.99/month).\n\nAccount: $userEmail\n\nThank you!")
                     }
@@ -175,7 +175,7 @@ fun SubscriptionScreen(
                 buttonText = "Request Featured",
                 onButtonClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.al")
+                        data = Uri.parse("mailto:admin@metont.com")
                         putExtra(Intent.EXTRA_SUBJECT, "Featured Listing Request - MeTont")
                         putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Featured (\$9.99/month).\n\nAccount: $userEmail\n\nThank you!")
                     }
@@ -202,7 +202,7 @@ fun SubscriptionScreen(
                 buttonText = "Request Sponsorship",
                 onButtonClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.al")
+                        data = Uri.parse("mailto:admin@metont.com")
                         putExtra(Intent.EXTRA_SUBJECT, "Sponsored Listing Request - MeTont")
                         putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Sponsored (\$19.99/month).\n\nAccount: $userEmail\n\nThank you!")
                     }

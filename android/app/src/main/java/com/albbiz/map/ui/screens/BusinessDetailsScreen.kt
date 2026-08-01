@@ -143,6 +143,27 @@ fun BusinessDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(16.dp)
         ) {
+            // ── PHOTOS (vertical feed, like Google Maps) ──────────
+            // Shown for every business regardless of tier — previously this
+            // whole section lived inside the Contact card and was hidden
+            // behind isPremium, so even a free business's one uploaded photo
+            // never actually displayed anywhere. Stacking vertically instead
+            // of the old horizontal LazyRow so more photos (once tiers allow
+            // them) read as a scrollable feed rather than a side-scroller.
+            if (business.photos.isNotEmpty()) {
+                items(business.photos) { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
             // ── MAIN INFO CARD ────────────────────────────────────
             item {
                 Card(
@@ -299,33 +320,6 @@ fun BusinessDetailScreen(
                                     val url = if (!business.website.startsWith("http"))
                                         "https://${business.website}" else business.website
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                }
-                            }
-
-                            // Photos
-                            if (business.photos.isNotEmpty()) {
-                                Text(
-                                    strings.photos,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MeTontRed,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.height(150.dp).padding(vertical = 8.dp)
-                                ) {
-                                    items(business.photos) { url ->
-                                        AsyncImage(
-                                            model = url,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .width(200.dp)
-                                                .fillMaxHeight()
-                                                .clip(RoundedCornerShape(12.dp)),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
                                 }
                             }
 

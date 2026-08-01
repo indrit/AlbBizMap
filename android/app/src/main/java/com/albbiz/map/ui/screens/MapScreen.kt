@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.albbiz.map.R
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
@@ -690,55 +691,29 @@ fun MapScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     items(sponsored) { business ->
-                                        val categoryIcon = BusinessCategory.entries
-                                            .find { it.name.equals(business.category, ignoreCase = true) }
-                                            ?.icon ?: Icons.Default.Business
                                         val tierColor = when {
                                             business.isSponsored -> TierGold
                                             business.isFeatured -> TierSilver
                                             else -> TierBronze
                                         }
-                                        Card(
-                                            modifier = Modifier
-                                                .width(220.dp)
-                                                .shadow(2.dp, RoundedCornerShape(14.dp))
-                                                .clickable { selectedSheetBusiness = business },
-                                            shape = RoundedCornerShape(14.dp),
-                                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                                        ) {
-                                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = tierColor.copy(alpha = 0.15f)) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        Icon(categoryIcon, null, tint = tierColor, modifier = Modifier.size(20.dp))
-                                                    }
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(business.name, maxLines = 1, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color.Black)
-                                                    Text(business.category, style = MaterialTheme.typography.labelSmall, color = tierColor, fontSize = 11.sp)
-                                                    Surface(color = tierColor.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                                                        Text(
-                                                            when { business.isSponsored -> "Sponsored"; business.isFeatured -> "Featured"; else -> "Premium" },
-                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = tierColor,
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 10.sp
-                                                        )
-                                                    }
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
-                                                        Text(" ${business.rating}", style = MaterialTheme.typography.labelSmall, color = MeTontGrey)
-                                                    }
-                                                }
-                                            }
+                                        val tierLabel = when {
+                                            business.isSponsored -> "Sponsored"
+                                            business.isFeatured -> "Featured"
+                                            else -> "Premium"
                                         }
+                                        MapBusinessCard(
+                                            business = business,
+                                            tierColor = tierColor,
+                                            tierLabel = tierLabel,
+                                            onClick = { selectedSheetBusiness = business }
+                                        )
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
-                            // NEAR YOU
+                            // NEAR YOU — now the "Featured Local Picks" style: full-width
+                            // vertical photo cards instead of the small side-scrolling row.
                             Text(
                                 "Near You",
                                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -759,31 +734,15 @@ fun MapScreen(
                                     Text("MeTont is growing — check back soon!", style = MaterialTheme.typography.labelSmall, color = MeTontGrey.copy(alpha = 0.7f))
                                 }
                             } else {
-                                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(nearMeBusinesses) { business ->
-                                        val categoryIcon = BusinessCategory.entries
-                                            .find { it.name.equals(business.category, ignoreCase = true) }
-                                            ?.icon ?: Icons.Default.Business
-                                        Card(
-                                            modifier = Modifier.width(220.dp).shadow(2.dp, RoundedCornerShape(14.dp)).clickable { selectedSheetBusiness = business },
-                                            shape = RoundedCornerShape(14.dp),
-                                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                                        ) {
-                                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = MeTontRed.copy(alpha = 0.1f)) {
-                                                    Box(contentAlignment = Alignment.Center) { Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(20.dp)) }
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(business.name, maxLines = 1, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color.Black)
-                                                    Text(business.category, style = MaterialTheme.typography.labelSmall, color = MeTontRed, fontSize = 11.sp)
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
-                                                        Text(" ${business.rating} (${business.reviewCount})", style = MaterialTheme.typography.labelSmall, color = MeTontGrey)
-                                                    }
-                                                }
-                                            }
-                                        }
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    nearMeBusinesses.forEach { business ->
+                                        FeaturedPickCard(
+                                            business = business,
+                                            onClick = { selectedSheetBusiness = business }
+                                        )
                                     }
                                 }
                             }
@@ -830,29 +789,10 @@ fun MapScreen(
                             } else {
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(topRatedBusinesses) { business ->
-                                        val categoryIcon = BusinessCategory.entries
-                                            .find { it.name.equals(business.category, ignoreCase = true) }
-                                            ?.icon ?: Icons.Default.Business
-                                        Card(
-                                            modifier = Modifier.width(220.dp).shadow(2.dp, RoundedCornerShape(14.dp)).clickable { selectedSheetBusiness = business },
-                                            shape = RoundedCornerShape(14.dp),
-                                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                                        ) {
-                                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = MeTontRed.copy(alpha = 0.1f)) {
-                                                    Box(contentAlignment = Alignment.Center) { Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(20.dp)) }
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(business.name, maxLines = 1, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color.Black)
-                                                    Text(business.category, style = MaterialTheme.typography.labelSmall, color = MeTontRed, fontSize = 11.sp)
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
-                                                        Text(" ${business.rating} (${business.reviewCount})", style = MaterialTheme.typography.labelSmall, color = MeTontGrey)
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        MapBusinessCard(
+                                            business = business,
+                                            onClick = { selectedSheetBusiness = business }
+                                        )
                                     }
                                 }
                             }
@@ -1054,5 +994,182 @@ fun BadgeChip(label: String, color: Color) {
             color = color,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+// Full-width card used by "Near You" — a large photo on top (with a tier
+// badge overlaid for sponsored/featured/premium businesses) and
+// name/category/rating in a white strip below. Stacked vertically instead of
+// side-scrolling like the smaller MapBusinessCard used by the other carousels.
+@Composable
+private fun FeaturedPickCard(
+    business: Business,
+    onClick: () -> Unit
+) {
+    val strings = LocalAppStrings.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF5D9D9))
+    ) {
+        Column {
+            Box(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                val photoUrl = business.photos.firstOrNull()
+                if (photoUrl != null) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = business.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(Color(0xFFFBEAEA)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val categoryIcon = BusinessCategory.entries
+                            .find { it.name.equals(business.category, ignoreCase = true) }
+                            ?.icon ?: Icons.Default.Business
+                        Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(36.dp))
+                    }
+                }
+                // Same tier badge system used everywhere else in the app (business
+                // list rows, detail page) — gold/silver/bronze for
+                // sponsored/featured/premium — rather than a one-off badge design
+                // just for this card.
+                val tierColor = when {
+                    business.isSponsored -> TierGold
+                    business.isFeatured -> TierSilver
+                    business.isPremium -> TierBronze
+                    else -> null
+                }
+                val tierLabel = when {
+                    business.isSponsored -> strings.sponsored
+                    business.isFeatured -> strings.featured2
+                    business.isPremium -> strings.premium
+                    else -> null
+                }
+                if (tierColor != null && tierLabel != null) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(10.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(tierColor)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(tierLabel.uppercase(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    business.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    business.category.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontRed,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(14.dp))
+                    Text(" ${business.rating}", style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                }
+            }
+        }
+    }
+}
+
+// Shared card for the map bottom sheet's carousels (Top Recommended, Near You,
+// Most Favorited Worldwide) — previously each of the three duplicated the same
+// layout inline with a circular category-icon placeholder and no photo at all.
+// Consolidated into one composable so the photo treatment (and any future
+// styling) only needs to change in one place instead of three.
+@Composable
+private fun MapBusinessCard(
+    business: Business,
+    tierColor: Color? = null,
+    tierLabel: String? = null,
+    onClick: () -> Unit
+) {
+    val accentColor = tierColor ?: MeTontRed
+
+    Card(
+        modifier = Modifier
+            .width(220.dp)
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            val photoUrl = business.photos.firstOrNull()
+            if (photoUrl != null) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = business.name,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                val categoryIcon = BusinessCategory.entries
+                    .find { it.name.equals(business.category, ignoreCase = true) }
+                    ?.icon ?: Icons.Default.Business
+                Surface(
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = accentColor.copy(alpha = 0.12f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(categoryIcon, null, tint = accentColor, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    business.name,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    business.category,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = accentColor,
+                    fontSize = 11.sp
+                )
+                if (tierLabel != null) {
+                    Surface(color = accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                        Text(
+                            tierLabel,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
+                    Text(" ${business.rating}", style = MaterialTheme.typography.labelSmall, color = MeTontGrey)
+                }
+            }
+        }
     }
 }

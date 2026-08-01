@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +63,30 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+    // Called with the ID token Credential Manager returns from Google's account
+    // picker (see AuthScreen's signInWithGoogle helper). Firebase matches this
+    // against an existing user by Google account, or silently creates a new
+    // Firebase Auth user the same way register() does with email/password —
+    // either way the app ends up with a normal FirebaseUser afterward. Firebase
+    // also auto-populates displayName/photoUrl from the Google account on first
+    // sign-in, so unlike email signup, these users won't need to visit
+    // UserProfileScreen just to have a name.
+    fun signInWithGoogle(idToken: String, isAlbanian: Boolean = false) {
+        if (_uiState.value == AuthUiState.Loading) return
+        _uiState.value = AuthUiState.Loading
+
+        viewModelScope.launch {
+            try {
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                auth.signInWithCredential(credential).await()
+                _currentUser.value = auth.currentUser
+                _uiState.value = AuthUiState.Success
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(mapFirebaseError(e, isAlbanian))
+            }
+        }
+    }
+
     fun logout() {
         auth.signOut()
         _currentUser.value = null

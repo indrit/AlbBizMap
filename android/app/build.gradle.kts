@@ -96,4 +96,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.2.1")
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
 
+    // Google Sign-In via Credential Manager
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
 }

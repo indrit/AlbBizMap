@@ -4,7 +4,9 @@
 
 package com.albbiz.map.ui.screens
 
+import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -32,6 +34,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.R
 import com.albbiz.map.ui.LocalAppStrings
@@ -41,6 +47,52 @@ import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.MeTontWhite
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.AppLanguage
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+
+// Web client ID from google-services.json's oauth_client (client_type 3) entry,
+// generated once Google was enabled as a sign-in provider in Firebase Console.
+// NOTE: this still won't work on a device until a SHA-1 fingerprint (debug and,
+// later, release) is registered under Project Settings → your Android app —
+// Google Play Services checks the calling app's signature against that before
+// letting the native account picker complete.
+private const val GOOGLE_WEB_CLIENT_ID =
+    "626415932806-jfk7i16odsfg6pj4u2fd9ou568jpbqdb.apps.googleusercontent.com"
+
+// Launches Android's Credential Manager (the system's native Google account
+// picker) and returns a Google ID token on success, or null if the user
+// cancelled or something went wrong. The token itself doesn't authenticate
+// anything by itself — AuthViewModel.signInWithGoogle() hands it to Firebase,
+// which verifies it and creates/logs into the matching Firebase Auth user.
+private suspend fun requestGoogleIdToken(context: Context): String? {
+    val credentialManager = CredentialManager.create(context)
+    val googleIdOption = GetGoogleIdOption.Builder()
+        .setFilterByAuthorizedAccounts(false)
+        .setServerClientId(GOOGLE_WEB_CLIENT_ID)
+        .build()
+    val request = GetCredentialRequest.Builder()
+        .addCredentialOption(googleIdOption)
+        .build()
+
+    return try {
+        val result = credentialManager.getCredential(context, request)
+        val credential = result.credential
+        if (credential is CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            GoogleIdTokenCredential.createFrom(credential.data).idToken
+        } else {
+            null
+        }
+    } catch (e: GetCredentialException) {
+        // Includes user cancellation (tapped outside the picker), no Google
+        // account on the device, or the request being misconfigured (e.g. the
+        // TODO above not being filled in yet) — all surfaced as null here and
+        // handled as a normal auth error by the caller.
+        null
+    }
+}
 
 
 
@@ -55,6 +107,7 @@ fun AuthScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
+    val coroutineScope = rememberCoroutineScope()
 
     var isLoginMode by remember { mutableStateOf(true) }
     var email by remember { mutableStateOf("") }
@@ -313,6 +366,83 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Sign in with Google — real functionality. Requests a Google ID
+                    // token via Credential Manager, then hands it to AuthViewModel to
+                    // exchange for a Firebase session (see requestGoogleIdToken above).
+                    OutlinedButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                val idToken = requestGoogleIdToken(context)
+                                if (idToken != null) {
+                                    viewModel.signInWithGoogle(
+                                        idToken,
+                                        isAlbanian = currentLanguage == AppLanguage.SQ
+                                    )
+                                }
+                                // If idToken is null, the user cancelled or something
+                                // went wrong picking an account — nothing to show, same
+                                // as tapping outside any other system picker.
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("authGoogleButton"),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFDADCE0)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MeTontWhite,
+                            contentColor = Color(0xFF3C4043)
+                        ),
+                        enabled = uiState !is AuthUiState.Loading
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_google_logo),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            strings.continueWithGoogle,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Sign in with Apple — placeholder only, per product decision.
+                    // No auth logic behind this yet; a collaborator is wiring up the
+                    // real implementation separately.
+                    Button(
+                        onClick = { /* placeholder — no-op until Sign in with Apple is implemented */ },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("authAppleButton"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = MeTontWhite
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_apple_logo),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            strings.continueWithApple,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 

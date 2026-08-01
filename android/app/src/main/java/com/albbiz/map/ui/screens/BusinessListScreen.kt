@@ -1,9 +1,7 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -12,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,17 +19,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessRepository
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
+import com.albbiz.map.ui.MeTontLightRed
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierGold
@@ -308,50 +309,64 @@ fun DiscoveryRow(
                 Card(
                     modifier = Modifier
                         .width(160.dp)
-                        .shadow(4.dp, RoundedCornerShape(12.dp))
                         .clickable { onBusinessClick(business.id) },
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFF5D9D9)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        // Category color bar
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .background(
-                                    MeTontRed,
-                                    RoundedCornerShape(2.dp)
-                                )
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            business.name,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Text(
-                            business.category,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MeTontRed,
-                            fontSize = 11.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Star,
-                                null,
-                                tint = Color(0xFFFFC107),
-                                modifier = Modifier.size(12.dp)
+                    Column {
+                        val photoUrl = business.photos.firstOrNull()
+                        if (photoUrl != null) {
+                            AsyncImage(
+                                model = photoUrl,
+                                contentDescription = business.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(90.dp)
+                                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(90.dp)
+                                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                                    .background(MeTontLightRed),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Storefront, null, tint = MeTontRed, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                business.name,
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                             )
                             Text(
-                                " ${business.rating}",
+                                business.category,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MeTontGrey
+                                color = MeTontRed,
+                                fontSize = 11.sp
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    null,
+                                    tint = MeTontRed,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    " ${business.rating}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MeTontGrey
+                                )
+                            }
                         }
                     }
                 }
@@ -360,6 +375,14 @@ fun DiscoveryRow(
     }
 }
 
+// Realtor-style compact row card: photo thumbnail on the left, details on the
+// right, favorite heart overlaid on the photo corner. Previously this card
+// never showed a photo at all (business.photos was unreferenced here) and
+// carried a like button, share button, and a full-width "Get Directions"
+// button inline — those secondary actions already exist on the business
+// detail screen (share/favorite in its top bar, like button and tappable
+// address further down), so dropping them here keeps this list row a fast,
+// glanceable directory entry rather than duplicating the detail screen.
 @Composable
 fun BusinessListItem(
     business: Business,
@@ -370,39 +393,106 @@ fun BusinessListItem(
     onNavigateToAuth: (() -> Unit) -> Unit = {},
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
     val strings = LocalAppStrings.current
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .shadow(4.dp, RoundedCornerShape(16.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFF5D9D9)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+        Row(modifier = Modifier.padding(10.dp)) {
+            // ── PHOTO + FAVORITE OVERLAY ──────────────────────────
+            Box(modifier = Modifier.size(84.dp)) {
+                val photoUrl = business.photos.firstOrNull()
+                if (photoUrl != null) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = business.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MeTontLightRed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Storefront, null, tint = MeTontRed, modifier = Modifier.size(28.dp))
+                    }
+                }
+                IconButton(
+                    // onToggleFavorite is already wrapped in an AuthGate check by the
+                    // caller (BusinessListScreen), same as the rest of this codebase's
+                    // pattern — invoking it directly here, no need to gate twice.
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.9f))
+                ) {
+                    Icon(
+                        if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = MeTontRed,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // ── DETAILS ────────────────────────────────────────────
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
                     Text(
                         business.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color.Black,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Text(
-                        business.category,
-                        color = MeTontRed,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = MeTontRed,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            " ${business.rating}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+                }
 
+                Text(
+                    business.category,
+                    color = MeTontRed,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                if (business.isVerified || business.isAlbanianOwned ||
+                    business.isSponsored || business.isFeatured || business.isPremium
+                ) {
                     Row(
                         modifier = Modifier
                             .padding(top = 4.dp)
@@ -419,140 +509,28 @@ fun BusinessListItem(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // ── LIKE BUTTON ───────────────────────────────────────
-                    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                    val isLiked = currentUserId != null && currentUserId in business.likedBy
-
-                    IconButton(onClick = {
-                        AuthGate.requireLogin(
-                            onNotLoggedIn = { onNavigateToAuth { onToggleLike() } },
-                            action = { onToggleLike() }
-                        )
-                    }) {
-                        Icon(
-                            imageVector = if (isLiked) Icons.Default.ThumbUp else Icons.Default.ThumbUpOffAlt,
-                            contentDescription = "Like",
-                            tint = if (isLiked) MeTontRed else MeTontGrey,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Text(
-                        "${business.likeCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MeTontGrey
+                if (userLocation != null && business.location != null) {
+                    val distance = BusinessRepository().calculateDistance(
+                        GeoPoint(userLocation.latitude, userLocation.longitude),
+                        GeoPoint(business.location.latitude, business.location.longitude)
                     )
-                    // ── SHARE BUTTON ──────────────────────────────────────
-                    IconButton(onClick = {
-                        val shareText = "Check out ${business.name} on MeTont!\n${business.category} • ${business.address}"
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
-                    }) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
                         Icon(
-                            Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = MeTontGrey,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    // ── FAVORITE BUTTON ───────────────────────────────────
-                    IconButton(onClick = onToggleFavorite) {
-                        Icon(
-                            if (isFavorite) Icons.Default.Favorite
-                            else Icons.Default.FavoriteBorder,
+                            Icons.Default.LocationOn,
                             null,
-                            tint = if (isFavorite) MeTontRed else MeTontGrey,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(12.dp),
+                            tint = MeTontGrey
+                        )
+                        Text(
+                            " ${if (distance < 1.0) "${(distance * 1000).toInt()} m" else "%.1f km".format(distance)} away",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MeTontGrey
                         )
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Rating
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 4.dp)
-            ) {
-                Icon(
-                    Icons.Default.Star,
-                    null,
-                    tint = Color(0xFFFFC107),
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    " ${business.rating} (${business.reviewCount} reviews)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MeTontGrey
-                )
-            }
-
-            Text(
-                business.description,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                color = Color.Black.copy(alpha = 0.7f)
-            )
-
-            // Distance
-            if (userLocation != null && business.location != null) {
-                val distance = BusinessRepository().calculateDistance(
-                    GeoPoint(userLocation.latitude, userLocation.longitude),
-                    GeoPoint(business.location.latitude, business.location.longitude)
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        null,
-                        modifier = Modifier.size(12.dp),
-                        tint = MeTontRed
-                    )
-                    Text(
-                        " ${if (distance < 1.0) "${(distance * 1000).toInt()} m" else "%.1f km".format(distance)} away",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MeTontGrey
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = {
-                    try {
-                        val uri = Uri.parse(
-                            "google.navigation:q=${business.location?.latitude},${business.location?.longitude}&mode=d"
-                        )
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, uri).apply {
-                                setPackage("com.google.android.apps.maps")
-                            }
-                        )
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MeTontRed,
-                    contentColor = Color.White
-                )
-            ) {
-                Icon(
-                    Icons.Default.Directions,
-                    null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(strings.getDirections, fontWeight = FontWeight.Bold)
             }
         }
     }

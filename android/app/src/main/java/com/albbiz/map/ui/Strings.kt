@@ -29,6 +29,8 @@ data class AppStrings(
     val logout: String,
     val noAccount: String,
     val haveAccount: String,
+    val continueWithGoogle: String,
+    val continueWithApple: String,
     // Map
     val searchPlaceholder: String,
     val addBusiness: String,
@@ -192,6 +194,8 @@ val EnglishStrings = AppStrings(
     logout = "Logout",
     noAccount = "Don't have an account? Sign Up",
     haveAccount = "Already have an account? Sign In",
+    continueWithGoogle = "Continue with Google",
+    continueWithApple = "Continue with Apple",
     // Map
     searchPlaceholder = "Search businesses...",
     addBusiness = "Add My Business",
@@ -353,6 +357,8 @@ val AlbanianStrings = AppStrings(
     logout = "Dil",
     noAccount = "Nuk keni llogari? Regjistrohu",
     haveAccount = "Keni llogari? Hyr",
+    continueWithGoogle = "Vazhdo me Google",
+    continueWithApple = "Vazhdo me Apple",
     // Map
     searchPlaceholder = "Kërko biznese...",
     addBusiness = "Shto Biznesin Tim",
