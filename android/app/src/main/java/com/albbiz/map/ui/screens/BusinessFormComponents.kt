@@ -1,9 +1,10 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.*
@@ -12,12 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.google.android.gms.maps.model.LatLng
+import java.util.Locale
 
 @Composable
 fun SectionTitle(title: String) {
@@ -27,6 +28,93 @@ fun SectionTitle(title: String) {
         fontWeight = FontWeight.Bold,
         color = MeTontRed
     )
+}
+
+// Splits a stored "HH:mm" 24-hour string into (hour, minute), falling back to
+// 09:00 for anything unparseable (blank, malformed, or a leftover typed value
+// from before this became a picker).
+private fun parseStoredTime(time: String): Pair<Int, Int> {
+    val parts = time.split(":")
+    val hour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 9
+    val minute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0
+    return hour to minute
+}
+
+// Friendly 12-hour display ("9:00 AM") for a stored "HH:mm" 24-hour string —
+// the stored format itself doesn't change, only how it's shown.
+private fun formatTimeDisplay(time: String): String {
+    val (hour, minute) = parseStoredTime(time)
+    val period = if (hour < 12) "AM" else "PM"
+    val hour12 = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    return String.format(Locale.getDefault(), "%d:%02d %s", hour12, minute, period)
+}
+
+// Read-only, tap-to-open time field. Replaces a free-text field that used
+// KeyboardType.Number — most Android number keyboards have no ":" key at
+// all, so typing a valid "09:00" was practically impossible. This opens a
+// real time picker instead and still writes back the same "HH:mm" format
+// the rest of the app (and Firestore) already expects.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerField(
+    label: String,
+    time: String,
+    onTimeChanged: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Text(label, fontSize = 10.sp, color = MeTontGrey)
+        Spacer(modifier = Modifier.height(2.dp))
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showPicker = true },
+            shape = RoundedCornerShape(8.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFFCCCCCC))
+        ) {
+            Text(
+                formatTimeDisplay(time),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                fontSize = 12.sp,
+                color = Color.Black
+            )
+        }
+    }
+
+    if (showPicker) {
+        val (initialHour, initialMinute) = remember(time) { parseStoredTime(time) }
+        val pickerState = rememberTimePickerState(
+            initialHour = initialHour,
+            initialMinute = initialMinute,
+            is24Hour = false
+        )
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(label, fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { TimePicker(state = pickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeChanged(String.format(Locale.US, "%02d:%02d", pickerState.hour, pickerState.minute))
+                    showPicker = false
+                }) {
+                    Text("OK", color = MeTontRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text("Cancel", color = MeTontGrey)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -82,40 +170,24 @@ fun WorkingHoursEditor(
                                 tint = MeTontRed,
                                 modifier = Modifier.size(14.dp)
                             )
-                            OutlinedTextField(
-                                value = openTime,
-                                onValueChange = {
+                            TimePickerField(
+                                label = "Open",
+                                time = openTime,
+                                onTimeChanged = {
                                     openTime = it
                                     onHoursChanged(hours + ("${day}_open" to it))
                                 },
-                                label = { Text("Open", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                shape = RoundedCornerShape(8.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MeTontRed,
-                                    cursorColor = MeTontRed
-                                ),
-                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                modifier = Modifier.weight(1f)
                             )
                             Text("-", color = MeTontGrey, fontWeight = FontWeight.Bold)
-                            OutlinedTextField(
-                                value = closeTime,
-                                onValueChange = {
+                            TimePickerField(
+                                label = "Close",
+                                time = closeTime,
+                                onTimeChanged = {
                                     closeTime = it
                                     onHoursChanged(hours + ("${day}_close" to it))
                                 },
-                                label = { Text("Close", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                shape = RoundedCornerShape(8.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MeTontRed,
-                                    cursorColor = MeTontRed
-                                ),
-                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }

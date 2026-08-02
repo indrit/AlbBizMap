@@ -43,6 +43,7 @@ import com.albbiz.map.R
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.viewmodel.AuthUiState
 import com.albbiz.map.viewmodel.AuthViewModel
+import com.albbiz.map.viewmodel.PasswordResetUiState
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.MeTontWhite
 import com.albbiz.map.ui.MeTontGrey
@@ -106,6 +107,7 @@ fun AuthScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val passwordResetState by viewModel.passwordResetState.collectAsState()
     val strings = LocalAppStrings.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -114,6 +116,8 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
 
     LaunchedEffect(uiState) {
         when (uiState) {
@@ -130,6 +134,24 @@ fun AuthScreen(
                 Toast.makeText(
                     context,
                     (uiState as AuthUiState.Error).message,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            else -> {}
+        }
+    }
+
+    LaunchedEffect(passwordResetState) {
+        when (passwordResetState) {
+            is PasswordResetUiState.Success -> {
+                Toast.makeText(context, strings.resetEmailSent, Toast.LENGTH_LONG).show()
+                showForgotPasswordDialog = false
+                viewModel.resetPasswordResetState()
+            }
+            is PasswordResetUiState.Error -> {
+                Toast.makeText(
+                    context,
+                    (passwordResetState as PasswordResetUiState.Error).message,
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -283,6 +305,30 @@ fun AuthScreen(
                         ),
                         singleLine = true
                     )
+
+                    // Forgot password — sign-in mode only, no reason to show this
+                    // while someone's mid-signup and hasn't set a password yet.
+                    if (isLoginMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    resetEmail = email
+                                    showForgotPasswordDialog = true
+                                },
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(
+                                    strings.forgotPassword,
+                                    color = MeTontRed,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
 
                     // Confirm Password field
                     if (!isLoginMode) {
@@ -496,6 +542,81 @@ fun AuthScreen(
                 }
             }
         }
+    }
+
+    // ── FORGOT PASSWORD DIALOG ─────────────────────────────────────────
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showForgotPasswordDialog = false
+                viewModel.resetPasswordResetState()
+            },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text(strings.resetPasswordTitle, fontWeight = FontWeight.Bold, color = Color.Black)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        strings.resetPasswordDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = { resetEmail = it },
+                        label = { Text(strings.email) },
+                        leadingIcon = { Icon(Icons.Default.Email, null, tint = MeTontRed) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            focusedLabelColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Done
+                        ),
+                        singleLine = true,
+                        enabled = passwordResetState !is PasswordResetUiState.Loading
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.sendPasswordResetEmail(
+                            resetEmail,
+                            isAlbanian = currentLanguage == AppLanguage.SQ
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed),
+                    enabled = passwordResetState !is PasswordResetUiState.Loading
+                ) {
+                    if (passwordResetState is PasswordResetUiState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(strings.sendResetLink, color = Color.White)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showForgotPasswordDialog = false
+                        viewModel.resetPasswordResetState()
+                    }
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
     }
 }
 

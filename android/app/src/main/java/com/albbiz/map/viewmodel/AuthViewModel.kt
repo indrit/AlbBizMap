@@ -19,6 +19,18 @@ sealed class AuthUiState {
     data class Error(val message: String) : AuthUiState()
 }
 
+// Separate from AuthUiState above rather than reusing it — AuthScreen's
+// LaunchedEffect(uiState) treats Success as "navigate away, the user is now
+// logged in." Sharing that state for password reset would either wrongly
+// trigger that navigation, or force login()/register() to special-case a
+// reset-in-progress state that has nothing to do with them.
+sealed class PasswordResetUiState {
+    object Idle : PasswordResetUiState()
+    object Loading : PasswordResetUiState()
+    object Success : PasswordResetUiState()
+    data class Error(val message: String) : PasswordResetUiState()
+}
+
 class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
@@ -27,6 +39,9 @@ class AuthViewModel : ViewModel() {
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
+
+    private val _passwordResetState = MutableStateFlow<PasswordResetUiState>(PasswordResetUiState.Idle)
+    val passwordResetState: StateFlow<PasswordResetUiState> = _passwordResetState.asStateFlow()
 
     fun login(email: String, password: String, isAlbanian: Boolean = false) {
         // AuthScreen's Sign In button only disables once uiState becomes Loading,
@@ -85,6 +100,36 @@ class AuthViewModel : ViewModel() {
                 _uiState.value = AuthUiState.Error(mapFirebaseError(e, isAlbanian))
             }
         }
+    }
+
+    // Firebase composes and sends the actual reset email itself — nothing on the
+    // app side beyond this call. Note Firebase does NOT reveal whether the email
+    // is actually registered (ERROR_USER_NOT_FOUND can surface here on some
+    // projects, silently succeeds on others depending on the "Email enumeration
+    // protection" setting in Firebase Console) — mapFirebaseError already handles
+    // that error code gracefully either way.
+    fun sendPasswordResetEmail(email: String, isAlbanian: Boolean = false) {
+        if (_passwordResetState.value == PasswordResetUiState.Loading) return
+        if (email.isBlank()) {
+            _passwordResetState.value = PasswordResetUiState.Error(
+                if (isAlbanian) "Email është i detyrueshëm" else "Email is required"
+            )
+            return
+        }
+        _passwordResetState.value = PasswordResetUiState.Loading
+
+        viewModelScope.launch {
+            try {
+                auth.sendPasswordResetEmail(email.trim()).await()
+                _passwordResetState.value = PasswordResetUiState.Success
+            } catch (e: Exception) {
+                _passwordResetState.value = PasswordResetUiState.Error(mapFirebaseError(e, isAlbanian))
+            }
+        }
+    }
+
+    fun resetPasswordResetState() {
+        _passwordResetState.value = PasswordResetUiState.Idle
     }
 
     fun logout() {

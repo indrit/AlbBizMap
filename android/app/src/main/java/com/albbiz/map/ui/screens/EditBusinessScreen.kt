@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,8 +44,8 @@ import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.EditBusinessUiState
 import com.albbiz.map.viewmodel.EditBusinessViewModel
-import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.launch
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,30 +66,49 @@ fun EditBusinessScreen(
     var email by remember { mutableStateOf(business.email) }
     var website by remember { mutableStateOf(business.website) }
     var address by remember { mutableStateOf(business.address) }
+    var city by remember { mutableStateOf(business.city) }
+    var country by remember { mutableStateOf(business.country) }
     var selectedCategory by remember {
         mutableStateOf(BusinessCategory.entries.find { it.name == business.category })
     }
     var showCategoryDropdown by remember { mutableStateOf(false) }
-    var latitude by remember { mutableStateOf(business.location?.latitude?.toString() ?: "") }
-    var longitude by remember { mutableStateOf(business.location?.longitude?.toString() ?: "") }
+    // Coordinates are re-resolved from Address+City+Country via GeocodingUtils on
+    // save, same as AddBusinessScreen — no raw lat/long field for the user to edit.
+    var isGeocoding by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     var isOpen24Hours by remember { mutableStateOf(business.isOpen24Hours) }
     var workingHours by remember { mutableStateOf(business.workingHours) }
     var jobs by remember { mutableStateOf(business.jobs.toMutableList()) }
     var showAddJobDialog by remember { mutableStateOf(false) }
     var promotions by remember { mutableStateOf(business.promotions.toMutableList()) }
     var showAddPromoDialog by remember { mutableStateOf(false) }
-    var newPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    // existingPhotos: already-uploaded URLs kept from business.photos (removable).
+    // newPhotoUris: freshly picked local images not yet uploaded (removable).
+    // Both lists are capped in total to business.maxPhotos, which depends on the
+    // business's tier (Free=1, Premium=6, Featured=10, Sponsored=14).
+    var existingPhotos by remember { mutableStateOf(business.photos) }
+    var newPhotoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
-    var showMapPicker by remember { mutableStateOf(false) }
+    val remainingPhotoSlots by remember {
+        derivedStateOf { business.maxPhotos - existingPhotos.size - newPhotoUris.size }
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri -> uri?.let { newPhotoUri = it } }
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (remainingPhotoSlots > 0) {
+            newPhotoUris = newPhotoUris + uris.take(remainingPhotoSlots)
+        }
+    }
 
     val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
-    ) { success -> if (success) cameraImageUri.value?.let { newPhotoUri = it } }
+    ) { success ->
+        if (success && remainingPhotoSlots > 0) {
+            cameraImageUri.value?.let { newPhotoUris = newPhotoUris + it }
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -400,42 +421,46 @@ fun EditBusinessScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
-                        value = latitude,
-                        onValueChange = { latitude = it },
-                        label = { Text("Latitude *") },
+                        value = city,
+                        onValueChange = { city = it },
+                        label = { Text("City *") },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
                             cursorColor = MeTontRed
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
                     )
                     OutlinedTextField(
-                        value = longitude,
-                        onValueChange = { longitude = it },
-                        label = { Text("Longitude *") },
+                        value = country,
+                        onValueChange = { country = it },
+                        label = { Text("Country *") },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
                             cursorColor = MeTontRed
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
                     )
                 }
-                OutlinedButton(
-                    onClick = { showMapPicker = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
-                ) {
-                    Icon(Icons.Default.Map, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pick Location from Map")
+                // Coordinates are re-resolved from Address+City+Country on save
+                // instead of being hand-edited — see the Save button below.
+                if (isGeocoding) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MeTontRed,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Finding coordinates…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MeTontGrey
+                        )
+                    }
                 }
             }
 
@@ -486,39 +511,70 @@ fun EditBusinessScreen(
                 }
             }
 
-            // ── PHOTO ─────────────────────────────────────────────
-            SectionCard(title = "Photo") {
-                val displayPhotoUrl = newPhotoUri?.toString() ?: business.photos.firstOrNull()
-                if (displayPhotoUrl != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(displayPhotoUrl),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                        IconButton(
-                            onClick = { newPhotoUri = null },
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Icon(Icons.Default.Close, null, tint = MeTontRed)
+            // ── PHOTOS ────────────────────────────────────────────
+            SectionCard(title = "Photos") {
+                val totalPhotos = existingPhotos.size + newPhotoUris.size
+                Text(
+                    "$totalPhotos / ${business.maxPhotos} photos",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MeTontGrey
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (totalPhotos > 0) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(existingPhotos) { url ->
+                            Box(modifier = Modifier.size(100.dp)) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(url),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = { existingPhotos = existingPhotos - url },
+                                    modifier = Modifier.align(Alignment.TopEnd).size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, null, tint = MeTontRed)
+                                }
+                            }
+                        }
+                        items(newPhotoUris) { uri ->
+                            Box(modifier = Modifier.size(100.dp)) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(uri),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = { newPhotoUris = newPhotoUris - uri },
+                                    modifier = Modifier.align(Alignment.TopEnd).size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, null, tint = MeTontRed)
+                                }
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
-                OutlinedButton(
-                    onClick = { showImageSourceDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
-                ) {
-                    Icon(Icons.Default.AddAPhoto, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (displayPhotoUrl != null) "Change Photo" else "Add Photo")
+                if (remainingPhotoSlots > 0) {
+                    OutlinedButton(
+                        onClick = { showImageSourceDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                    ) {
+                        Icon(Icons.Default.AddAPhoto, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add Photo")
+                    }
+                } else {
+                    Text(
+                        "Photo limit reached for your plan",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
                 }
             }
 
@@ -639,31 +695,42 @@ fun EditBusinessScreen(
             // ── SAVE BUTTON ───────────────────────────────────────
             Button(
                 onClick = {
-                    val lat = latitude.toDoubleOrNull()
-                    val lng = longitude.toDoubleOrNull()
                     when {
                         name.isBlank() -> Toast.makeText(context, "Business name is required", Toast.LENGTH_SHORT).show()
                         selectedCategory == null -> Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
                         description.isBlank() -> Toast.makeText(context, "Description is required", Toast.LENGTH_SHORT).show()
                         address.isBlank() -> Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                        city.isBlank() -> Toast.makeText(context, "City is required", Toast.LENGTH_SHORT).show()
                         phone.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
-                        lat == null || lng == null -> Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
                         else -> {
-                            val updatedBusiness = business.copy(
-                                name = name.trim(),
-                                description = description.trim(),
-                                category = selectedCategory!!.name,
-                                address = address.trim(),
-                                phone = phone.trim(),
-                                email = email.trim(),
-                                website = website.trim(),
-                                location = GeoPoint(lat, lng),
-                                isOpen24Hours = isOpen24Hours,
-                                workingHours = if (isOpen24Hours) emptyMap() else workingHours,
-                                jobs = jobs,
-                                promotions = promotions
-                            )
-                            viewModel.updateBusiness(updatedBusiness, newPhotoUri)
+                            coroutineScope.launch {
+                                isGeocoding = true
+                                val latLng = com.albbiz.map.utils.GeocodingUtils.geocodeAddress(
+                                    context, address.trim(), city.trim(), country.trim()
+                                )
+                                isGeocoding = false
+                                if (latLng == null) {
+                                    Toast.makeText(context, "Couldn't find that address — please check it's correct", Toast.LENGTH_LONG).show()
+                                    return@launch
+                                }
+                                val updatedBusiness = business.copy(
+                                    name = name.trim(),
+                                    description = description.trim(),
+                                    category = selectedCategory!!.name,
+                                    address = address.trim(),
+                                    city = city.trim(),
+                                    country = country.trim(),
+                                    phone = phone.trim(),
+                                    email = email.trim(),
+                                    website = website.trim(),
+                                    location = GeoPoint(latLng.latitude, latLng.longitude),
+                                    isOpen24Hours = isOpen24Hours,
+                                    workingHours = if (isOpen24Hours) emptyMap() else workingHours,
+                                    jobs = jobs,
+                                    promotions = promotions
+                                )
+                                viewModel.updateBusiness(updatedBusiness, newPhotoUris, existingPhotos)
+                            }
                         }
                     }
                 },
@@ -673,16 +740,16 @@ fun EditBusinessScreen(
                     containerColor = MeTontRed,
                     contentColor = Color.White
                 ),
-                enabled = uiState !is EditBusinessUiState.Loading
+                enabled = uiState !is EditBusinessUiState.Loading && !isGeocoding
             ) {
-                if (uiState is EditBusinessUiState.Loading) {
+                if (uiState is EditBusinessUiState.Loading || isGeocoding) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = Color.White,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Saving...")
+                    Text(if (isGeocoding) "Finding coordinates…" else "Saving...")
                 } else {
                     Icon(Icons.Default.Save, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -724,19 +791,4 @@ fun EditBusinessScreen(
         )
     }
 
-    // ── MAP PICKER ────────────────────────────────────────────────────
-    if (showMapPicker) {
-        LocationPickerDialog(
-            initialLocation = LatLng(
-                latitude.toDoubleOrNull() ?: 41.3275,
-                longitude.toDoubleOrNull() ?: 19.8187
-            ),
-            onLocationSelected = { latLng ->
-                latitude = latLng.latitude.toString()
-                longitude = latLng.longitude.toString()
-                showMapPicker = false
-            },
-            onDismiss = { showMapPicker = false }
-        )
-    }
 }

@@ -10,6 +10,8 @@ data class Business(
     val description: String = "", // Short description (free - 100 chars)
     val longDescription: String = "", // Extended description (premium)
     val address: String = "",
+    val city: String = "",
+    val country: String = "",
     val phone: String = "",
     val email: String = "",
     val website: String = "",
@@ -33,6 +35,21 @@ data class Business(
     val likeCount: Int = 0,
     val likedBy: List<String> = emptyList()
 ) {
+    // Total photo cap per tier, INCLUDING the one required main photo every
+    // business must have regardless of plan — not additional photos on top of
+    // it. Checked highest tier first since a business can have multiple tier
+    // flags set at once (e.g. isPremium + isSponsored), same precedence order
+    // already used elsewhere (UserProfileScreen's tier badge, MapViewModel's
+    // topPicks sort).
+    val maxPhotos: Int
+        get() = when {
+            isSponsored -> 14
+            isFeatured -> 10
+            isPremium -> 6
+            else -> 1
+        }
+
+
     fun toMap(): Map<String, Any?> {
         return mapOf(
             "id" to id,
@@ -41,6 +58,8 @@ data class Business(
             "description" to description,
             "longDescription" to longDescription,
             "address" to address,
+            "city" to city,
+            "country" to country,
             "phone" to phone,
             "email" to email,
             "website" to website,
@@ -76,6 +95,8 @@ data class Business(
                 description = map["description"] as? String ?: "",
                 longDescription = map["longDescription"] as? String ?: "",
                 address = map["address"] as? String ?: "",
+                city = map["city"] as? String ?: "",
+                country = map["country"] as? String ?: "",
                 phone = map["phone"] as? String ?: "",
                 email = map["email"] as? String ?: "",
                 website = map["website"] as? String ?: "",

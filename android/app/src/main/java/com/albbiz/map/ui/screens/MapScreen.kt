@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -102,7 +105,11 @@ data class BusinessClusterItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    onListClick: () -> Unit = {},
+    // Takes a sortBy mode to hand straight to BusinessListScreen — the drawer's
+    // "Businesses" item passes "default", while the home screen's "Most
+    // Favorited Worldwide" See more button passes "mostFavorited" so the full
+    // directory opens already sorted the same way as the carousel it came from.
+    onListClick: (String) -> Unit = {},
     onAddBusinessClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onFavoritesClick: () -> Unit = {},
@@ -136,7 +143,13 @@ fun MapScreen(
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val nearMeBusinesses by viewModel.nearMe.collectAsState()
-    val topRatedBusinesses by viewModel.topRated.collectAsState()
+    val mostFavoritedBusinesses by viewModel.mostFavorited.collectAsState()
+    // Previously unused — "Top Recommended" below used to filter the raw business
+    // list by tier only, with no distance limit, so it could surface a sponsored
+    // business on the other side of the country. topPicks already existed in the
+    // ViewModel doing the right thing (tier-eligible AND within 50km, sorted by
+    // tier then distance) but was never actually collected here.
+    val topPicksBusinesses by viewModel.topPicks.collectAsState()
 
     val eventsRepository = remember { EventsRepository() }
     // Must remember() the Flow itself, not just the repository — see EventsScreen.kt
@@ -411,7 +424,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.listView, fontWeight = FontWeight.Medium) },
                     selected = false,
-                    onClick = { closeDrawer(); if (mapReady) onListClick() },
+                    onClick = { closeDrawer(); if (mapReady) onListClick("default") },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -485,7 +498,11 @@ fun MapScreen(
                     )
                 },
                 sheetContent = {
-                  Column(modifier = Modifier.navigationBarsPadding()) {
+                  Column(
+                      modifier = Modifier
+                          .verticalScroll(rememberScrollState())
+                          .navigationBarsPadding()
+                  ) {
                     if (selectedSheetBusiness != null) {
                         // BUSINESS DETAIL IN SHEET
                         val biz = selectedSheetBusiness!!
@@ -676,9 +693,14 @@ fun MapScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // TOP RECOMMENDED
-                            val sponsored = businesses.filter { it.isSponsored || it.isFeatured }
-                            if (sponsored.isNotEmpty()) {
+                            // TOP RECOMMENDED — now backed by topPicks (tier-eligible AND
+                            // within 50km, see the comment where topPicksBusinesses is
+                            // collected above), and using the same full-width vertical
+                            // FeaturedPickCard layout as Near You, capped at 2 with the
+                            // same "See more" toggle used by the other sections.
+                            if (topPicksBusinesses.isNotEmpty()) {
+                                var topRecommendedExpanded by remember { mutableStateOf(false) }
+                                val visibleTopPicks = if (topRecommendedExpanded) topPicksBusinesses else topPicksBusinesses.take(2)
                                 Text(
                                     "Top Recommended",
                                     modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
@@ -686,34 +708,31 @@ fun MapScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    items(sponsored) { business ->
-                                        val tierColor = when {
-                                            business.isSponsored -> TierGold
-                                            business.isFeatured -> TierSilver
-                                            else -> TierBronze
-                                        }
-                                        val tierLabel = when {
-                                            business.isSponsored -> "Sponsored"
-                                            business.isFeatured -> "Featured"
-                                            else -> "Premium"
-                                        }
-                                        MapBusinessCard(
+                                    visibleTopPicks.forEach { business ->
+                                        FeaturedPickCard(
                                             business = business,
-                                            tierColor = tierColor,
-                                            tierLabel = tierLabel,
                                             onClick = { selectedSheetBusiness = business }
                                         )
                                     }
                                 }
+                                if (topPicksBusinesses.size > 2) {
+                                    SeeMoreButton(
+                                        expanded = topRecommendedExpanded,
+                                        onClick = { topRecommendedExpanded = !topRecommendedExpanded },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
-                            // NEAR YOU — now the "Featured Local Picks" style: full-width
-                            // vertical photo cards instead of the small side-scrolling row.
+                            // NEAR YOU — the "Featured Local Picks" style: full-width
+                            // vertical photo cards. Capped at 2 with "See more" since each
+                            // card is tall and would otherwise push everything else below
+                            // it far down the sheet.
                             Text(
                                 "Near You",
                                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -734,28 +753,40 @@ fun MapScreen(
                                     Text("MeTont is growing — check back soon!", style = MaterialTheme.typography.labelSmall, color = MeTontGrey.copy(alpha = 0.7f))
                                 }
                             } else {
+                                var nearYouExpanded by remember { mutableStateOf(false) }
+                                val visibleNearMe = if (nearYouExpanded) nearMeBusinesses else nearMeBusinesses.take(2)
                                 Column(
                                     modifier = Modifier.padding(horizontal = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    nearMeBusinesses.forEach { business ->
+                                    visibleNearMe.forEach { business ->
                                         FeaturedPickCard(
                                             business = business,
                                             onClick = { selectedSheetBusiness = business }
                                         )
                                     }
                                 }
+                                if (nearMeBusinesses.size > 2) {
+                                    SeeMoreButton(
+                                        expanded = nearYouExpanded,
+                                        onClick = { nearYouExpanded = !nearYouExpanded },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // COMMUNITY ANNOUNCEMENTS
+                            // COMMUNITY ANNOUNCEMENTS — capped at 6; "See more" leaves the
+                            // home screen entirely and opens the full Events list, same as
+                            // tapping an individual card already does.
                             Text("Community Announcements", modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                             if (announcements.isEmpty()) {
                                 Text("No upcoming events right now", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
                             } else {
+                                val visibleAnnouncements = announcements.take(6)
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(announcements) { event ->
+                                    items(visibleAnnouncements) { event ->
                                         Card(
                                             modifier = Modifier.width(220.dp).shadow(2.dp, RoundedCornerShape(14.dp)).clickable { if (mapReady) onEventsClick() },
                                             shape = RoundedCornerShape(14.dp),
@@ -778,22 +809,36 @@ fun MapScreen(
                                         }
                                     }
                                 }
+                                if (announcements.size > 6) {
+                                    SeeMoreNavButton(
+                                        onClick = { if (mapReady) onEventsClick() },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // MOST FAVORITED WORLDWIDE
+                            // MOST FAVORITED WORLDWIDE — capped at 6; "See more" leaves the
+                            // home screen and opens the full directory sorted the same way
+                            // (by likeCount), instead of expanding in place.
                             Text("Most Favorited Worldwide", modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
-                            if (topRatedBusinesses.isEmpty()) {
+                            if (mostFavoritedBusinesses.isEmpty()) {
                                 Text("No businesses yet", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
                             } else {
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(topRatedBusinesses) { business ->
+                                    items(mostFavoritedBusinesses.take(6)) { business ->
                                         MapBusinessCard(
                                             business = business,
                                             onClick = { selectedSheetBusiness = business }
                                         )
                                     }
+                                }
+                                if (mostFavoritedBusinesses.size > 6) {
+                                    SeeMoreNavButton(
+                                        onClick = { if (mapReady) onListClick("mostFavorited") },
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
                                 }
                             }
 
@@ -993,6 +1038,62 @@ fun BadgeChip(label: String, color: Color) {
             style = MaterialTheme.typography.labelSmall,
             color = color,
             fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// Toggle shown under Top Recommended and Near You — those sections cap
+// themselves at 2 items by default and hand this button the current
+// expanded/collapsed state plus a callback to flip it in place.
+@Composable
+private fun SeeMoreButton(
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            if (expanded) "See less" else "See more",
+            color = MeTontRed,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp
+        )
+        Icon(
+            if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+            null,
+            tint = MeTontRed,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+// Shown under Community Announcements and Most Favorited Worldwide — those
+// sections cap themselves at 6 items and never expand in place; this always
+// navigates away to a full dedicated screen instead, so it uses a forward
+// chevron rather than SeeMoreButton's up/down toggle arrow.
+@Composable
+private fun SeeMoreNavButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            "See more",
+            color = MeTontRed,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            null,
+            tint = MeTontRed,
+            modifier = Modifier.size(16.dp)
         )
     }
 }

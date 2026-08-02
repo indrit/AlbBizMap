@@ -28,7 +28,7 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Color(0xFFFFAA00),          // Gold for premium
     onTertiary = Color.White,
 
-    background = Color(0xFFFFF8F0),      // Off white background
+    background = Color.White,              // Was an off-white/cream (0xFFFFF8F0) — the app is red-and-white only now
     onBackground = Color(0xFF1A1A1A),
 
     surface = Color.White,

@@ -43,6 +43,7 @@ import com.albbiz.map.viewmodel.AddBusinessUiState
 import com.albbiz.map.viewmodel.AddBusinessViewModel
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.*
 
@@ -65,11 +66,15 @@ fun AddBusinessScreen(
     var email by remember { mutableStateOf("") }
     var website by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<BusinessCategory?>(null) }
     var showCategoryDropdown by remember { mutableStateOf(false) }
-    var latitude by remember { mutableStateOf(initialLocation?.latitude?.toString() ?: "") }
-    var longitude by remember { mutableStateOf(initialLocation?.longitude?.toString() ?: "") }
-    var showMapPicker by remember { mutableStateOf(false) }
+    // Resolved from Address+City+Country via GeocodingUtils right before submit —
+    // see the Save button below. isGeocoding drives a small inline spinner in the
+    // Location section while that lookup is in flight.
+    var isGeocoding by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var isOpen24Hours by remember { mutableStateOf(false) }
@@ -232,43 +237,51 @@ fun AddBusinessScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
-                        value = latitude,
-                        onValueChange = { latitude = it },
-                        label = { Text(strings.latitude) },
+                        value = city,
+                        onValueChange = { city = it },
+                        label = { Text(strings.cityLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
+                            focusedLabelColor = MeTontRed,
                             cursorColor = MeTontRed
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
                     )
                     OutlinedTextField(
-                        value = longitude,
-                        onValueChange = { longitude = it },
-                        label = { Text(strings.longitude) },
+                        value = country,
+                        onValueChange = { country = it },
+                        label = { Text(strings.countryLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
+                            focusedLabelColor = MeTontRed,
                             cursorColor = MeTontRed
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
                     )
                 }
 
-                OutlinedButton(
-                    onClick = { showMapPicker = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
-                ) {
-                    Icon(Icons.Default.Map, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(strings.pickLocationFromMap)
+                // Coordinates are no longer typed in by hand — Address + City +
+                // Country above get geocoded automatically on submit (see the Save
+                // button below), same as modern directory apps (Yelp, Google
+                // Business Profile) do instead of exposing raw lat/long to users.
+                if (isGeocoding) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MeTontRed,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            strings.locatingAddress,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MeTontGrey
+                        )
+                    }
                 }
             }
 
@@ -358,33 +371,44 @@ fun AddBusinessScreen(
             // ── SUBMIT ────────────────────────────────────────────
             Button(
                 onClick = {
-                    val lat = latitude.toDoubleOrNull()
-                    val lng = longitude.toDoubleOrNull()
                     when {
                         name.isBlank() -> Toast.makeText(context, strings.businessNameRequired, Toast.LENGTH_SHORT).show()
                         selectedCategory == null -> Toast.makeText(context, strings.selectCategory, Toast.LENGTH_SHORT).show()
                         description.isBlank() -> Toast.makeText(context, strings.descriptionRequired, Toast.LENGTH_SHORT).show()
                         address.isBlank() -> Toast.makeText(context, strings.addressRequired, Toast.LENGTH_SHORT).show()
+                        city.isBlank() -> Toast.makeText(context, strings.cityRequired, Toast.LENGTH_SHORT).show()
                         phone.isBlank() -> Toast.makeText(context, strings.phoneRequired, Toast.LENGTH_SHORT).show()
-                        lat == null || lng == null -> Toast.makeText(context, strings.validCoordinates, Toast.LENGTH_SHORT).show()
                         else -> {
-                            val business = Business(
-                                id = UUID.randomUUID().toString(),
-                                name = name.trim(),
-                                description = description.trim(),
-                                category = selectedCategory!!.name,
-                                address = address.trim(),
-                                phone = phone.trim(),
-                                email = email.trim(),
-                                website = website.trim(),
-                                location = GeoPoint(lat, lng),
-                                isOpen24Hours = isOpen24Hours,
-                                workingHours = if (isOpen24Hours) emptyMap() else workingHours,
-                                isActive = true,
-                                rating = 0.0,
-                                reviewCount = 0
-                            )
-                            viewModel.addBusiness(business, selectedImageUris)
+                            coroutineScope.launch {
+                                isGeocoding = true
+                                val latLng = com.albbiz.map.utils.GeocodingUtils.geocodeAddress(
+                                    context, address.trim(), city.trim(), country.trim()
+                                )
+                                isGeocoding = false
+                                if (latLng == null) {
+                                    Toast.makeText(context, strings.geocodeFailed, Toast.LENGTH_LONG).show()
+                                    return@launch
+                                }
+                                val business = Business(
+                                    id = UUID.randomUUID().toString(),
+                                    name = name.trim(),
+                                    description = description.trim(),
+                                    category = selectedCategory!!.name,
+                                    address = address.trim(),
+                                    city = city.trim(),
+                                    country = country.trim(),
+                                    phone = phone.trim(),
+                                    email = email.trim(),
+                                    website = website.trim(),
+                                    location = GeoPoint(latLng.latitude, latLng.longitude),
+                                    isOpen24Hours = isOpen24Hours,
+                                    workingHours = if (isOpen24Hours) emptyMap() else workingHours,
+                                    isActive = true,
+                                    rating = 0.0,
+                                    reviewCount = 0
+                                )
+                                viewModel.addBusiness(business, selectedImageUris)
+                            }
                         }
                     }
                 },
@@ -394,16 +418,16 @@ fun AddBusinessScreen(
                     containerColor = MeTontRed,
                     contentColor = Color.White
                 ),
-                enabled = uiState !is AddBusinessUiState.Loading
+                enabled = uiState !is AddBusinessUiState.Loading && !isGeocoding
             ) {
-                if (uiState is AddBusinessUiState.Loading) {
+                if (uiState is AddBusinessUiState.Loading || isGeocoding) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = Color.White,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(strings.registering)
+                    Text(if (isGeocoding) strings.locatingAddress else strings.registering)
                 } else {
                     Icon(Icons.Default.CheckCircle, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -448,21 +472,6 @@ fun AddBusinessScreen(
         )
     }
 
-    // ── MAP PICKER DIALOG ─────────────────────────────────────────────
-    if (showMapPicker) {
-        LocationPickerDialog(
-            initialLocation = LatLng(
-                latitude.toDoubleOrNull() ?: 41.3275,
-                longitude.toDoubleOrNull() ?: 19.8187
-            ),
-            onLocationSelected = { latLng ->
-                latitude = latLng.latitude.toString()
-                longitude = latLng.longitude.toString()
-                showMapPicker = false
-            },
-            onDismiss = { showMapPicker = false }
-        )
-    }
 }
 
 // ── REUSABLE COMPONENTS ───────────────────────────────────────────────

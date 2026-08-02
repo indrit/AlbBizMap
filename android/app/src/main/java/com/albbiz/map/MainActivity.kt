@@ -164,6 +164,16 @@ class MainActivity : ComponentActivity() {
                                 var showEventsOverlay by remember { mutableStateOf(false) }
                                 var showAddBusinessOverlay by remember { mutableStateOf(false) }
                                 var showBusinessListOverlay by remember { mutableStateOf(false) }
+                                // Reached from the "My Businesses" card on Profile — same
+                                // overlay-instead-of-NavHost-destination reasoning as
+                                // everything else here.
+                                var showMyBusinessesOverlay by remember { mutableStateOf(false) }
+                                // Which sort mode BusinessListScreen opens with — "default"
+                                // from the drawer's plain "Businesses" item, "mostFavorited"
+                                // when reached via the home screen's Most Favorited
+                                // Worldwide "See more" button, so the full directory keeps
+                                // whatever ordering the user came from.
+                                var businessListSortBy by remember { mutableStateOf("default") }
                                 var showJobsOverlay by remember { mutableStateOf(false) }
                                 // Admin is one level deeper (reached from inside the
                                 // Profile overlay), but it's still the same underlying
@@ -234,6 +244,7 @@ class MainActivity : ComponentActivity() {
                                         showFavoritesOverlay || showProfileOverlay ||
                                         showEventsOverlay || showAddBusinessOverlay ||
                                         showBusinessListOverlay || showJobsOverlay || showAdminOverlay ||
+                                        showMyBusinessesOverlay ||
                                         selectedBusinessId != null || showSubscriptionOverlay ||
                                         showAddEventOverlay || showAddReviewOverlay ||
                                         showEditBusinessOverlay || showAddStoryOverlay ||
@@ -250,6 +261,7 @@ class MainActivity : ComponentActivity() {
                                         showSubscriptionOverlay -> showSubscriptionOverlay = false
                                         showAddEventOverlay -> showAddEventOverlay = false
                                         selectedBusinessId != null -> selectedBusinessId = null
+                                        showMyBusinessesOverlay -> showMyBusinessesOverlay = false
                                         showAdminOverlay -> showAdminOverlay = false
                                         selectedStoryIndex != null -> selectedStoryIndex = null
                                         showAddStoryOverlay -> showAddStoryOverlay = false
@@ -260,6 +272,7 @@ class MainActivity : ComponentActivity() {
                                             showAddBusinessOverlay = false
                                             if (showBusinessListOverlay) mapViewModel.resetListFilters()
                                             showBusinessListOverlay = false
+                                            businessListSortBy = "default"
                                             showJobsOverlay = false
                                         }
                                     }
@@ -267,7 +280,10 @@ class MainActivity : ComponentActivity() {
 
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     MapScreen(
-                                        onListClick = { showBusinessListOverlay = true },
+                                        onListClick = { sortMode ->
+                                            businessListSortBy = sortMode
+                                            showBusinessListOverlay = true
+                                        },
                                         onAddBusinessClick = {
                                             requireLoginOrPrompt { showAddBusinessOverlay = true }
                                         },
@@ -297,8 +313,10 @@ class MainActivity : ComponentActivity() {
                                             showAddBusinessOverlay = false
                                             mapViewModel.resetListFilters()
                                             showBusinessListOverlay = false
+                                            businessListSortBy = "default"
                                             showJobsOverlay = false
                                             showAdminOverlay = false
+                                            showMyBusinessesOverlay = false
                                             selectedBusinessId = null
                                             showSubscriptionOverlay = false
                                             showAddEventOverlay = false
@@ -338,6 +356,7 @@ class MainActivity : ComponentActivity() {
                                                 showBusinessListOverlay = false
                                                 showJobsOverlay = false
                                                 showAdminOverlay = false
+                                                showMyBusinessesOverlay = false
                                                 selectedBusinessId = null
                                                 showSubscriptionOverlay = false
                                                 showAddEventOverlay = false
@@ -347,8 +366,8 @@ class MainActivity : ComponentActivity() {
                                                 selectedStoryIndex = null
                                                 showAuthOverlay = true
                                             },
-                                            onUpgradeClick = { showSubscriptionOverlay = true },
                                             onAdminClick = { showAdminOverlay = true },
+                                            onMyBusinessesClick = { showMyBusinessesOverlay = true },
                                             currentLanguage = currentLanguage,
                                             onLanguageChange = { currentLanguage = it },
                                             viewModel = authViewModel
@@ -362,6 +381,21 @@ class MainActivity : ComponentActivity() {
                                         AdminScreen(
                                             currentUserId = currentUserId,
                                             onBackClick = { showAdminOverlay = false }
+                                        )
+                                    }
+
+                                    // Same layering reasoning as Admin above.
+                                    if (showMyBusinessesOverlay) {
+                                        MyBusinessesScreen(
+                                            onBackClick = { showMyBusinessesOverlay = false },
+                                            onBusinessClick = { businessId ->
+                                                selectedBusinessId = businessId
+                                            },
+                                            onAddBusinessClick = {
+                                                showMyBusinessesOverlay = false
+                                                showAddBusinessOverlay = true
+                                            },
+                                            viewModel = mapViewModel
                                         )
                                     }
 
@@ -405,6 +439,7 @@ class MainActivity : ComponentActivity() {
                                             onBackClick = {
                                                 mapViewModel.resetListFilters()
                                                 showBusinessListOverlay = false
+                                                businessListSortBy = "default"
                                             },
                                             onBusinessClick = { businessId ->
                                                 selectedBusinessId = businessId
@@ -414,7 +449,7 @@ class MainActivity : ComponentActivity() {
                                                 showLoginPrompt = true
                                             },
                                             viewModel = mapViewModel,
-                                            sortBy = "default"
+                                            sortBy = businessListSortBy
                                         )
                                     }
 
@@ -522,12 +557,30 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
 
-                                    // Reachable from both Profile and Business Detail,
-                                    // so it's drawn above either one.
+                                    // Only reachable from a specific business's detail
+                                    // page now (the old generic Profile-tab "Upgrade"
+                                    // card was removed since it had no way to know which
+                                    // of a user's businesses the request was for — every
+                                    // upgrade needs to be tied to exactly one business).
+                                    // selectedBusinessId is still set here since opening
+                                    // this overlay doesn't clear it, so the same lookup
+                                    // used for Business Detail above finds the business.
                                     if (showSubscriptionOverlay) {
-                                        SubscriptionScreen(
-                                            onBackClick = { showSubscriptionOverlay = false }
-                                        )
+                                        val allBusinessesForSub by mapViewModel.businesses.collectAsState()
+                                        val subscriptionBusiness = allBusinessesForSub.find { it.id == selectedBusinessId }
+                                        if (subscriptionBusiness != null) {
+                                            SubscriptionScreen(
+                                                business = subscriptionBusiness,
+                                                onBackClick = { showSubscriptionOverlay = false }
+                                            )
+                                        } else {
+                                            // Same "came back empty" bailout pattern as the
+                                            // story viewer above — mutate state in an effect,
+                                            // not directly during composition.
+                                            LaunchedEffect(Unit) {
+                                                showSubscriptionOverlay = false
+                                            }
+                                        }
                                     }
 
                                     // Reachable from literally any overlay above (any of

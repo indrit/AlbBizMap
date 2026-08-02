@@ -25,9 +25,16 @@ class EditBusinessViewModel(
     private val _uiState = MutableStateFlow<EditBusinessUiState>(EditBusinessUiState.Initial)
     val uiState: StateFlow<EditBusinessUiState> = _uiState.asStateFlow()
 
+    // newPhotoUris: freshly picked local images still needing upload.
+    // keptPhotoUrls: existing (already-uploaded) photo URLs the user did NOT
+    // delete from the gallery manager — passed in explicitly rather than reading
+    // business.photos directly, since the caller may have removed some of the
+    // business's original photos in this same edit session and that removal
+    // needs to persist even if no new photos were added at all.
     fun updateBusiness(
         business: Business,
-        newPhotoUri: Uri?
+        newPhotoUris: List<Uri>,
+        keptPhotoUrls: List<String>
     ) {
         // Same double-submit gap as AddBusinessViewModel: set/check Loading
         // synchronously, before launch, so a second fast tap on Save is rejected
@@ -37,17 +44,20 @@ class EditBusinessViewModel(
 
         viewModelScope.launch {
             try {
-                // Upload new photo if user picked one
-                val finalBusiness = if (newPhotoUri != null) {
-                    val photoResult = repository.updateBusinessPhoto(business.id, newPhotoUri)
-                    if (photoResult.isSuccess) {
-                        business.copy(photos = listOf(photoResult.getOrThrow()))
+                // Upload any newly picked photos, then combine with whatever
+                // existing photos survived the edit — never a blind replace, so
+                // photos the user didn't touch (or newly kept after deleting
+                // others) aren't lost.
+                val finalBusiness = if (newPhotoUris.isNotEmpty()) {
+                    val uploadResult = repository.uploadBusinessImages(business.id, newPhotoUris)
+                    if (uploadResult.isSuccess) {
+                        business.copy(photos = keptPhotoUrls + uploadResult.getOrThrow())
                     } else {
-                        _uiState.value = EditBusinessUiState.Error("Failed to upload photo")
+                        _uiState.value = EditBusinessUiState.Error("Failed to upload photos")
                         return@launch
                     }
                 } else {
-                    business
+                    business.copy(photos = keptPhotoUrls)
                 }
 
                 // Update business in Firestore

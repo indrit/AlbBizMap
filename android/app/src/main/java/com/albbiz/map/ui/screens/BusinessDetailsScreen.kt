@@ -6,12 +6,16 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +52,7 @@ import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.utils.AuthGate
 import com.albbiz.map.data.Reply
 import androidx.compose.foundation.layout.PaddingValues
+import kotlinx.coroutines.launch
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,28 +148,7 @@ fun BusinessDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(16.dp)
         ) {
-            // ── PHOTOS (vertical feed, like Google Maps) ──────────
-            // Shown for every business regardless of tier — previously this
-            // whole section lived inside the Contact card and was hidden
-            // behind isPremium, so even a free business's one uploaded photo
-            // never actually displayed anywhere. Stacking vertically instead
-            // of the old horizontal LazyRow so more photos (once tiers allow
-            // them) read as a scrollable feed rather than a side-scroller.
-            if (business.photos.isNotEmpty()) {
-                items(business.photos) { url ->
-                    AsyncImage(
-                        model = url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            // ── MAIN INFO CARD ────────────────────────────────────
+            // ── MAIN INFO CARD (name + badges, above the photos) ──
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -173,6 +157,18 @@ fun BusinessDetailScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+
+                        // Name — previously only shown in the top app bar title;
+                        // now also shown here so it (and the badges) read above
+                        // the photo gallery instead of the name being separated
+                        // from its badges by the whole photo section.
+                        Text(
+                            business.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         // Badges
                         if (business.isVerified || business.isAlbanianOwned ||
@@ -281,9 +277,79 @@ fun BusinessDetailScreen(
                 }
             }
 
-            // ── CONTACT CARD (Premium) ────────────────────────────
+            // ── PHOTOS (main pager + thumbnail strip) ─────────────
+            // Big photo on top with the next one peeking in on the right edge
+            // (via the pager's contentPadding/pageSpacing), plus a row of
+            // smaller thumbnails underneath that jump the pager on tap.
+            // Shown for every business regardless of tier — previously this
+            // whole section lived inside the Contact card and was hidden
+            // behind isPremium, so even a free business's one uploaded photo
+            // never actually displayed anywhere. Placed below the name/badges
+            // card so the name and badges read above the photos.
+            if (business.photos.isNotEmpty()) {
+                item {
+                    val pagerState = rememberPagerState(pageCount = { business.photos.size })
+                    val photoScope = rememberCoroutineScope()
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HorizontalPager(
+                            state = pagerState,
+                            contentPadding = PaddingValues(end = 48.dp),
+                            pageSpacing = 8.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { page ->
+                            AsyncImage(
+                                model = business.photos[page],
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(240.dp)
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                        if (business.photos.size > 1) {
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                itemsIndexed(business.photos) { index, url ->
+                                    AsyncImage(
+                                        model = url,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .then(
+                                                if (pagerState.currentPage == index) {
+                                                    Modifier.border(2.dp, MeTontRed, RoundedCornerShape(10.dp))
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .clickable {
+                                                photoScope.launch {
+                                                    pagerState.animateScrollToPage(index)
+                                                }
+                                            },
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── CONTACT CARD (Premium+) ───────────────────────────
+            // Was gated behind isPremium alone, which hid it for a business
+            // that's Featured or Sponsored but never had isPremium itself set
+            // to true — even though Featured/Sponsored are supposed to include
+            // everything Premium has. Same highest-tier-wins flags used
+            // elsewhere (Business.maxPhotos, UserProfileScreen's badge).
             item {
-                if (business.isPremium) {
+                if (business.isPremium || business.isFeatured || business.isSponsored) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -344,8 +410,18 @@ fun BusinessDetailScreen(
                             }
                         }
                     }
-                } else {
-                    // Upgrade card
+                }
+            }
+
+            // ── UPGRADE CARD ───────────────────────────────────────
+            // Its own item now, shown for any business not already on the
+            // top plan — regardless of whether the Contact card above is
+            // also showing. Previously this only rendered in the else-branch
+            // of the Contact card's isPremium check, so a business already on
+            // Premium (or Featured) had no way to see this at all, meaning no
+            // way to upgrade further to Featured/Sponsored from this screen.
+            if (!business.isSponsored) {
+                item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),

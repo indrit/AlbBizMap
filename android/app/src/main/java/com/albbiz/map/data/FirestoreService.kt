@@ -326,6 +326,8 @@ class FirestoreService {
                     "category" to obj.getString("category"),
                     "description" to obj.getString("description"),
                     "address" to obj.getString("address"),
+                    "city" to obj.optString("city", ""),
+                    "country" to obj.optString("country", ""),
                     "phone" to obj.getString("phone"),
                     "email" to obj.getString("email"),
                     "website" to obj.getString("website"),
@@ -342,7 +344,14 @@ class FirestoreService {
                     "rating" to 0.0,
                     "reviewCount" to 0,
                     "ownerId" to "",
-                    "photos" to emptyList<String>(),
+                    "photos" to run {
+                        val photosArray = obj.optJSONArray("photos")
+                        if (photosArray != null) {
+                            List(photosArray.length()) { idx -> photosArray.getString(idx) }
+                        } else {
+                            emptyList<String>()
+                        }
+                    },
                     "workingHours" to emptyMap<String, String>(),
                     "isOpen24Hours" to false,
                     "longDescription" to "",

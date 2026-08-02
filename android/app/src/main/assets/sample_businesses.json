@@ -16,7 +16,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout1.png?alt=media&token=5687cce6-3574-4c28-8a04-bc56cfb9927e"
+    ]
   },
   {
     "name": "Café Botaniku",
@@ -26,8 +29,8 @@
     "phone": "+355 69 234 5678",
     "email": "",
     "website": "",
-    "latitude": 41.3290,
-    "longitude": 19.8200,
+    "latitude": 41.329,
+    "longitude": 19.82,
     "city": "Tirana",
     "country": "Albania",
     "isActive": true,
@@ -35,7 +38,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout7.png?alt=media&token=9398320f-8a91-44c3-9d14-20782d93741e"
+    ]
   },
   {
     "name": "Avokat Koshi & Partners",
@@ -54,7 +60,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout4.png?alt=media&token=8869693d-c06c-463d-ada2-78c2efa69412"
+    ]
   },
   {
     "name": "Dentisti Beqiri",
@@ -64,8 +73,8 @@
     "phone": "+355 69 345 6789",
     "email": "klinika@beqiri.al",
     "website": "",
-    "latitude": 41.3310,
-    "longitude": 19.8220,
+    "latitude": 41.331,
+    "longitude": 19.822,
     "city": "Tirana",
     "country": "Albania",
     "isActive": true,
@@ -111,7 +120,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout5.png?alt=media&token=e812c680-cbb5-4bc5-ab1c-678dadbe2b0b"
+    ]
   },
   {
     "name": "Restorant Adriatiku",
@@ -130,7 +142,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout2.png?alt=media&token=b86bf30e-0237-40c7-af41-a15224a547dd"
+    ]
   },
   {
     "name": "Café Riviera",
@@ -149,7 +164,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout7.png?alt=media&token=9398320f-8a91-44c3-9d14-20782d93741e"
+    ]
   },
   {
     "name": "Albanian Restaurant Besa",
@@ -160,7 +178,7 @@
     "email": "info@besanyc.com",
     "website": "https://besanyc.com",
     "latitude": 40.8542,
-    "longitude": -73.8840,
+    "longitude": -73.884,
     "city": "New York",
     "country": "USA",
     "isActive": true,
@@ -168,7 +186,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout1.png?alt=media&token=5687cce6-3574-4c28-8a04-bc56cfb9927e"
+    ]
   },
   {
     "name": "Shqiponja Albanian Cafe",
@@ -187,7 +208,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout7.png?alt=media&token=9398320f-8a91-44c3-9d14-20782d93741e"
+    ]
   },
   {
     "name": "Iliria Construction Group",
@@ -206,7 +230,10 @@
     "isAlbanianOwned": true,
     "isPremium": false,
     "isSponsored": false,
-    "isFeatured": false
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout6.png?alt=media&token=e2e611de-89ab-473f-b275-97d0b86a1d7f"
+    ]
   },
   {
     "name": "Beauty Salon Rozafa",
@@ -226,5 +253,415 @@
     "isPremium": false,
     "isSponsored": false,
     "isFeatured": false
+  },
+  {
+    "name": "Korça Bistro & Wine Bar",
+    "category": "RESTAURANT",
+    "description": "Modern Albanian bistro with regional wines from Korça.",
+    "address": "Bulevardi Gjergj Kastrioti, Korçë, Albania",
+    "phone": "+355 82 234 567",
+    "email": "info@korcabistro.al",
+    "website": "",
+    "latitude": 40.6186,
+    "longitude": 20.7808,
+    "city": "Korçë",
+    "country": "Albania",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": true,
+    "isSponsored": false,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout2.png?alt=media&token=b86bf30e-0237-40c7-af41-a15224a547dd"
+    ]
+  },
+  {
+    "name": "Auto Servis Elbasani",
+    "category": "AUTO_SHOP",
+    "description": "Full-service auto repair and maintenance shop.",
+    "address": "Rruga Qemal Stafa, Elbasan, Albania",
+    "phone": "+355 54 234 567",
+    "email": "",
+    "website": "",
+    "latitude": 41.1125,
+    "longitude": 20.0822,
+    "city": "Elbasan",
+    "country": "Albania",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Fier Legal Advisors",
+    "category": "LAWYER",
+    "description": "Business and property law consultancy.",
+    "address": "Rruga Kastriot Muçaj, Fier, Albania",
+    "phone": "+355 34 234 567",
+    "email": "contact@fierlegal.al",
+    "website": "",
+    "latitude": 40.7239,
+    "longitude": 19.5567,
+    "city": "Fier",
+    "country": "Albania",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout4.png?alt=media&token=8869693d-c06c-463d-ada2-78c2efa69412"
+    ]
+  },
+  {
+    "name": "Miami Albanian Grill",
+    "category": "RESTAURANT",
+    "description": "Charcoal-grilled Albanian specialties in the heart of Miami.",
+    "address": "1420 SW 8th St, Miami, FL 33135, USA",
+    "phone": "+1 305 555 2011",
+    "email": "info@miamialbaniangrill.com",
+    "website": "https://miamialbaniangrill.com",
+    "latitude": 25.7654,
+    "longitude": -80.2201,
+    "city": "Miami",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": true,
+    "isSponsored": true,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout1.png?alt=media&token=5687cce6-3574-4c28-8a04-bc56cfb9927e"
+    ]
+  },
+  {
+    "name": "Sunshine Beauty Bar",
+    "category": "BEAUTY_SALON",
+    "description": "Albanian-owned beauty salon serving South Florida.",
+    "address": "2200 N Federal Hwy, Fort Lauderdale, FL 33305, USA",
+    "phone": "+1 954 555 3344",
+    "email": "hello@sunshinebeautybar.com",
+    "website": "",
+    "latitude": 26.142,
+    "longitude": -80.1287,
+    "city": "Fort Lauderdale",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Adriatic Realty Group",
+    "category": "OTHER",
+    "description": "Albanian-owned real estate agency serving Broward County.",
+    "address": "888 E Las Olas Blvd, Fort Lauderdale, FL 33301, USA",
+    "phone": "+1 954 555 7788",
+    "email": "info@adriaticrealtygroup.com",
+    "website": "https://adriaticrealtygroup.com",
+    "latitude": 26.1195,
+    "longitude": -80.1418,
+    "city": "Fort Lauderdale",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": true
+  },
+  {
+    "name": "Boca Raton Dental Care",
+    "category": "DENTIST",
+    "description": "Family dental practice founded by an Albanian-American dentist.",
+    "address": "951 Yamato Rd, Boca Raton, FL 33431, USA",
+    "phone": "+1 561 555 9012",
+    "email": "",
+    "website": "",
+    "latitude": 26.3839,
+    "longitude": -80.1067,
+    "city": "Boca Raton",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Tampa Bay Auto Repair",
+    "category": "AUTO_SHOP",
+    "description": "Trusted auto repair shop run by an Albanian family since 2005.",
+    "address": "4310 W Kennedy Blvd, Tampa, FL 33609, USA",
+    "phone": "+1 813 555 4455",
+    "email": "service@tampabayauto.com",
+    "website": "",
+    "latitude": 27.9528,
+    "longitude": -82.5085,
+    "city": "Tampa",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Orlando Market & Deli",
+    "category": "MARKET",
+    "description": "Balkan grocery and deli with imported Albanian products.",
+    "address": "5250 International Dr, Orlando, FL 32819, USA",
+    "phone": "+1 407 555 6677",
+    "email": "",
+    "website": "",
+    "latitude": 28.4451,
+    "longitude": -81.4685,
+    "city": "Orlando",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Skanderbeg Barbershop NYC",
+    "category": "BARBER",
+    "description": "Old-school Albanian barbershop in Staten Island.",
+    "address": "1560 Victory Blvd, Staten Island, NY 10314, USA",
+    "phone": "+1 718 555 2233",
+    "email": "",
+    "website": "",
+    "latitude": 40.6176,
+    "longitude": -74.131,
+    "city": "New York",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": true,
+    "isSponsored": false,
+    "isFeatured": true,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout5.png?alt=media&token=e812c680-cbb5-4bc5-ab1c-678dadbe2b0b"
+    ]
+  },
+  {
+    "name": "Astoria Byrektore",
+    "category": "CAFE",
+    "description": "Fresh-baked byrek and Albanian pastries in Astoria.",
+    "address": "31-14 Broadway, Astoria, NY 11106, USA",
+    "phone": "+1 718 555 8899",
+    "email": "info@astoriabyrek.com",
+    "website": "",
+    "latitude": 40.7616,
+    "longitude": -73.925,
+    "city": "New York",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout7.png?alt=media&token=9398320f-8a91-44c3-9d14-20782d93741e"
+    ]
+  },
+  {
+    "name": "Dardania Law Offices",
+    "category": "LAWYER",
+    "description": "Immigration and family law for the Albanian-American community.",
+    "address": "225 Broadway, New York, NY 10007, USA",
+    "phone": "+1 212 555 3321",
+    "email": "contact@dardanialaw.com",
+    "website": "https://dardanialaw.com",
+    "latitude": 40.7106,
+    "longitude": -74.0089,
+    "city": "New York",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": true,
+    "isSponsored": true,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout4.png?alt=media&token=8869693d-c06c-463d-ada2-78c2efa69412"
+    ]
+  },
+  {
+    "name": "Bronx Smile Dental",
+    "category": "DENTIST",
+    "description": "Affordable family dentistry serving the Bronx Albanian community.",
+    "address": "2510 Arthur Ave, Bronx, NY 10458, USA",
+    "phone": "+1 718 555 6612",
+    "email": "",
+    "website": "",
+    "latitude": 40.8558,
+    "longitude": -73.888,
+    "city": "New York",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Rilindja Beauty Salon",
+    "category": "BEAUTY_SALON",
+    "description": "Full-service salon owned by an Albanian family in Queens.",
+    "address": "37-16 30th Ave, Queens, NY 11103, USA",
+    "phone": "+1 718 555 4470",
+    "email": "",
+    "website": "",
+    "latitude": 40.7647,
+    "longitude": -73.916,
+    "city": "New York",
+    "country": "USA",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Toronto Albanian Grill House",
+    "category": "RESTAURANT",
+    "description": "Traditional Albanian grill and comfort food in downtown Toronto.",
+    "address": "1200 Bloor St W, Toronto, ON M6H 1N4, Canada",
+    "phone": "+1 416 555 1123",
+    "email": "info@torontoalbaniangrill.com",
+    "website": "https://torontoalbaniangrill.com",
+    "latitude": 43.6595,
+    "longitude": -79.4378,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": true,
+    "isSponsored": true,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout2.png?alt=media&token=b86bf30e-0237-40c7-af41-a15224a547dd"
+    ]
+  },
+  {
+    "name": "Illyria Café",
+    "category": "CAFE",
+    "description": "Espresso bar and Albanian sweets in Etobicoke.",
+    "address": "845 The Queensway, Etobicoke, ON M8Z 1N6, Canada",
+    "phone": "+1 416 555 7745",
+    "email": "",
+    "website": "",
+    "latitude": 43.6297,
+    "longitude": -79.5138,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout7.png?alt=media&token=9398320f-8a91-44c3-9d14-20782d93741e"
+    ]
+  },
+  {
+    "name": "Toronto Balkan Market",
+    "category": "MARKET",
+    "description": "Imported foods and specialty groceries from the Balkans.",
+    "address": "2481 Eglinton Ave W, Toronto, ON M6M 1T1, Canada",
+    "phone": "+1 416 555 8890",
+    "email": "",
+    "website": "",
+    "latitude": 43.6852,
+    "longitude": -79.4664,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Kastrioti Construction Toronto",
+    "category": "CONTRACTOR",
+    "description": "Residential renovations and construction across the GTA.",
+    "address": "3300 Danforth Ave, Toronto, ON M1L 1C6, Canada",
+    "phone": "+1 416 555 3390",
+    "email": "info@kastrioticonstruction.ca",
+    "website": "",
+    "latitude": 43.6889,
+    "longitude": -79.2892,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": true,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": true,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout6.png?alt=media&token=e2e611de-89ab-473f-b275-97d0b86a1d7f"
+    ]
+  },
+  {
+    "name": "North York Family Dental",
+    "category": "DENTIST",
+    "description": "General and cosmetic dentistry in North York.",
+    "address": "5140 Yonge St, North York, ON M2N 6L7, Canada",
+    "phone": "+1 416 555 2280",
+    "email": "",
+    "website": "",
+    "latitude": 43.7686,
+    "longitude": -79.4126,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false
+  },
+  {
+    "name": "Mississauga Barber Co.",
+    "category": "BARBER",
+    "description": "Modern cuts and classic shaves near Square One.",
+    "address": "100 City Centre Dr, Mississauga, ON L5B 2C9, Canada",
+    "phone": "+1 905 555 6634",
+    "email": "",
+    "website": "",
+    "latitude": 43.5932,
+    "longitude": -79.6428,
+    "city": "Toronto",
+    "country": "Canada",
+    "isActive": true,
+    "isVerified": false,
+    "isAlbanianOwned": true,
+    "isPremium": false,
+    "isSponsored": false,
+    "isFeatured": false,
+    "photos": [
+      "https://firebasestorage.googleapis.com/v0/b/albbizmap.firebasestorage.app/o/BusinessLayout5.png?alt=media&token=e812c680-cbb5-4bc5-ab1c-678dadbe2b0b"
+    ]
   }
 ]

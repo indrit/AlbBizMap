@@ -50,8 +50,25 @@ class MapViewModel : ViewModel() {
     private val _listSearchQuery = MutableStateFlow("")
     val listSearchQuery: StateFlow<String> = _listSearchQuery
 
-    private val _listSelectedCategory = MutableStateFlow("")
-    val listSelectedCategory: StateFlow<String> = _listSelectedCategory
+    // Multi-select, same reasoning as Country/City below — a business matches if
+    // its category is ANY of the selected ones (e.g. Restaurant OR Cafe). Only
+    // List View's copy is multi-select; the map's own _selectedCategory above stays
+    // single-select since that wasn't asked for and touching it risks changing
+    // behavior nobody requested there.
+    private val _listSelectedCategories = MutableStateFlow<Set<String>>(emptySet())
+    val listSelectedCategories: StateFlow<Set<String>> = _listSelectedCategories
+
+    // Location filters — List View only (the map itself is already a location filter
+    // by nature, so these don't apply there). Kept as their own pair rather than
+    // folded into search, since the UI shows them as a distinct filter section with
+    // its own chips, not something you type. Sets rather than single values — a
+    // business matches if its country is ANY of the selected countries (e.g. USA
+    // OR UK), same OR logic for city, so a user can pick several of each at once.
+    private val _listSelectedCountries = MutableStateFlow<Set<String>>(emptySet())
+    val listSelectedCountries: StateFlow<Set<String>> = _listSelectedCountries
+
+    private val _listSelectedCities = MutableStateFlow<Set<String>>(emptySet())
+    val listSelectedCities: StateFlow<Set<String>> = _listSelectedCities
 
     private val _userLocation = MutableStateFlow<LatLng?>(null)
     val userLocation: StateFlow<LatLng?> = _userLocation
@@ -79,8 +96,14 @@ class MapViewModel : ViewModel() {
         .mapLatest { list -> list.sortedByDescending { it.id }.take(5) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
-    val topRated: StateFlow<List<Business>> = _businesses
-        .mapLatest { list -> list.sortedByDescending { it.rating }.take(10) }
+    // Renamed from topRated — the map screen's "Most Favorited Worldwide" section
+    // was labeled as favorites but was actually sorting by star rating (a
+    // different field entirely from likeCount). Now sorts by actual like count
+    // so the section does what its label promises. (BusinessListScreen's
+    // separate "Top Rated" discovery row is unrelated to this and still
+    // correctly sorts by rating — not touched.)
+    val mostFavorited: StateFlow<List<Business>> = _businesses
+        .mapLatest { list -> list.sortedByDescending { it.likeCount }.take(10) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     // Both combine() blocks below re-run on every _userLocation tick (every 5s while
@@ -115,21 +138,35 @@ class MapViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())
 
 
+    // "Top Recommended" on the map screen — Sponsored and Featured businesses
+    // ONLY (not Premium: per the actual plan copy in SubscriptionScreen.kt,
+    // Premium's benefits are profile fields like phone/email/hours, not
+    // placement — Featured and Sponsored are the two tiers that explicitly
+    // promise "featured in discovery row" / "top of search results").
+    // Deliberately no distance cutoff, unlike nearMe above: these businesses
+    // paid for visibility, and with the app still early and listings possibly
+    // spread across many countries, a hard local radius could leave this
+    // section empty for most users and mean a paying business gets shown to
+    // almost no one. Distance is used only as a tiebreaker within each tier —
+    // closer paid businesses still rank first, but nothing is excluded purely
+    // for being far away. Falls back to Double.MAX_VALUE when location isn't
+    // available yet, so the tier sort still works before a location fix lands.
     val topPicks = combine(
         _businesses, _userLocation
     ) { list: List<Business>, location: LatLng? ->
-        if (location == null) emptyList<Business>()
-        else {
-            val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.map { business -> business to repository.calculateDistance(userPoint, business.location ?: GeoPoint(0.0, 0.0)) }
-                .filter { (business, distance) -> (business.isSponsored || business.isFeatured || business.isPremium) && distance <= 50.0 }
-                .sortedWith(
-                    compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
-                        .thenByDescending { it.first.isFeatured }
-                        .thenByDescending { it.first.isPremium }
-                        .thenBy { it.second }
-                ).take(10).map { it.first }
-        }
+        val userPoint = location?.let { GeoPoint(it.latitude, it.longitude) }
+        list.filter { it.isSponsored || it.isFeatured }
+            .map { business ->
+                val distance = userPoint?.let {
+                    repository.calculateDistance(it, business.location ?: GeoPoint(0.0, 0.0))
+                } ?: Double.MAX_VALUE
+                business to distance
+            }
+            .sortedWith(
+                compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
+                    .thenByDescending { it.first.isFeatured }
+                    .thenBy { it.second }
+            ).take(10).map { it.first }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())
 
     val filteredBusinesses: StateFlow<List<Business>> = combine(
@@ -153,17 +190,43 @@ class MapViewModel : ViewModel() {
     val listFilteredBusinesses: StateFlow<List<Business>> = combine(
         _businesses,
         _listSearchQuery,
-        _listSelectedCategory
-    ) { list, query, category ->
+        _listSelectedCategories,
+        _listSelectedCountries,
+        _listSelectedCities
+    ) { list, query, categories, countries, cities ->
         list.filter { business ->
             val matchesQuery = query.isEmpty() ||
                     business.name.contains(query, ignoreCase = true) ||
                     business.category.contains(query, ignoreCase = true) ||
                     business.address.contains(query, ignoreCase = true)
-            val matchesCategory = category.isEmpty() ||
-                    business.category.equals(category, ignoreCase = true)
-            matchesQuery && matchesCategory
+            val matchesCategory = categories.isEmpty() ||
+                    categories.any { business.category.equals(it, ignoreCase = true) }
+            val matchesCountry = countries.isEmpty() ||
+                    countries.any { business.country.equals(it, ignoreCase = true) }
+            val matchesCity = cities.isEmpty() ||
+                    cities.any { business.city.equals(it, ignoreCase = true) }
+            matchesQuery && matchesCategory && matchesCountry && matchesCity
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+
+    // Distinct country/city values to populate the Location filter chips —
+    // derived from whatever's currently loaded rather than a hardcoded list, so it
+    // stays correct as businesses are added from new places. City options narrow to
+    // whichever countries are currently selected (any of them, not just one — falls
+    // back to all cities when no country is selected), matching the two-level way
+    // this is usually shown in other directory apps.
+    val availableCountries: StateFlow<List<String>> = _businesses.mapLatest { list ->
+        list.map { it.country }.filter { it.isNotBlank() }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+
+    val availableCities: StateFlow<List<String>> = combine(
+        _businesses, _listSelectedCountries
+    ) { list, countries ->
+        list.filter { countries.isEmpty() || countries.any { c -> it.country.equals(c, ignoreCase = true) } }
+            .map { it.city }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     init {
@@ -249,17 +312,63 @@ class MapViewModel : ViewModel() {
         _listSearchQuery.value = query
     }
 
-    fun onListCategoryChange(category: String) {
-        _listSelectedCategory.value = category
+    fun onListCategoryToggle(category: String) {
+        _listSelectedCategories.value = _listSelectedCategories.value.let { current ->
+            if (current.any { it.equals(category, ignoreCase = true) }) {
+                current.filterNot { it.equals(category, ignoreCase = true) }.toSet()
+            } else {
+                current + category
+            }
+        }
+    }
+
+    fun onListCategoryClearAll() {
+        _listSelectedCategories.value = emptySet()
+    }
+
+    // Toggles one country in/out of the selected set — tapping "USA" then "UK"
+    // selects both, tapping either again deselects just that one.
+    fun onListCountryToggle(country: String) {
+        _listSelectedCountries.value = _listSelectedCountries.value.let { current ->
+            if (current.any { it.equals(country, ignoreCase = true) }) {
+                current.filterNot { it.equals(country, ignoreCase = true) }.toSet()
+            } else {
+                current + country
+            }
+        }
+    }
+
+    // The "All" chip — clears every selected country. Also clears cities, since a
+    // city selected under a now-cleared country (e.g. "Toronto" with no country
+    // filter left) would otherwise sit there silently constraining results.
+    fun onListCountryClearAll() {
+        _listSelectedCountries.value = emptySet()
+        _listSelectedCities.value = emptySet()
+    }
+
+    fun onListCityToggle(city: String) {
+        _listSelectedCities.value = _listSelectedCities.value.let { current ->
+            if (current.any { it.equals(city, ignoreCase = true) }) {
+                current.filterNot { it.equals(city, ignoreCase = true) }.toSet()
+            } else {
+                current + city
+            }
+        }
+    }
+
+    fun onListCityClearAll() {
+        _listSelectedCities.value = emptySet()
     }
 
     // Called when List View closes, so reopening it always starts from a clean
-    // search box and "All" category instead of remembering whatever was typed/
-    // selected last time — same "reset on close" behavior the map's own search
-    // already had, now applied to List View's independent copy too.
+    // search box and "All" category/country/city instead of remembering whatever
+    // was typed/selected last time — same "reset on close" behavior the map's own
+    // search already had, now applied to List View's independent copy too.
     fun resetListFilters() {
         _listSearchQuery.value = ""
-        _listSelectedCategory.value = ""
+        _listSelectedCategories.value = emptySet()
+        _listSelectedCountries.value = emptySet()
+        _listSelectedCities.value = emptySet()
     }
 
     fun getBusinessById(id: String): Business? {

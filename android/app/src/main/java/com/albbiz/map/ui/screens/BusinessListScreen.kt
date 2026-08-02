@@ -61,6 +61,17 @@ fun BusinessListScreen(
 
     val filteredBusinesses by viewModel.listFilteredBusinesses.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
+    val selectedCategories by viewModel.listSelectedCategories.collectAsState()
+    val selectedCountries by viewModel.listSelectedCountries.collectAsState()
+    val selectedCities by viewModel.listSelectedCities.collectAsState()
+    val availableCountries by viewModel.availableCountries.collectAsState()
+    val availableCities by viewModel.availableCities.collectAsState()
+    // Country/City used to always be expanded, which pushed the actual business
+    // list three filter rows down. Now they're tucked behind this toggle (the
+    // "Filters" button next to "All Businesses") and only take up space when the
+    // user actually wants them — same idea as the collapsible filter panels in
+    // most directory/marketplace apps.
+    var showLocationFilters by remember { mutableStateOf(false) }
 
     val businesses = remember(filteredBusinesses, sortBy, userLocation) {
         when (sortBy) {
@@ -78,6 +89,7 @@ fun BusinessListScreen(
                 } else filteredBusinesses
             }
             "topRated" -> filteredBusinesses.sortedByDescending { it.rating }
+            "mostFavorited" -> filteredBusinesses.sortedByDescending { it.likeCount }
             else -> filteredBusinesses
         }
     }
@@ -105,6 +117,32 @@ fun BusinessListScreen(
                     containerColor = MeTontRed
                 )
             )
+        },
+        // Only present while the Country/City panel is open — its job is just to
+        // collapse that panel back (the actual filtering already happened live as
+        // chips were tapped, same as Category), giving the user a clear "I'm done"
+        // action instead of having to scroll back up to the Filters button.
+        bottomBar = {
+            if (showLocationFilters) {
+                Surface(
+                    color = Color.White,
+                    shadowElevation = 8.dp
+                ) {
+                    Button(
+                        onClick = { showLocationFilters = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MeTontRed,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("Apply Filters", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     ) { padding ->
         Box(
@@ -142,18 +180,50 @@ fun BusinessListScreen(
                         )
                     }
                     item {
-                        Text(
-                            strings.allBusinesses,
-                            modifier = Modifier.padding(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 16.dp,
-                                bottom = 8.dp
-                            ),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 16.dp,
+                                    bottom = 8.dp
+                                ),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                strings.allBusinesses,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            // Only worth showing once there's actually a Country/City
+                            // to filter by — matches the same availableCountries guard
+                            // the collapsible section below uses.
+                            if (availableCountries.isNotEmpty()) {
+                                OutlinedButton(
+                                    onClick = { showLocationFilters = !showLocationFilters },
+                                    shape = RoundedCornerShape(20.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = if (showLocationFilters) MeTontRed else Color.Black
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (showLocationFilters) MeTontRed else Color(0xFFDADCE0)
+                                    )
+                                ) {
+                                    Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    val activeCount = selectedCountries.size + selectedCities.size
+                                    Text(
+                                        if (activeCount > 0) "Filters ($activeCount)" else "Filters",
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -179,12 +249,14 @@ fun BusinessListScreen(
                 }
 
                 // ── CATEGORY FILTERS ──────────────────────────────
+                // Multi-select, same as Country/City below — "All" clears the set,
+                // each other chip toggles independently so e.g. Restaurant + Cafe
+                // can both be active at once.
                 item {
                     val categories = listOf(
-                        "All", "Restaurant", "Cafe", "Market",
+                        "Restaurant", "Cafe", "Market",
                         "Lawyer", "Contractor", "Other"
                     )
-                    var selectedCategory by remember { mutableStateOf("All") }
 
                     Row(
                         modifier = Modifier
@@ -193,21 +265,116 @@ fun BusinessListScreen(
                             .padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        FilterChip(
+                            selected = selectedCategories.isEmpty(),
+                            onClick = { viewModel.onListCategoryClearAll() },
+                            label = { Text("All", fontSize = 12.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MeTontRed,
+                                selectedLabelColor = Color.White
+                            )
+                        )
                         categories.forEach { category ->
                             FilterChip(
-                                selected = selectedCategory == category,
-                                onClick = {
-                                    selectedCategory = category
-                                    viewModel.onListCategoryChange(
-                                        if (category == "All") "" else category
-                                    )
-                                },
+                                selected = selectedCategories.any { it.equals(category, ignoreCase = true) },
+                                onClick = { viewModel.onListCategoryToggle(category) },
                                 label = { Text(category, fontSize = 12.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MeTontRed,
                                     selectedLabelColor = Color.White
                                 )
                             )
+                        }
+                    }
+                }
+
+                // ── LOCATION FILTERS ──────────────────────────────
+                // Separate section from Category above — multi-select on both:
+                // Country and City are each a set, so e.g. USA + UK, or Boston +
+                // Toronto, can all be selected at once (OR within each group, AND
+                // between the two groups and Category/search). Options come from
+                // availableCountries/Cities in the ViewModel, i.e. whatever's
+                // actually in the currently loaded business list, not a fixed list.
+                if (showLocationFilters && availableCountries.isNotEmpty()) {
+                    item {
+                        Column {
+                            Text(
+                                strings.countryLabel.removeSuffix(" *"),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MeTontGrey
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilterChip(
+                                    selected = selectedCountries.isEmpty(),
+                                    onClick = { viewModel.onListCountryClearAll() },
+                                    label = { Text("All", fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MeTontRed,
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                                availableCountries.forEach { country ->
+                                    FilterChip(
+                                        selected = selectedCountries.any { it.equals(country, ignoreCase = true) },
+                                        onClick = { viewModel.onListCountryToggle(country) },
+                                        label = { Text(country, fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MeTontRed,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (availableCities.isNotEmpty()) {
+                        item {
+                            Column {
+                                Text(
+                                    strings.cityLabel.removeSuffix(" *"),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MeTontGrey
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    FilterChip(
+                                        selected = selectedCities.isEmpty(),
+                                        onClick = { viewModel.onListCityClearAll() },
+                                        label = { Text("All", fontSize = 12.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MeTontRed,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                    availableCities.forEach { city ->
+                                        FilterChip(
+                                            selected = selectedCities.any { it.equals(city, ignoreCase = true) },
+                                            onClick = { viewModel.onListCityToggle(city) },
+                                            label = { Text(city, fontSize = 12.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MeTontRed,
+                                                selectedLabelColor = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

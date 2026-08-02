@@ -43,10 +43,10 @@ import com.albbiz.map.data.BusinessRepository
 fun UserProfileScreen(
     onBackClick: () -> Unit,
     onLogout: () -> Unit,
-    onUpgradeClick: () -> Unit,
     currentLanguage: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     onAdminClick: () -> Unit,
+    onMyBusinessesClick: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -62,10 +62,15 @@ fun UserProfileScreen(
     val isAdmin by adminViewModel.isAdmin.collectAsState()
     val businessRepository = remember { BusinessRepository() }
     var userTierIcon by remember { mutableStateOf<Int?>(null) }
+    // Same getBusinessesByOwner listener already fetches everything needed for the
+    // tier badge above — piggybacking the count here avoids a second Firestore
+    // query just to show it on the "My Businesses" card below.
+    var ownedBusinessCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(user?.uid) {
         user?.uid?.let { uid ->
             businessRepository.getBusinessesByOwner(uid).collect { ownedBusinesses ->
+                ownedBusinessCount = ownedBusinesses.size
                 userTierIcon = when {
                     ownedBusinesses.any { it.isSponsored } -> R.drawable.metont_gold
                     ownedBusinesses.any { it.isFeatured } -> R.drawable.metont_silver
@@ -278,13 +283,13 @@ fun UserProfileScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── UPGRADE CARD ──────────────────────────────────────
+            // ── MY BUSINESSES CARD ─────────────────────────────────
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
@@ -295,35 +300,39 @@ fun UserProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
-                        Icons.Default.Star,
+                        Icons.Default.Storefront,
                         null,
-                        tint = Color(0xFFFFAA00),
+                        tint = MeTontRed,
                         modifier = Modifier.size(32.dp)
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            strings.upgradeToPremium,
+                            strings.myBusinesses,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF8F00),
+                            color = MeTontRed,
                             fontSize = 14.sp
                         )
                         Text(
-                            "Unlock all features",
+                            if (ownedBusinessCount > 0)
+                                "$ownedBusinessCount ${if (ownedBusinessCount == 1) "business" else "businesses"}"
+                            else strings.myBusinessesSubtitle,
                             color = MeTontGrey,
                             fontSize = 12.sp
                         )
                     }
                     Button(
-                        onClick = onUpgradeClick,
+                        onClick = onMyBusinessesClick,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFAA00)
+                            containerColor = MeTontRed
                         )
                     ) {
-                        Text("Upgrade", color = Color.White, fontSize = 12.sp)
+                        Text("Open", color = Color.White, fontSize = 12.sp)
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // ── ADMIN PANEL CARD ──────────────────────────────────
             if (isAdmin) {

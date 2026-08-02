@@ -30,24 +30,53 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.albbiz.map.R
+import com.albbiz.map.data.Business
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionScreen(
+    // Every upgrade is scoped to exactly one business — there's no longer a
+    // generic entry point into this screen, so this is never null in practice.
+    // The plan cards below use this to show which plan the business is
+    // actually on right now and to say which business the request e-mail is
+    // for, instead of it being ambiguous when an account owns more than one.
+    business: Business,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
     val user = FirebaseAuth.getInstance().currentUser
     val userEmail = user?.email ?: ""
 
+    // Same highest-tier-wins precedence used everywhere else (UserProfileScreen's
+    // badge, MapViewModel's topPicks sort, Business.maxPhotos).
+    val currentTier = when {
+        business.isSponsored -> "Sponsored"
+        business.isFeatured -> "Featured"
+        business.isPremium -> "Premium"
+        else -> "Free"
+    }
+
+    fun requestEmailIntent(planName: String, price: String): Intent {
+        return Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:admin@metont.com")
+            putExtra(Intent.EXTRA_SUBJECT, "$planName Upgrade Request - MeTont")
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "Hello,\n\nI would like to upgrade \"${business.name}\" (ID: ${business.id}) to " +
+                    "$planName ($price).\n\nAccount: $userEmail\n\nThank you!"
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Upgrade Your Listing",
+                        "Upgrade \"${business.name}\"",
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
                 },
                 navigationIcon = {
@@ -110,7 +139,7 @@ fun SubscriptionScreen(
                 price = "$0",
                 period = "forever",
                 accentColor = MeTontGrey,
-                isCurrentPlan = true,
+                isCurrentPlan = currentTier == "Free",
                 features = listOf(
                     PlanFeature("Business name & category", true),
                     PlanFeature("Location on map", true),
@@ -119,11 +148,10 @@ fun SubscriptionScreen(
                     PlanFeature("Phone number", false),
                     PlanFeature("Email & website", false),
                     PlanFeature("Extended description", false),
-                    PlanFeature("Multiple photos", false),
                     PlanFeature("Hours of operation", false),
                     PlanFeature("Premium badge", false)
                 ),
-                buttonText = "Current Plan",
+                buttonText = if (currentTier == "Free") "Current Plan" else "—",
                 onButtonClick = {}
             )
 
@@ -134,27 +162,23 @@ fun SubscriptionScreen(
                 period = "per month",
                 accentColor = TierBronze,
                // badgeIcon = R.drawable.metont_bronze,
-                isCurrentPlan = false,
+                isCurrentPlan = currentTier == "Premium",
                 features = listOf(
                     PlanFeature("Business name & category", true),
                     PlanFeature("Location on map", true),
                     PlanFeature("100 character description", true),
-                    PlanFeature("1 photo", true),
+                    PlanFeature("Up to 6 photos", true),
                     PlanFeature("Phone number", true),
                     PlanFeature("Email & website", true),
                     PlanFeature("Extended description", true),
-                    PlanFeature("Multiple photos", true),
                     PlanFeature("Hours of operation", true),
                     PlanFeature("Premium badge", true)
                 ),
-                buttonText = "Request Upgrade",
+                buttonText = if (currentTier == "Premium") "Current Plan" else "Request Upgrade",
                 onButtonClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "Premium Upgrade Request - MeTont")
-                        putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Premium (\$2.99/month).\n\nAccount: $userEmail\n\nThank you!")
-                    }
-                    context.startActivity(Intent.createChooser(intent, "Send upgrade request"))
+                    context.startActivity(
+                        Intent.createChooser(requestEmailIntent("Premium", "$2.99/month"), "Send upgrade request")
+                    )
                 }
             )
 
@@ -165,21 +189,19 @@ fun SubscriptionScreen(
                 period = "per month",
                 accentColor = TierSilver,
                 //badgeIcon = R.drawable.metont_silver,
-                isCurrentPlan = false,
+                isCurrentPlan = currentTier == "Featured",
                 features = listOf(
                     PlanFeature("Everything in Premium", true),
+                    PlanFeature("Up to 10 photos", true),
                     PlanFeature("Featured badge", true),
                     PlanFeature("Featured in discovery row", true),
                     PlanFeature("Highlighted in list view", true)
                 ),
-                buttonText = "Request Featured",
+                buttonText = if (currentTier == "Featured") "Current Plan" else "Request Featured",
                 onButtonClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "Featured Listing Request - MeTont")
-                        putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Featured (\$9.99/month).\n\nAccount: $userEmail\n\nThank you!")
-                    }
-                    context.startActivity(Intent.createChooser(intent, "Send featured request"))
+                    context.startActivity(
+                        Intent.createChooser(requestEmailIntent("Featured", "$9.99/month"), "Send featured request")
+                    )
                 }
             )
 
@@ -190,23 +212,21 @@ fun SubscriptionScreen(
                 period = "per month",
                 accentColor = TierGold,
                 //badgeIcon = R.drawable.metont_gold,
-                isCurrentPlan = false,
+                isCurrentPlan = currentTier == "Sponsored",
                 features = listOf(
                     PlanFeature("Everything in Premium", true),
+                    PlanFeature("Up to 14 photos", true),
                     PlanFeature("Highlighted map pin", true),
                     PlanFeature("Top of search results", true),
                     PlanFeature("Sponsored badge", true),
                     PlanFeature("Featured in discovery section", true),
                     PlanFeature("Priority customer support", true)
                 ),
-                buttonText = "Request Sponsorship",
+                buttonText = if (currentTier == "Sponsored") "Current Plan" else "Request Sponsorship",
                 onButtonClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:admin@metont.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "Sponsored Listing Request - MeTont")
-                        putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to upgrade to Sponsored (\$19.99/month).\n\nAccount: $userEmail\n\nThank you!")
-                    }
-                    context.startActivity(Intent.createChooser(intent, "Send sponsorship request"))
+                    context.startActivity(
+                        Intent.createChooser(requestEmailIntent("Sponsored", "$19.99/month"), "Send sponsorship request")
+                    )
                 }
             )
 
