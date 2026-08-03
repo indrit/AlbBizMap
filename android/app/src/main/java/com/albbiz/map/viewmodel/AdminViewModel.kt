@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.BusinessRepository
 import com.albbiz.map.data.ClaimRequest
+import com.albbiz.map.ui.CurrentLanguage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,7 +55,7 @@ class AdminViewModel(
                 _isLoading.value = false
             }
             .catch { e ->
-                _message.value = "Error loading claims: ${e.message}"
+                _message.value = "${CurrentLanguage.strings().errorLoadingClaimsPrefix}: ${e.message}"
                 _isLoading.value = false
             }
             .launchIn(viewModelScope)
@@ -64,10 +65,14 @@ class AdminViewModel(
         viewModelScope.launch {
             repository.approveClaim(claim)
                 .onSuccess {
-                    _message.value = "Claim approved — ${claim.businessName} is now owned by ${claim.userEmail}"
+                    _message.value = String.format(
+                        CurrentLanguage.strings().claimApprovedTemplate,
+                        claim.businessName,
+                        claim.userEmail
+                    )
                 }
                 .onFailure { e ->
-                    _message.value = "Failed to approve: ${e.message}"
+                    _message.value = "${CurrentLanguage.strings().failedToApprovePrefix}: ${e.message}"
                 }
         }
     }
@@ -76,10 +81,10 @@ class AdminViewModel(
         viewModelScope.launch {
             repository.rejectClaim(claimId)
                 .onSuccess {
-                    _message.value = "Claim rejected"
+                    _message.value = CurrentLanguage.strings().claimRejectedMsg
                 }
                 .onFailure { e ->
-                    _message.value = "Failed to reject: ${e.message}"
+                    _message.value = "${CurrentLanguage.strings().failedToRejectPrefix}: ${e.message}"
                 }
         }
     }
@@ -103,10 +108,10 @@ class AdminViewModel(
                 _isLoading.value = true
                 repository.seedBusinessesFromJson(context)
                     .onSuccess { count ->
-                        _message.value = "Successfully imported $count businesses!"
+                        _message.value = String.format(CurrentLanguage.strings().importSuccessTemplate, count)
                     }
                     .onFailure { e ->
-                        _message.value = "Import failed: ${e.message}"
+                        _message.value = "${CurrentLanguage.strings().importFailedPrefix}: ${e.message}"
                     }
                 _isLoading.value = false
             } finally {

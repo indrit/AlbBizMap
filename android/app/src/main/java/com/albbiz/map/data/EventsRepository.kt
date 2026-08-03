@@ -37,4 +37,32 @@ class EventsRepository {
             Result.failure(e)
         }
     }
+
+    fun getEventsByOrganizer(organizerId: String): Flow<List<Event>> {
+        return firestoreService.getEventsByOrganizer(organizerId)
+            .catch { e ->
+                Log.e("AlbBizMap", "EventsRepo: Error fetching organizer events", e)
+                emit(emptyList())
+            }
+    }
+
+    // Deletes the Firestore doc and, if the event had a photo, its Storage file too.
+    // Storage delete failures are logged but don't block the Firestore delete from
+    // succeeding — an orphaned image is a much smaller problem than a stuck event
+    // the owner can no longer remove.
+    suspend fun deleteEvent(event: Event): Result<Unit> {
+        return try {
+            if (!event.imageUrl.isNullOrBlank()) {
+                try {
+                    storage.getReferenceFromUrl(event.imageUrl).delete().await()
+                } catch (e: Exception) {
+                    Log.e("AlbBizMap", "EventsRepo: Error deleting event image", e)
+                }
+            }
+            firestoreService.deleteEvent(event.id)
+        } catch (e: Exception) {
+            Log.e("AlbBizMap", "EventsRepo: Error deleting event", e)
+            Result.failure(e)
+        }
+    }
 }

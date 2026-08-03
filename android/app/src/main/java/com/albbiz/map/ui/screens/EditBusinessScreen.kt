@@ -40,6 +40,7 @@ import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessCategory
 import com.albbiz.map.data.JobPosting
 import com.albbiz.map.data.Promotion
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.EditBusinessUiState
@@ -57,6 +58,7 @@ fun EditBusinessScreen(
     viewModel: EditBusinessViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -119,14 +121,14 @@ fun EditBusinessScreen(
             cameraImageUri.value = uri
             cameraLauncher.launch(uri)
         } else {
-            Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strings.cameraPermissionRequired, Toast.LENGTH_SHORT).show()
         }
     }
 
     LaunchedEffect(uiState) {
         when (uiState) {
             is EditBusinessUiState.Success -> {
-                Toast.makeText(context, "Business updated successfully!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, strings.businessUpdatedSuccess, Toast.LENGTH_LONG).show()
                 onBusinessUpdated()
                 viewModel.resetState()
             }
@@ -150,14 +152,14 @@ fun EditBusinessScreen(
             onDismissRequest = { showAddJobDialog = false },
             shape = RoundedCornerShape(20.dp),
             title = {
-                Text("Add Job Posting", fontWeight = FontWeight.Bold, color = MeTontRed)
+                Text(strings.addJobPostingTitle, fontWeight = FontWeight.Bold, color = MeTontRed)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = jobTitle,
                         onValueChange = { jobTitle = it },
-                        label = { Text("Job Title *") },
+                        label = { Text(strings.jobTitleLabel) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -174,7 +176,7 @@ fun EditBusinessScreen(
                             value = jobType,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Job Type *") },
+                            label = { Text(strings.jobTypeLabel) },
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = jobTypeExpanded)
                             },
@@ -199,7 +201,7 @@ fun EditBusinessScreen(
                     OutlinedTextField(
                         value = jobDescription,
                         onValueChange = { jobDescription = it },
-                        label = { Text("Description *") },
+                        label = { Text(strings.descriptionRequiredLabel) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         shape = RoundedCornerShape(12.dp),
@@ -211,8 +213,8 @@ fun EditBusinessScreen(
                     OutlinedTextField(
                         value = jobSalary,
                         onValueChange = { jobSalary = it },
-                        label = { Text("Salary (Optional)") },
-                        placeholder = { Text("e.g. \$1,500/month") },
+                        label = { Text(strings.jobSalaryLabel) },
+                        placeholder = { Text(strings.jobSalaryPlaceholder) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -227,7 +229,7 @@ fun EditBusinessScreen(
                 Button(
                     onClick = {
                         if (jobTitle.isBlank() || jobDescription.isBlank()) {
-                            Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.jobTitleDescRequired, Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         jobs = (jobs + JobPosting(
@@ -240,11 +242,11 @@ fun EditBusinessScreen(
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
-                ) { Text("Add Job", color = Color.White) }
+                ) { Text(strings.addJobButton, color = Color.White) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddJobDialog = false }) {
-                    Text("Cancel", color = MeTontGrey)
+                    Text(strings.cancel, color = MeTontGrey)
                 }
             }
         )
@@ -259,14 +261,14 @@ fun EditBusinessScreen(
             onDismissRequest = { showAddPromoDialog = false },
             shape = RoundedCornerShape(20.dp),
             title = {
-                Text("Add Promotion", fontWeight = FontWeight.Bold, color = MeTontRed)
+                Text(strings.addPromotionTitle, fontWeight = FontWeight.Bold, color = MeTontRed)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = promoTitle,
                         onValueChange = { promoTitle = it },
-                        label = { Text("Promotion Title *") },
+                        label = { Text(strings.promotionTitleLabel) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -278,7 +280,7 @@ fun EditBusinessScreen(
                     OutlinedTextField(
                         value = promoDescription,
                         onValueChange = { promoDescription = it },
-                        label = { Text("Description *") },
+                        label = { Text(strings.descriptionRequiredLabel) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         shape = RoundedCornerShape(12.dp),
@@ -293,7 +295,7 @@ fun EditBusinessScreen(
                 Button(
                     onClick = {
                         if (promoTitle.isBlank() || promoDescription.isBlank()) {
-                            Toast.makeText(context, "Title and description are required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, strings.jobTitleDescRequired, Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         promotions = (promotions + Promotion(
@@ -304,11 +306,11 @@ fun EditBusinessScreen(
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
-                ) { Text("Add Promotion", color = Color.White) }
+                ) { Text(strings.addPromotionTitle, color = Color.White) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddPromoDialog = false }) {
-                    Text("Cancel", color = MeTontGrey)
+                    Text(strings.cancel, color = MeTontGrey)
                 }
             }
         )
@@ -319,14 +321,14 @@ fun EditBusinessScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Edit Business",
+                        strings.editBusinessTitle,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.back, tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
@@ -344,11 +346,11 @@ fun EditBusinessScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ── BASIC INFO ────────────────────────────────────────
-            SectionCard(title = "Basic Information") {
+            SectionCard(title = strings.basicInformationSection) {
                 RedOutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = "Business Name *",
+                    label = strings.businessName,
                     icon = Icons.Default.Store
                 )
                 ExposedDropdownMenuBox(
@@ -360,7 +362,7 @@ fun EditBusinessScreen(
                         value = selectedCategory?.displayName ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Category *") },
+                        label = { Text(strings.categoryRequiredLabel) },
                         leadingIcon = { Icon(Icons.Default.Category, null, tint = MeTontRed) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown)
@@ -393,7 +395,7 @@ fun EditBusinessScreen(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { if (it.length <= 100) description = it },
-                    label = { Text("Description *") },
+                    label = { Text(strings.descriptionRequiredLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 5,
@@ -408,11 +410,11 @@ fun EditBusinessScreen(
             }
 
             // ── LOCATION ──────────────────────────────────────────
-            SectionCard(title = "Location") {
+            SectionCard(title = strings.locationSectionShort) {
                 RedOutlinedTextField(
                     value = address,
                     onValueChange = { address = it },
-                    label = "Full Address *",
+                    label = strings.fullAddress,
                     icon = Icons.Default.LocationOn,
                     singleLine = false
                 )
@@ -423,7 +425,7 @@ fun EditBusinessScreen(
                     OutlinedTextField(
                         value = city,
                         onValueChange = { city = it },
-                        label = { Text("City *") },
+                        label = { Text(strings.cityLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -435,7 +437,7 @@ fun EditBusinessScreen(
                     OutlinedTextField(
                         value = country,
                         onValueChange = { country = it },
-                        label = { Text("Country *") },
+                        label = { Text(strings.countryLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -456,7 +458,7 @@ fun EditBusinessScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Finding coordinates…",
+                            strings.locatingAddress,
                             style = MaterialTheme.typography.bodySmall,
                             color = MeTontGrey
                         )
@@ -465,38 +467,38 @@ fun EditBusinessScreen(
             }
 
             // ── CONTACT ───────────────────────────────────────────
-            SectionCard(title = "Contact Information") {
+            SectionCard(title = strings.contactInformation) {
                 RedOutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = "Phone Number *",
+                    label = strings.phoneNumber,
                     icon = Icons.Default.Phone,
                     keyboardType = KeyboardType.Phone
                 )
                 RedOutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = "Email (Optional)",
+                    label = strings.emailOptional,
                     icon = Icons.Default.Email,
                     keyboardType = KeyboardType.Email
                 )
                 RedOutlinedTextField(
                     value = website,
                     onValueChange = { website = it },
-                    label = "Website (Optional)",
+                    label = strings.websiteOptional,
                     icon = Icons.Default.Language,
                     keyboardType = KeyboardType.Uri
                 )
             }
 
             // ── WORKING HOURS ─────────────────────────────────────
-            SectionCard(title = "Working Hours") {
+            SectionCard(title = strings.workingHoursSection) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Open 24/7", fontWeight = FontWeight.Medium)
+                    Text(strings.open247, fontWeight = FontWeight.Medium)
                     Switch(
                         checked = isOpen24Hours,
                         onCheckedChange = { isOpen24Hours = it },
@@ -512,7 +514,7 @@ fun EditBusinessScreen(
             }
 
             // ── PHOTOS ────────────────────────────────────────────
-            SectionCard(title = "Photos") {
+            SectionCard(title = strings.photos) {
                 val totalPhotos = existingPhotos.size + newPhotoUris.size
                 Text(
                     "$totalPhotos / ${business.maxPhotos} photos",
@@ -567,11 +569,11 @@ fun EditBusinessScreen(
                     ) {
                         Icon(Icons.Default.AddAPhoto, null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add Photo")
+                        Text(strings.addPhoto)
                     }
                 } else {
                     Text(
-                        "Photo limit reached for your plan",
+                        strings.photoLimitReached,
                         style = MaterialTheme.typography.bodySmall,
                         color = MeTontGrey
                     )
@@ -579,10 +581,10 @@ fun EditBusinessScreen(
             }
 
             // ── JOB POSTINGS ──────────────────────────────────────
-            SectionCard(title = "Job Postings") {
+            SectionCard(title = strings.jobs) {
                 if (jobs.isEmpty()) {
                     Text(
-                        "No job postings yet.",
+                        strings.jobsEmptyTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MeTontGrey
                     )
@@ -630,15 +632,15 @@ fun EditBusinessScreen(
                 ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Job Posting")
+                    Text(strings.addJobPostingTitle)
                 }
             }
 
             // ── PROMOTIONS ────────────────────────────────────────
-            SectionCard(title = "Promotions & Deals") {
+            SectionCard(title = strings.promotions) {
                 if (promotions.isEmpty()) {
                     Text(
-                        "No promotions yet.",
+                        strings.promotionsEmptyTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MeTontGrey
                     )
@@ -688,7 +690,7 @@ fun EditBusinessScreen(
                 ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Promotion")
+                    Text(strings.addPromotionTitle)
                 }
             }
 
@@ -696,12 +698,12 @@ fun EditBusinessScreen(
             Button(
                 onClick = {
                     when {
-                        name.isBlank() -> Toast.makeText(context, "Business name is required", Toast.LENGTH_SHORT).show()
-                        selectedCategory == null -> Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
-                        description.isBlank() -> Toast.makeText(context, "Description is required", Toast.LENGTH_SHORT).show()
-                        address.isBlank() -> Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
-                        city.isBlank() -> Toast.makeText(context, "City is required", Toast.LENGTH_SHORT).show()
-                        phone.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                        name.isBlank() -> Toast.makeText(context, strings.businessNameRequired, Toast.LENGTH_SHORT).show()
+                        selectedCategory == null -> Toast.makeText(context, strings.selectCategory, Toast.LENGTH_SHORT).show()
+                        description.isBlank() -> Toast.makeText(context, strings.descriptionRequired, Toast.LENGTH_SHORT).show()
+                        address.isBlank() -> Toast.makeText(context, strings.addressRequired, Toast.LENGTH_SHORT).show()
+                        city.isBlank() -> Toast.makeText(context, strings.cityRequired, Toast.LENGTH_SHORT).show()
+                        phone.isBlank() -> Toast.makeText(context, strings.phoneRequired, Toast.LENGTH_SHORT).show()
                         else -> {
                             coroutineScope.launch {
                                 isGeocoding = true
@@ -710,7 +712,7 @@ fun EditBusinessScreen(
                                 )
                                 isGeocoding = false
                                 if (latLng == null) {
-                                    Toast.makeText(context, "Couldn't find that address — please check it's correct", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, strings.geocodeFailed, Toast.LENGTH_LONG).show()
                                     return@launch
                                 }
                                 val updatedBusiness = business.copy(
@@ -749,11 +751,11 @@ fun EditBusinessScreen(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isGeocoding) "Finding coordinates…" else "Saving...")
+                    Text(if (isGeocoding) strings.locatingAddress else strings.savingLabel)
                 } else {
                     Icon(Icons.Default.Save, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Changes", fontWeight = FontWeight.Bold)
+                    Text(strings.saveChanges, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -766,13 +768,13 @@ fun EditBusinessScreen(
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
             shape = RoundedCornerShape(20.dp),
-            title = { Text("Change Photo", fontWeight = FontWeight.Bold) },
-            text = { Text("Choose photo source", color = MeTontGrey) },
+            title = { Text(strings.changePhoto, fontWeight = FontWeight.Bold) },
+            text = { Text(strings.choosePhotoSource, color = MeTontGrey) },
             confirmButton = {
                 TextButton(onClick = {
                     showImageSourceDialog = false
                     galleryLauncher.launch("image/*")
-                }) { Text("Gallery", color = MeTontRed) }
+                }) { Text(strings.gallery, color = MeTontRed) }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -786,7 +788,7 @@ fun EditBusinessScreen(
                         }
                         else -> permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
-                }) { Text("Camera", color = MeTontRed) }
+                }) { Text(strings.camera, color = MeTontRed) }
             }
         )
     }

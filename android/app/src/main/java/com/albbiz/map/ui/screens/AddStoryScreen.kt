@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.AddStoryUiState
@@ -49,6 +50,7 @@ fun AddStoryScreen(
     storiesViewModel: StoriesViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val addStoryState by storiesViewModel.addStoryState.collectAsState()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
@@ -105,7 +107,7 @@ fun AddStoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Story", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(strings.addStoryTitle, fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
@@ -233,7 +235,7 @@ fun AddStoryScreen(
                         ) {
                             Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add Photos")
+                            Text(strings.addPhotosButton)
                         }
                     }
 
@@ -381,7 +383,7 @@ fun AddStoryScreen(
                         value = storyText,
                         onValueChange = { storyText = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Write a caption...", color = MeTontGrey) },
+                        placeholder = { Text(strings.captionPlaceholder, color = MeTontGrey) },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MeTontRed,
@@ -416,7 +418,7 @@ fun AddStoryScreen(
                         value = locationText,
                         onValueChange = { locationText = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g. Tirana, Albania", color = MeTontGrey) },
+                        placeholder = { Text(strings.storyLocationPlaceholder, color = MeTontGrey) },
                         leadingIcon = {
                             Icon(Icons.Default.LocationOn, null, tint = MeTontRed)
                         },
@@ -466,7 +468,7 @@ fun AddStoryScreen(
                 } else {
                     Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Post Story", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(strings.postStory, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
 

@@ -1,11 +1,15 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -18,8 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -124,6 +130,42 @@ class MainActivity : ComponentActivity() {
                             // point where the user actually tries to do them, instead of
                             // blocking everyone at the door before they've seen anything.
                             composable("splash") {
+                                // Location permission + the first fix used to only be
+                                // requested once MapScreen itself composed — i.e. only
+                                // after the splash video already finished — so the map
+                                // always opened centered on the hardcoded Tirana default
+                                // and visibly jumped to the real location a moment later.
+                                // Requesting permission and starting the location fetch
+                                // here instead means it runs in parallel with the ~5s
+                                // splash video, so by the time MapScreen composes there's
+                                // a real location already available most of the time —
+                                // see the cameraPositionState logic in MapScreen.kt, which
+                                // now seeds the camera directly from whatever's already
+                                // known instead of always starting at Tirana.
+                                val splashContext = LocalContext.current
+                                val locationPermissionLauncher = rememberLauncherForActivityResult(
+                                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                                ) { permissions ->
+                                    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                                    if (granted) mapViewModel.startLocationUpdates(splashContext)
+                                }
+                                LaunchedEffect(Unit) {
+                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                        splashContext, Manifest.permission.ACCESS_FINE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (hasPermission) {
+                                        mapViewModel.startLocationUpdates(splashContext)
+                                    } else {
+                                        locationPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                }
+
                                 SplashScreen(
                                     onSplashFinished = {
                                         navController.navigateSafe("map") {
@@ -168,6 +210,9 @@ class MainActivity : ComponentActivity() {
                                 // overlay-instead-of-NavHost-destination reasoning as
                                 // everything else here.
                                 var showMyBusinessesOverlay by remember { mutableStateOf(false) }
+                                // Reached from the "My Events" card on Profile — same
+                                // reasoning as My Businesses above.
+                                var showMyEventsOverlay by remember { mutableStateOf(false) }
                                 // Which sort mode BusinessListScreen opens with — "default"
                                 // from the drawer's plain "Businesses" item, "mostFavorited"
                                 // when reached via the home screen's Most Favorited
@@ -244,7 +289,7 @@ class MainActivity : ComponentActivity() {
                                         showFavoritesOverlay || showProfileOverlay ||
                                         showEventsOverlay || showAddBusinessOverlay ||
                                         showBusinessListOverlay || showJobsOverlay || showAdminOverlay ||
-                                        showMyBusinessesOverlay ||
+                                        showMyBusinessesOverlay || showMyEventsOverlay ||
                                         selectedBusinessId != null || showSubscriptionOverlay ||
                                         showAddEventOverlay || showAddReviewOverlay ||
                                         showEditBusinessOverlay || showAddStoryOverlay ||
@@ -262,6 +307,7 @@ class MainActivity : ComponentActivity() {
                                         showAddEventOverlay -> showAddEventOverlay = false
                                         selectedBusinessId != null -> selectedBusinessId = null
                                         showMyBusinessesOverlay -> showMyBusinessesOverlay = false
+                                        showMyEventsOverlay -> showMyEventsOverlay = false
                                         showAdminOverlay -> showAdminOverlay = false
                                         selectedStoryIndex != null -> selectedStoryIndex = null
                                         showAddStoryOverlay -> showAddStoryOverlay = false
@@ -317,6 +363,7 @@ class MainActivity : ComponentActivity() {
                                             showJobsOverlay = false
                                             showAdminOverlay = false
                                             showMyBusinessesOverlay = false
+                                            showMyEventsOverlay = false
                                             selectedBusinessId = null
                                             showSubscriptionOverlay = false
                                             showAddEventOverlay = false
@@ -357,6 +404,7 @@ class MainActivity : ComponentActivity() {
                                                 showJobsOverlay = false
                                                 showAdminOverlay = false
                                                 showMyBusinessesOverlay = false
+                                                showMyEventsOverlay = false
                                                 selectedBusinessId = null
                                                 showSubscriptionOverlay = false
                                                 showAddEventOverlay = false
@@ -368,6 +416,7 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onAdminClick = { showAdminOverlay = true },
                                             onMyBusinessesClick = { showMyBusinessesOverlay = true },
+                                            onMyEventsClick = { showMyEventsOverlay = true },
                                             currentLanguage = currentLanguage,
                                             onLanguageChange = { currentLanguage = it },
                                             viewModel = authViewModel
@@ -396,6 +445,17 @@ class MainActivity : ComponentActivity() {
                                                 showAddBusinessOverlay = true
                                             },
                                             viewModel = mapViewModel
+                                        )
+                                    }
+
+                                    // Same layering reasoning as My Businesses above.
+                                    if (showMyEventsOverlay) {
+                                        MyEventsScreen(
+                                            onBackClick = { showMyEventsOverlay = false },
+                                            onAddEventClick = {
+                                                showMyEventsOverlay = false
+                                                showAddEventOverlay = true
+                                            }
                                         )
                                     }
 

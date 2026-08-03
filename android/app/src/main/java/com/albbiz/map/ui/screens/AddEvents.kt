@@ -59,6 +59,7 @@ fun AddEventScreen(
     var day by remember { mutableStateOf("") }
     var month by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("18:00") }
 
     val categories = listOf(
         "Cultural", "Concert", "Festival",
@@ -216,8 +217,8 @@ fun AddEventScreen(
                     OutlinedTextField(
                         value = day,
                         onValueChange = { if (it.length <= 2) day = it },
-                        label = { Text("Day") },
-                        placeholder = { Text("DD") },
+                        label = { Text(strings.dayLabel) },
+                        placeholder = { Text(strings.dayPlaceholder) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -230,8 +231,8 @@ fun AddEventScreen(
                     OutlinedTextField(
                         value = month,
                         onValueChange = { if (it.length <= 2) month = it },
-                        label = { Text("Month") },
-                        placeholder = { Text("MM") },
+                        label = { Text(strings.monthLabel) },
+                        placeholder = { Text(strings.monthPlaceholder) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -244,8 +245,8 @@ fun AddEventScreen(
                     OutlinedTextField(
                         value = year,
                         onValueChange = { if (it.length <= 4) year = it },
-                        label = { Text("Year") },
-                        placeholder = { Text("YYYY") },
+                        label = { Text(strings.yearLabel) },
+                        placeholder = { Text(strings.yearPlaceholder) },
                         modifier = Modifier.weight(1.5f),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
@@ -256,6 +257,13 @@ fun AddEventScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                TimePickerField(
+                    label = strings.eventStartTimeLabel,
+                    time = startTime,
+                    onTimeChanged = { startTime = it },
+                    modifier = Modifier.fillMaxWidth(0.5f)
+                )
             }
 
             // ── LOCATION & WEBSITE ────────────────────────────────
@@ -290,8 +298,9 @@ fun AddEventScreen(
                         dayInt == null || monthInt == null || yearInt == null -> Toast.makeText(context, strings.eventInvalidDate, Toast.LENGTH_SHORT).show()
                         dayInt !in 1..31 || monthInt !in 1..12 || yearInt < 2024 -> Toast.makeText(context, strings.eventInvalidDate, Toast.LENGTH_SHORT).show()
                         else -> {
+                            val (startHour, startMinute) = parseStoredTime(startTime)
                             val calendar = Calendar.getInstance().apply {
-                                set(yearInt, monthInt - 1, dayInt, 0, 0, 0)
+                                set(yearInt, monthInt - 1, dayInt, startHour, startMinute, 0)
                             }
                             val event = Event(
                                 id = UUID.randomUUID().toString(),

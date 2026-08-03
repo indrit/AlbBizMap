@@ -139,7 +139,7 @@ fun BusinessListScreen(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("Apply Filters", fontWeight = FontWeight.Bold)
+                        Text(strings.applyFilters, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -268,7 +268,7 @@ fun BusinessListScreen(
                         FilterChip(
                             selected = selectedCategories.isEmpty(),
                             onClick = { viewModel.onListCategoryClearAll() },
-                            label = { Text("All", fontSize = 12.sp) },
+                            label = { Text(strings.allFilterOption, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MeTontRed,
                                 selectedLabelColor = Color.White
@@ -315,7 +315,7 @@ fun BusinessListScreen(
                                 FilterChip(
                                     selected = selectedCountries.isEmpty(),
                                     onClick = { viewModel.onListCountryClearAll() },
-                                    label = { Text("All", fontSize = 12.sp) },
+                                    label = { Text(strings.allFilterOption, fontSize = 12.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MeTontRed,
                                         selectedLabelColor = Color.White
@@ -356,7 +356,7 @@ fun BusinessListScreen(
                                     FilterChip(
                                         selected = selectedCities.isEmpty(),
                                         onClick = { viewModel.onListCityClearAll() },
-                                        label = { Text("All", fontSize = 12.sp) },
+                                        label = { Text(strings.allFilterOption, fontSize = 12.sp) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = MeTontRed,
                                             selectedLabelColor = Color.White

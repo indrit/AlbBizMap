@@ -106,13 +106,13 @@ fun JobsScreen(
                             }
                         }
                         Text(
-                            "No job postings yet",
+                            strings.jobsEmptyTitle,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MeTontGrey,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "Businesses that are hiring will show up here",
+                            strings.jobsEmptySubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MeTontGrey.copy(alpha = 0.7f)
                         )
@@ -151,6 +151,7 @@ private fun JobListingCard(
     job: JobPosting,
     onViewProfileClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Surface(
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 2.dp,
@@ -245,7 +246,7 @@ private fun JobListingCard(
                     contentColor = Color.White
                 )
             ) {
-                Text("View Profile", fontWeight = FontWeight.Bold)
+                Text(strings.viewProfile, fontWeight = FontWeight.Bold)
             }
         }
     }

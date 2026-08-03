@@ -182,9 +182,20 @@ fun BusinessDetailScreen(
                             ) {
                                 if (business.isVerified) DetailBadgeChip(strings.verified, Color(0xFF2196F3), Icons.Default.Verified)
                                 if (business.isAlbanianOwned) DetailBadgeChip(strings.albanianOwned, MeTontRed, Icons.Default.Flag)
-                                if (business.isPremium) DetailBadgeChip(strings.premium, TierBronze, Icons.Default.Star)
-                                if (business.isFeatured) DetailBadgeChip(strings.featured2, TierSilver, Icons.Default.LocalFireDepartment)
-                                if (business.isSponsored) DetailBadgeChip(strings.sponsored, TierGold, Icons.Default.Campaign)
+                                // Only the highest tier badge, not one chip per true flag —
+                                // matches the same highest-tier-wins pattern already used for
+                                // the list view's badge, the map pin color, and the profile
+                                // tier icon. Previously each flag rendered its own chip, so a
+                                // business with all three tier flags set (the only way to reach
+                                // Sponsored's 14-photo cap, since a business's plan is
+                                // cumulative — see maxPhotos) showed Premium + Featured +
+                                // Sponsored stacked together, which read as confusing/redundant
+                                // rather than "this business is Sponsored."
+                                when {
+                                    business.isSponsored -> DetailBadgeChip(strings.sponsored, TierGold, Icons.Default.Campaign)
+                                    business.isFeatured -> DetailBadgeChip(strings.featured2, TierSilver, Icons.Default.LocalFireDepartment)
+                                    business.isPremium -> DetailBadgeChip(strings.premium, TierBronze, Icons.Default.Star)
+                                }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -223,7 +234,13 @@ fun BusinessDetailScreen(
                             color = Color.Black
                         )
 
-                        if (business.isPremium && business.longDescription.isNotEmpty()) {
+                        // Same highest-tier-wins fix as the badges above — this was
+                        // isPremium-only, so a Featured/Sponsored business without isPremium
+                        // itself set to true never showed its extended description, even
+                        // though Featured/Sponsored are supposed to include everything
+                        // Premium has.
+                        if ((business.isPremium || business.isFeatured || business.isSponsored) &&
+                            business.longDescription.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 business.longDescription,
@@ -244,7 +261,7 @@ fun BusinessDetailScreen(
                             modifier = Modifier.clickable {
                                 val location = business.location
                                 if (location == null) {
-                                    Toast.makeText(context, "No location set for this business", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, strings.noLocationSetToast, Toast.LENGTH_SHORT).show()
                                     return@clickable
                                 }
                                 try {
@@ -255,7 +272,7 @@ fun BusinessDetailScreen(
                                         }
                                     )
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, strings.googleMapsNotInstalled, Toast.LENGTH_SHORT).show()
                                 }
                             }
                         ) {
@@ -398,15 +415,74 @@ fun BusinessDetailScreen(
                                     fontSize = 14.sp,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
-                                business.workingHours.forEach { (day, hours) ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(day, style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
-                                        Text(hours, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                // business.workingHours is a flat map of "Mon_open"/"Mon_close"/
+                                // "Mon_closed" style keys (see WorkingHoursEditor) — iterating
+                                // it directly used to print each raw key/value as its own row
+                                // ("Mon_close  20:00"). Group by day instead and render one
+                                // friendly "Open - Close" (or "Closed") row per day, same
+                                // defaults and formatting the editor itself uses.
+                                val weekdayOrder = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                                weekdayOrder.forEach { day ->
+                                    val hasAnyEntry = business.workingHours.containsKey("${day}_open") ||
+                                        business.workingHours.containsKey("${day}_close") ||
+                                        business.workingHours.containsKey("${day}_closed")
+                                    if (hasAnyEntry) {
+                                        val isClosed = business.workingHours["${day}_closed"] == "true"
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(day, style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                                            if (isClosed) {
+                                                Text(
+                                                    "Closed",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MeTontRed
+                                                )
+                                            } else {
+                                                val openDisplay = formatTimeDisplay(business.workingHours["${day}_open"] ?: "09:00")
+                                                val closeDisplay = formatTimeDisplay(business.workingHours["${day}_close"] ?: "18:00")
+                                                Text(
+                                                    "$openDisplay - $closeDisplay",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── PROMOTIONS CARD ───────────────────────────────────
+            // Moved above the Upgrade card so a business's active deals sit
+            // with the rest of its profile data (name, contact, hours) —
+            // previously this rendered below the Upgrade card, which buried
+            // it under an unrelated sales pitch.
+            if (business.promotions.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                strings.promotions,
+                                fontWeight = FontWeight.Bold,
+                                color = MeTontRed,
+                                fontSize = 14.sp
+                            )
+                            business.promotions.forEach { promotion ->
+                                DetailPromotionItem(promotion)
                             }
                         }
                     }
@@ -462,33 +538,6 @@ fun BusinessDetailScreen(
                                 )
                             ) {
                                 Text(strings.viewPlans, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── PROMOTIONS CARD ───────────────────────────────────
-            if (business.promotions.isNotEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                strings.promotions,
-                                fontWeight = FontWeight.Bold,
-                                color = MeTontRed,
-                                fontSize = 14.sp
-                            )
-                            business.promotions.forEach { promotion ->
-                                DetailPromotionItem(promotion)
                             }
                         }
                     }
@@ -769,6 +818,7 @@ fun DetailReviewItem(
     onNavigateToAuth: (() -> Unit) -> Unit,
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
+    val strings = LocalAppStrings.current
     val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
     val currentUserId = firebaseUser?.uid
     val currentUserName = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
@@ -936,7 +986,7 @@ fun DetailReviewItem(
                         onValueChange = { replyText = it },
                         modifier = Modifier.weight(1f),
                         placeholder = {
-                            Text("Write a reply...", color = MeTontGrey, fontSize = 12.sp)
+                            Text(strings.writeReplyPlaceholder, color = MeTontGrey, fontSize = 12.sp)
                         },
                         shape = RoundedCornerShape(20.dp),
                         colors = OutlinedTextFieldDefaults.colors(

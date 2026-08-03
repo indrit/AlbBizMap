@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.theme.TierBronze
@@ -44,11 +45,14 @@ fun SubscriptionScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val user = FirebaseAuth.getInstance().currentUser
     val userEmail = user?.email ?: ""
 
     // Same highest-tier-wins precedence used everywhere else (UserProfileScreen's
-    // badge, MapViewModel's topPicks sort, Business.maxPhotos).
+    // badge, MapViewModel's topPicks sort, Business.maxPhotos). These are internal
+    // comparison keys, not display text, so they stay in English regardless of
+    // language — only the strings shown to the user (title/buttonText below) change.
     val currentTier = when {
         business.isSponsored -> "Sponsored"
         business.isFeatured -> "Featured"
@@ -73,7 +77,7 @@ fun SubscriptionScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Upgrade \"${business.name}\"",
+                        String.format(strings.upgradeTitleTemplate, business.name),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
@@ -81,7 +85,7 @@ fun SubscriptionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.back, tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MeTontRed)
@@ -118,14 +122,14 @@ fun SubscriptionScreen(
                         modifier = Modifier.size(40.dp)
                     )
                     Text(
-                        "Choose Your Plan",
+                        strings.choosePlan,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        "Help your business stand out in the Albanian community",
+                        strings.subscriptionHeaderSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center
@@ -135,97 +139,97 @@ fun SubscriptionScreen(
 
             // ── FREE PLAN ─────────────────────────────────────────
             PlanCard(
-                title = "Free",
+                title = strings.freeTierName,
                 price = "$0",
-                period = "forever",
+                period = strings.forever,
                 accentColor = MeTontGrey,
                 isCurrentPlan = currentTier == "Free",
                 features = listOf(
-                    PlanFeature("Business name & category", true),
-                    PlanFeature("Location on map", true),
-                    PlanFeature("100 character description", true),
-                    PlanFeature("1 photo", true),
-                    PlanFeature("Phone number", false),
-                    PlanFeature("Email & website", false),
-                    PlanFeature("Extended description", false),
-                    PlanFeature("Hours of operation", false),
-                    PlanFeature("Premium badge", false)
+                    PlanFeature(strings.planFeatureNameCategory, true),
+                    PlanFeature(strings.planFeatureLocationOnMap, true),
+                    PlanFeature(strings.planFeature100CharDesc, true),
+                    PlanFeature(strings.planFeature1Photo, true),
+                    PlanFeature(strings.planFeaturePhoneNumber, false),
+                    PlanFeature(strings.planFeatureEmailWebsite, false),
+                    PlanFeature(strings.planFeatureExtendedDesc, false),
+                    PlanFeature(strings.planFeatureHoursOfOperation, false),
+                    PlanFeature(strings.planFeaturePremiumBadge, false)
                 ),
-                buttonText = if (currentTier == "Free") "Current Plan" else "—",
+                buttonText = if (currentTier == "Free") strings.currentPlanButton else strings.notAvailableDash,
                 onButtonClick = {}
             )
 
             // ── PREMIUM PLAN ──────────────────────────────────────
             PlanCard(
-                title = "Premium",
+                title = strings.premium,
                 price = "$2.99",
-                period = "per month",
+                period = strings.perMonth,
                 accentColor = TierBronze,
                // badgeIcon = R.drawable.metont_bronze,
                 isCurrentPlan = currentTier == "Premium",
                 features = listOf(
-                    PlanFeature("Business name & category", true),
-                    PlanFeature("Location on map", true),
-                    PlanFeature("100 character description", true),
-                    PlanFeature("Up to 6 photos", true),
-                    PlanFeature("Phone number", true),
-                    PlanFeature("Email & website", true),
-                    PlanFeature("Extended description", true),
-                    PlanFeature("Hours of operation", true),
-                    PlanFeature("Premium badge", true)
+                    PlanFeature(strings.planFeatureNameCategory, true),
+                    PlanFeature(strings.planFeatureLocationOnMap, true),
+                    PlanFeature(strings.planFeature100CharDesc, true),
+                    PlanFeature(strings.planFeatureUp6Photos, true),
+                    PlanFeature(strings.planFeaturePhoneNumber, true),
+                    PlanFeature(strings.planFeatureEmailWebsite, true),
+                    PlanFeature(strings.planFeatureExtendedDesc, true),
+                    PlanFeature(strings.planFeatureHoursOfOperation, true),
+                    PlanFeature(strings.planFeaturePremiumBadge, true)
                 ),
-                buttonText = if (currentTier == "Premium") "Current Plan" else "Request Upgrade",
+                buttonText = if (currentTier == "Premium") strings.currentPlanButton else strings.requestUpgrade,
                 onButtonClick = {
                     context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Premium", "$2.99/month"), "Send upgrade request")
+                        Intent.createChooser(requestEmailIntent("Premium", "$2.99/month"), strings.sendUpgradeRequest)
                     )
                 }
             )
 
             // ── FEATURED PLAN ─────────────────────────────────────
             PlanCard(
-                title = "Featured",
+                title = strings.featured2,
                 price = "$9.99",
-                period = "per month",
+                period = strings.perMonth,
                 accentColor = TierSilver,
                 //badgeIcon = R.drawable.metont_silver,
                 isCurrentPlan = currentTier == "Featured",
                 features = listOf(
-                    PlanFeature("Everything in Premium", true),
-                    PlanFeature("Up to 10 photos", true),
-                    PlanFeature("Featured badge", true),
-                    PlanFeature("Featured in discovery row", true),
-                    PlanFeature("Highlighted in list view", true)
+                    PlanFeature(strings.planFeatureEverythingPremium, true),
+                    PlanFeature(strings.planFeatureUp10Photos, true),
+                    PlanFeature(strings.planFeatureFeaturedBadge, true),
+                    PlanFeature(strings.planFeatureFeaturedDiscoveryRow, true),
+                    PlanFeature(strings.planFeatureHighlightedListView, true)
                 ),
-                buttonText = if (currentTier == "Featured") "Current Plan" else "Request Featured",
+                buttonText = if (currentTier == "Featured") strings.currentPlanButton else strings.requestFeatured,
                 onButtonClick = {
                     context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Featured", "$9.99/month"), "Send featured request")
+                        Intent.createChooser(requestEmailIntent("Featured", "$9.99/month"), strings.sendFeaturedRequest)
                     )
                 }
             )
 
             // ── SPONSORED PLAN ────────────────────────────────────
             PlanCard(
-                title = "Sponsored",
+                title = strings.sponsored,
                 price = "$19.99",
-                period = "per month",
+                period = strings.perMonth,
                 accentColor = TierGold,
                 //badgeIcon = R.drawable.metont_gold,
                 isCurrentPlan = currentTier == "Sponsored",
                 features = listOf(
-                    PlanFeature("Everything in Premium", true),
-                    PlanFeature("Up to 14 photos", true),
-                    PlanFeature("Highlighted map pin", true),
-                    PlanFeature("Top of search results", true),
-                    PlanFeature("Sponsored badge", true),
-                    PlanFeature("Featured in discovery section", true),
-                    PlanFeature("Priority customer support", true)
+                    PlanFeature(strings.planFeatureEverythingPremium, true),
+                    PlanFeature(strings.planFeatureUp14Photos, true),
+                    PlanFeature(strings.planFeatureHighlightedMapPin, true),
+                    PlanFeature(strings.planFeatureTopSearchResults, true),
+                    PlanFeature(strings.planFeatureSponsoredBadge, true),
+                    PlanFeature(strings.planFeatureFeaturedDiscoverySection, true),
+                    PlanFeature(strings.planFeaturePriorityCustomerSupport, true)
                 ),
-                buttonText = if (currentTier == "Sponsored") "Current Plan" else "Request Sponsorship",
+                buttonText = if (currentTier == "Sponsored") strings.currentPlanButton else strings.requestSponsorship,
                 onButtonClick = {
                     context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Sponsored", "$19.99/month"), "Send sponsorship request")
+                        Intent.createChooser(requestEmailIntent("Sponsored", "$19.99/month"), strings.sendSponsorshipRequest)
                     )
                 }
             )
@@ -249,7 +253,7 @@ fun SubscriptionScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        "Payments are currently processed manually. We will contact you within 24 hours of your request.",
+                        strings.manualPaymentNote,
                         style = MaterialTheme.typography.bodySmall,
                         color = MeTontGrey
                     )

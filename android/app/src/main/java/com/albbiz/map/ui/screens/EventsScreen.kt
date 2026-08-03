@@ -260,7 +260,7 @@ fun EventItem(event: Event) {
                     )
                     Spacer(Modifier.width(6.dp))
                     val date = SimpleDateFormat(
-                        "EEEE, MMM dd, yyyy",
+                        "EEEE, MMM dd, yyyy 'at' h:mm a",
                         Locale.getDefault()
                     ).format(Date(event.date))
                     Text(
@@ -324,7 +324,7 @@ fun EventItem(event: Event) {
                                 }
                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Couldn't open that link", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, strings.couldntOpenLink, Toast.LENGTH_SHORT).show()
                             }
                         },
                         shape = RoundedCornerShape(8.dp),

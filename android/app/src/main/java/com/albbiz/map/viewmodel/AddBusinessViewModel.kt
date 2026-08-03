@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessRepository
+import com.albbiz.map.ui.CurrentLanguage
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,20 +72,20 @@ class AddBusinessViewModel(
                             },
                             onFailure = { e ->
                                 _uiState.value = AddBusinessUiState.Error(
-                                    "Failed to add business: ${e.message}"
+                                    "${CurrentLanguage.strings().failedToAddBusinessPrefix}: ${e.message}"
                                 )
                             }
                         )
                     },
                     onFailure = { e ->
                         _uiState.value = AddBusinessUiState.Error(
-                            "Failed to upload images: ${e.message}"
+                            "${CurrentLanguage.strings().failedToUploadImagesPrefix}: ${e.message}"
                         )
                     }
                 )
             } catch (e: Exception) {
                 _uiState.value = AddBusinessUiState.Error(
-                    "Unexpected error: ${e.message}"
+                    "${CurrentLanguage.strings().unexpectedErrorPrefix}: ${e.message}"
                 )
             }
         }

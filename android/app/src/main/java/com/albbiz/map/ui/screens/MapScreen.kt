@@ -240,15 +240,27 @@ fun MapScreen(
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        // If we've already done the one-time move-to-location this session (e.g. we're
-        // returning from Profile, not launching fresh), seed the camera directly at the
-        // user's last known location instead of the Tirana default — avoids both a
-        // jarring flash back to the default position AND re-running the animation below.
-        position = if (viewModel.hasMovedToInitialLocation) {
-            userLocation?.let { CameraPosition.fromLatLngZoom(it, 14f) }
-                ?: CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
-        } else {
-            CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
+        // Location permission + the first fix are now requested from the splash screen
+        // (see MainActivity's "splash" composable), running in parallel with the splash
+        // video instead of only starting once this screen composes. That means by the
+        // time we get here there's a real location already available most of the time —
+        // reading viewModel.userLocation.value directly (a StateFlow's current value is
+        // always readable synchronously, unlike the collectAsState() below which may not
+        // have delivered its first value into this composition yet) lets us seed the
+        // camera at the real location immediately instead of unconditionally starting at
+        // Tirana and jumping once location arrives. Tirana is now only ever used as a
+        // genuine fallback — permission denied, or the fix genuinely hasn't come back
+        // yet — not as the default starting point.
+        val alreadyKnownLocation = viewModel.userLocation.value
+        position = when {
+            viewModel.hasMovedToInitialLocation ->
+                userLocation?.let { CameraPosition.fromLatLngZoom(it, 14f) }
+                    ?: CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
+            alreadyKnownLocation != null -> {
+                viewModel.hasMovedToInitialLocation = true
+                CameraPosition.fromLatLngZoom(alreadyKnownLocation, 14f)
+            }
+            else -> CameraPosition.fromLatLngZoom(TIRANA_LOCATION, 12f)
         }
     }
 
@@ -353,8 +365,8 @@ fun MapScreen(
                             modifier = Modifier.size(80.dp),
                             contentScale = ContentScale.Fit
                         )
-                        Text("MeTont", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text("Albanian Business Directory", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                        Text(strings.appName, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(strings.appTagline, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
                     }
                 }
 
@@ -518,7 +530,7 @@ fun MapScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MeTontRed, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Back", color = MeTontRed, fontWeight = FontWeight.Medium)
+                                Text(strings.back, color = MeTontRed, fontWeight = FontWeight.Medium)
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -555,7 +567,7 @@ fun MapScreen(
                                         val uri = Uri.parse("google.navigation:q=${biz.location?.latitude},${biz.location?.longitude}&mode=d")
                                         context.startActivity(Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") })
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Google Maps isn't installed", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, strings.googleMapsNotInstalled, Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -564,7 +576,7 @@ fun MapScreen(
                             ) {
                                 Icon(Icons.Default.Directions, null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Get Directions", fontWeight = FontWeight.Bold)
+                                Text(strings.getDirections, fontWeight = FontWeight.Bold)
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -573,7 +585,7 @@ fun MapScreen(
                                 onClick = { if (mapReady) onBusinessClick(biz.id) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("View Full Profile", color = Color.Black, fontWeight = FontWeight.Medium)
+                                Text(strings.viewFullProfile, color = Color.Black, fontWeight = FontWeight.Medium)
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -749,8 +761,8 @@ fun MapScreen(
                                 ) {
                                     Icon(Icons.Default.LocationOff, null, tint = MeTontGrey.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("No businesses near you yet", style = MaterialTheme.typography.bodySmall, color = MeTontGrey, fontWeight = FontWeight.Medium)
-                                    Text("MeTont is growing — check back soon!", style = MaterialTheme.typography.labelSmall, color = MeTontGrey.copy(alpha = 0.7f))
+                                    Text(strings.noBusinessesNearYou, style = MaterialTheme.typography.bodySmall, color = MeTontGrey, fontWeight = FontWeight.Medium)
+                                    Text(strings.appGrowingMessage, style = MaterialTheme.typography.labelSmall, color = MeTontGrey.copy(alpha = 0.7f))
                                 }
                             } else {
                                 var nearYouExpanded by remember { mutableStateOf(false) }
@@ -780,9 +792,9 @@ fun MapScreen(
                             // COMMUNITY ANNOUNCEMENTS — capped at 6; "See more" leaves the
                             // home screen entirely and opens the full Events list, same as
                             // tapping an individual card already does.
-                            Text("Community Announcements", modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(strings.communityAnnouncements, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                             if (announcements.isEmpty()) {
-                                Text("No upcoming events right now", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                                Text(strings.noUpcomingEventsShort, modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
                             } else {
                                 val visibleAnnouncements = announcements.take(6)
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -822,9 +834,9 @@ fun MapScreen(
                             // MOST FAVORITED WORLDWIDE — capped at 6; "See more" leaves the
                             // home screen and opens the full directory sorted the same way
                             // (by likeCount), instead of expanding in place.
-                            Text("Most Favorited Worldwide", modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(strings.mostFavoritedWorldwide, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                             if (mostFavoritedBusinesses.isEmpty()) {
-                                Text("No businesses yet", modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
+                                Text(strings.noBusinessesYetHome, modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
                             } else {
                                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(mostFavoritedBusinesses.take(6)) { business ->

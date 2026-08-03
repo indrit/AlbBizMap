@@ -36,6 +36,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.albbiz.map.R
 import com.albbiz.map.data.BusinessRepository
+import com.albbiz.map.data.EventsRepository
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +48,7 @@ fun UserProfileScreen(
     onLanguageChange: (AppLanguage) -> Unit,
     onAdminClick: () -> Unit,
     onMyBusinessesClick: () -> Unit,
+    onMyEventsClick: () -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -66,6 +68,8 @@ fun UserProfileScreen(
     // tier badge above — piggybacking the count here avoids a second Firestore
     // query just to show it on the "My Businesses" card below.
     var ownedBusinessCount by remember { mutableStateOf(0) }
+    val eventsRepository = remember { EventsRepository() }
+    var ownedEventCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(user?.uid) {
         user?.uid?.let { uid ->
@@ -77,6 +81,14 @@ fun UserProfileScreen(
                     ownedBusinesses.any { it.isPremium } -> R.drawable.metont_bronze
                     else -> null
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(user?.uid) {
+        user?.uid?.let { uid ->
+            eventsRepository.getEventsByOrganizer(uid).collect { ownedEvents ->
+                ownedEventCount = ownedEvents.size
             }
         }
     }
@@ -327,7 +339,58 @@ fun UserProfileScreen(
                             containerColor = MeTontRed
                         )
                     ) {
-                        Text("Open", color = Color.White, fontSize = 12.sp)
+                        Text(strings.openButton, color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── MY EVENTS CARD ──────────────────────────────────────
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Event,
+                        null,
+                        tint = MeTontRed,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            strings.myEvents,
+                            fontWeight = FontWeight.Bold,
+                            color = MeTontRed,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            if (ownedEventCount > 0)
+                                "$ownedEventCount ${if (ownedEventCount == 1) "event" else "events"}"
+                            else strings.myEventsSubtitle,
+                            color = MeTontGrey,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Button(
+                        onClick = onMyEventsClick,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MeTontRed
+                        )
+                    ) {
+                        Text(strings.openButton, color = Color.White, fontSize = 12.sp)
                     }
                 }
             }
@@ -380,7 +443,7 @@ fun UserProfileScreen(
                                 containerColor = MeTontRed
                             )
                         ) {
-                            Text("Open", color = Color.White, fontSize = 12.sp)
+                            Text(strings.openButton, color = Color.White, fontSize = 12.sp)
                         }
                     }
                 }

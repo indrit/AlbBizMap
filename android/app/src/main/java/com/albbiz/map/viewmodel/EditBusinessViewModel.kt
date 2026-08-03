@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Business
 import com.albbiz.map.data.BusinessRepository
+import com.albbiz.map.ui.CurrentLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,7 +54,7 @@ class EditBusinessViewModel(
                     if (uploadResult.isSuccess) {
                         business.copy(photos = keptPhotoUrls + uploadResult.getOrThrow())
                     } else {
-                        _uiState.value = EditBusinessUiState.Error("Failed to upload photos")
+                        _uiState.value = EditBusinessUiState.Error(CurrentLanguage.strings().failedToUploadPhotos)
                         return@launch
                     }
                 } else {
@@ -66,13 +67,13 @@ class EditBusinessViewModel(
                     _uiState.value = EditBusinessUiState.Success
                 } else {
                     _uiState.value = EditBusinessUiState.Error(
-                        updateResult.exceptionOrNull()?.message ?: "Failed to update business"
+                        updateResult.exceptionOrNull()?.message ?: CurrentLanguage.strings().failedToUpdateBusiness
                     )
                 }
 
             } catch (e: Exception) {
                 _uiState.value = EditBusinessUiState.Error(
-                    e.message ?: "Unexpected error"
+                    e.message ?: CurrentLanguage.strings().unexpectedErrorPrefix
                 )
             }
         }

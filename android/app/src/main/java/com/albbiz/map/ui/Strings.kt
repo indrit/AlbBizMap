@@ -113,6 +113,15 @@ data class AppStrings(
     val noBusinessesYet: String,
     val noBusinessesYetSubtitle: String,
     val myBusinessesSubtitle: String,
+    val myEvents: String,
+    val noEventsYet: String,
+    val noEventsYetSubtitle: String,
+    val myEventsSubtitle: String,
+    val deleteEvent: String,
+    val deleteEventConfirmTitle: String,
+    val deleteEventConfirmMessage: String,
+    val eventDeleted: String,
+    val eventDeleteFailed: String,
     val noSearchResults: String,
     val upgradePremiumTitle: String,
 
@@ -184,7 +193,165 @@ data class AppStrings(
     val camera: String,
     val choosePhotoSource: String,
 
+    // Generic dialog buttons
+    val ok: String,
+    val confirm: String,
+    val openButton: String,
 
+    // Time picker / working hours
+    val hoursOpenLabel: String,
+    val hoursCloseLabel: String,
+
+    // Add Event date fields
+    val dayLabel: String,
+    val dayPlaceholder: String,
+    val monthLabel: String,
+    val monthPlaceholder: String,
+    val yearLabel: String,
+    val yearPlaceholder: String,
+    val eventStartTimeLabel: String,
+
+    // Edit Business screen
+    val basicInformationSection: String,
+    val locationSectionShort: String,
+    val saveChanges: String,
+    val businessUpdatedSuccess: String,
+    val categoryRequiredLabel: String,
+    val descriptionRequiredLabel: String,
+    val photoLimitReached: String,
+    val addJobPostingTitle: String,
+    val jobTitleLabel: String,
+    val jobTypeLabel: String,
+    val jobSalaryLabel: String,
+    val jobSalaryPlaceholder: String,
+    val addJobButton: String,
+    val jobTitleDescRequired: String,
+    val addPromotionTitle: String,
+    val promotionTitleLabel: String,
+
+    // Add Story screen
+    val addStoryTitle: String,
+    val addPhotosButton: String,
+    val captionPlaceholder: String,
+    val storyLocationPlaceholder: String,
+    val postStory: String,
+
+    // Admin screen
+    val importSampleBusinesses: String,
+    val approveClaimTitle: String,
+    val approveClaimMessage: String,
+    val approve: String,
+    val rejectClaimTitle: String,
+    val rejectClaimMessage: String,
+    val reject: String,
+
+    // Business detail screen
+    val writeReplyPlaceholder: String,
+    val noLocationSetToast: String,
+    val googleMapsNotInstalled: String,
+
+    // Business list screen
+    val applyFilters: String,
+    val allFilterOption: String,
+
+    // Jobs screen
+    val viewProfile: String,
+    val jobsEmptyTitle: String,
+    val jobsEmptySubtitle: String,
+
+    // Map / home screen
+    val appTagline: String,
+    val viewFullProfile: String,
+    val noBusinessesNearYou: String,
+    val appGrowingMessage: String,
+    val communityAnnouncements: String,
+    val noUpcomingEventsShort: String,
+    val mostFavoritedWorldwide: String,
+    val noBusinessesYetHome: String,
+
+    // Story viewer
+    val viewBusiness: String,
+    val couldntOpenMaps: String,
+
+    // Events screen
+    val couldntOpenLink: String,
+
+    // Reviews
+    val loginRequiredForReview: String,
+
+    // Subscription
+    val freeTierName: String,
+
+    // Edit Business screen (additional)
+    val editBusinessTitle: String,
+    val savingLabel: String,
+    val promotionsEmptyTitle: String,
+    val closedLabel: String,
+
+    // Subscription screen (plan details)
+    val upgradeTitleTemplate: String,
+    val subscriptionHeaderSubtitle: String,
+    val perMonth: String,
+    val forever: String,
+    val currentPlanButton: String,
+    val notAvailableDash: String,
+    val sendUpgradeRequest: String,
+    val sendFeaturedRequest: String,
+    val sendSponsorshipRequest: String,
+    val planFeatureNameCategory: String,
+    val planFeatureLocationOnMap: String,
+    val planFeature100CharDesc: String,
+    val planFeature1Photo: String,
+    val planFeaturePhoneNumber: String,
+    val planFeatureEmailWebsite: String,
+    val planFeatureExtendedDesc: String,
+    val planFeatureHoursOfOperation: String,
+    val planFeaturePremiumBadge: String,
+    val planFeatureUp6Photos: String,
+    val planFeatureEverythingPremium: String,
+    val planFeatureUp10Photos: String,
+    val planFeatureFeaturedBadge: String,
+    val planFeatureFeaturedDiscoveryRow: String,
+    val planFeatureHighlightedListView: String,
+    val planFeatureUp14Photos: String,
+    val planFeatureHighlightedMapPin: String,
+    val planFeatureTopSearchResults: String,
+    val planFeatureSponsoredBadge: String,
+    val planFeatureFeaturedDiscoverySection: String,
+    val planFeaturePriorityCustomerSupport: String,
+
+    // Admin screen (additional)
+    val pendingClaimRequests: String,
+    val noPendingClaims: String,
+    val allClaimsProcessed: String,
+    val pendingCountLabel: String,
+
+    // Exception/error messages surfaced from ViewModels and Repositories (no
+    // Compose context there, so these are looked up via CurrentLanguage.strings()
+    // instead of LocalAppStrings). The raw SDK/Firebase exception text appended
+    // after some of these (e.message) can't be localized — it comes from Google's
+    // libraries in English regardless of app language.
+    val mustBeLoggedInToAddBusiness: String,
+    val reviewNotFound: String,
+    val alreadyReportedReview: String,
+    val replyNotFound: String,
+    val reviewReportedSuccess: String,
+    val failedToAddBusinessPrefix: String,
+    val failedToUploadImagesPrefix: String,
+    val unexpectedErrorPrefix: String,
+    val failedToUploadPhotos: String,
+    val failedToUpdateBusiness: String,
+    val errorLoadingClaimsPrefix: String,
+    val failedToApprovePrefix: String,
+    val failedToRejectPrefix: String,
+    val importFailedPrefix: String,
+    val claimApprovedTemplate: String,
+    val claimRejectedMsg: String,
+    val importSuccessTemplate: String,
+    val mustBeLoggedInToPostStory: String,
+    val addAtLeastOnePhoto: String,
+    val maxPhotosPerStory: String,
+    val failedToPostStoryFallback: String,
 )
 
 val EnglishStrings = AppStrings(
@@ -292,6 +459,15 @@ val EnglishStrings = AppStrings(
     noBusinessesYet = "You don't have any businesses yet",
     noBusinessesYetSubtitle = "Add your business to reach more customers",
     myBusinessesSubtitle = "Manage your business listings",
+    myEvents = "My Events",
+    noEventsYet = "You don't have any events yet",
+    noEventsYetSubtitle = "Submit an event to reach more people",
+    myEventsSubtitle = "Manage your submitted events",
+    deleteEvent = "Delete Event",
+    deleteEventConfirmTitle = "Delete this event?",
+    deleteEventConfirmMessage = "This will permanently remove the event. This action cannot be undone.",
+    eventDeleted = "Event deleted",
+    eventDeleteFailed = "Failed to delete event",
     noSearchResults = "No results found",
     upgradePremiumTitle = "Upgrade to Premium",
 
@@ -362,6 +538,162 @@ val EnglishStrings = AppStrings(
     gallery = "Gallery",
     camera = "Camera",
     choosePhotoSource = "Choose photo source",
+
+    // Generic dialog buttons
+    ok = "OK",
+    confirm = "Confirm",
+    openButton = "Open",
+
+    // Time picker / working hours
+    hoursOpenLabel = "Open",
+    hoursCloseLabel = "Close",
+
+    // Add Event date fields
+    dayLabel = "Day",
+    dayPlaceholder = "DD",
+    monthLabel = "Month",
+    monthPlaceholder = "MM",
+    yearLabel = "Year",
+    yearPlaceholder = "YYYY",
+    eventStartTimeLabel = "Start time",
+
+    // Edit Business screen
+    basicInformationSection = "Basic Information",
+    locationSectionShort = "Location",
+    saveChanges = "Save Changes",
+    businessUpdatedSuccess = "Business updated successfully!",
+    categoryRequiredLabel = "Category *",
+    descriptionRequiredLabel = "Description *",
+    photoLimitReached = "Photo limit reached for your plan",
+    addJobPostingTitle = "Add Job Posting",
+    jobTitleLabel = "Job Title *",
+    jobTypeLabel = "Job Type *",
+    jobSalaryLabel = "Salary (Optional)",
+    jobSalaryPlaceholder = "e.g. \$1,500/month",
+    addJobButton = "Add Job",
+    jobTitleDescRequired = "Title and description are required",
+    addPromotionTitle = "Add Promotion",
+    promotionTitleLabel = "Promotion Title *",
+
+    // Add Story screen
+    addStoryTitle = "Add Story",
+    addPhotosButton = "Add Photos",
+    captionPlaceholder = "Write a caption...",
+    storyLocationPlaceholder = "e.g. Tirana, Albania",
+    postStory = "Post Story",
+
+    // Admin screen
+    importSampleBusinesses = "Import Sample Businesses",
+    approveClaimTitle = "Approve Claim",
+    approveClaimMessage = "Are you sure you want to approve %1\$s's claim for \"%2\$s\"? This will transfer ownership and verify the business.",
+    approve = "Approve",
+    rejectClaimTitle = "Reject Claim",
+    rejectClaimMessage = "Are you sure you want to reject this claim request from %1\$s?",
+    reject = "Reject",
+
+    // Business detail screen
+    writeReplyPlaceholder = "Write a reply...",
+    noLocationSetToast = "No location set for this business",
+    googleMapsNotInstalled = "Google Maps isn't installed",
+
+    // Business list screen
+    applyFilters = "Apply Filters",
+    allFilterOption = "All",
+
+    // Jobs screen
+    viewProfile = "View Profile",
+    jobsEmptyTitle = "No job postings yet",
+    jobsEmptySubtitle = "Businesses that are hiring will show up here",
+
+    // Map / home screen
+    appTagline = "Albanian Business Directory",
+    viewFullProfile = "View Full Profile",
+    noBusinessesNearYou = "No businesses near you yet",
+    appGrowingMessage = "MeTont is growing — check back soon!",
+    communityAnnouncements = "Community Announcements",
+    noUpcomingEventsShort = "No upcoming events right now",
+    mostFavoritedWorldwide = "Most Favorited Worldwide",
+    noBusinessesYetHome = "No businesses yet",
+
+    // Story viewer
+    viewBusiness = "View Business",
+    couldntOpenMaps = "Couldn't open maps",
+
+    // Events screen
+    couldntOpenLink = "Couldn't open that link",
+
+    // Reviews
+    loginRequiredForReview = "You must be logged in to submit a review",
+
+    // Subscription
+    freeTierName = "Free",
+
+    // Edit Business screen (additional)
+    editBusinessTitle = "Edit Business",
+    savingLabel = "Saving...",
+    promotionsEmptyTitle = "No promotions yet.",
+    closedLabel = "Closed",
+
+    // Subscription screen (plan details)
+    upgradeTitleTemplate = "Upgrade \"%1\$s\"",
+    subscriptionHeaderSubtitle = "Help your business stand out in the Albanian community",
+    perMonth = "per month",
+    forever = "forever",
+    currentPlanButton = "Current Plan",
+    notAvailableDash = "—",
+    sendUpgradeRequest = "Send upgrade request",
+    sendFeaturedRequest = "Send featured request",
+    sendSponsorshipRequest = "Send sponsorship request",
+    planFeatureNameCategory = "Business name & category",
+    planFeatureLocationOnMap = "Location on map",
+    planFeature100CharDesc = "100 character description",
+    planFeature1Photo = "1 photo",
+    planFeaturePhoneNumber = "Phone number",
+    planFeatureEmailWebsite = "Email & website",
+    planFeatureExtendedDesc = "Extended description",
+    planFeatureHoursOfOperation = "Hours of operation",
+    planFeaturePremiumBadge = "Premium badge",
+    planFeatureUp6Photos = "Up to 6 photos",
+    planFeatureEverythingPremium = "Everything in Premium",
+    planFeatureUp10Photos = "Up to 10 photos",
+    planFeatureFeaturedBadge = "Featured badge",
+    planFeatureFeaturedDiscoveryRow = "Featured in discovery row",
+    planFeatureHighlightedListView = "Highlighted in list view",
+    planFeatureUp14Photos = "Up to 14 photos",
+    planFeatureHighlightedMapPin = "Highlighted map pin",
+    planFeatureTopSearchResults = "Top of search results",
+    planFeatureSponsoredBadge = "Sponsored badge",
+    planFeatureFeaturedDiscoverySection = "Featured in discovery section",
+    planFeaturePriorityCustomerSupport = "Priority customer support",
+
+    // Admin screen (additional)
+    pendingClaimRequests = "Pending Claim Requests",
+    noPendingClaims = "No pending claims!",
+    allClaimsProcessed = "All claim requests have been processed.",
+    pendingCountLabel = "pending",
+
+    // Exception/error messages
+    mustBeLoggedInToAddBusiness = "You must be logged in to add a business",
+    reviewNotFound = "Review not found",
+    alreadyReportedReview = "You have already reported this review",
+    replyNotFound = "Reply not found",
+    reviewReportedSuccess = "Review reported successfully",
+    failedToAddBusinessPrefix = "Failed to add business",
+    failedToUploadImagesPrefix = "Failed to upload images",
+    unexpectedErrorPrefix = "Unexpected error",
+    failedToUploadPhotos = "Failed to upload photos",
+    failedToUpdateBusiness = "Failed to update business",
+    errorLoadingClaimsPrefix = "Error loading claims",
+    failedToApprovePrefix = "Failed to approve",
+    failedToRejectPrefix = "Failed to reject",
+    importFailedPrefix = "Import failed",
+    claimApprovedTemplate = "Claim approved — %1\$s is now owned by %2\$s",
+    claimRejectedMsg = "Claim rejected",
+    importSuccessTemplate = "Successfully imported %1\$d businesses!",
+    mustBeLoggedInToPostStory = "You must be logged in to post a story",
+    addAtLeastOnePhoto = "Please add at least one photo",
+    maxPhotosPerStory = "Maximum 10 photos per story",
+    failedToPostStoryFallback = "Failed to post story",
     )
 
 val AlbanianStrings = AppStrings(
@@ -469,6 +801,15 @@ val AlbanianStrings = AppStrings(
     noBusinessesYet = "Ende nuk keni asnjë biznes",
     noBusinessesYetSubtitle = "Shtoni biznesin tuaj për të arritur më shumë klientë",
     myBusinessesSubtitle = "Menaxhoni listimet e biznesit tuaj",
+    myEvents = "Eventet e Mia",
+    noEventsYet = "Ende nuk keni asnjë event",
+    noEventsYetSubtitle = "Shtoni një event për të arritur më shumë njerëz",
+    myEventsSubtitle = "Menaxhoni eventet tuaja të dërguara",
+    deleteEvent = "Fshi Eventin",
+    deleteEventConfirmTitle = "Fshi këtë event?",
+    deleteEventConfirmMessage = "Kjo do ta heqë përgjithmonë eventin. Ky veprim nuk mund të zhbëhet.",
+    eventDeleted = "Eventi u fshi",
+    eventDeleteFailed = "Fshirja e eventit dështoi",
     noSearchResults = "Nuk u gjetën rezultate",
     upgradePremiumTitle = "Kalo në Premium",
 
@@ -541,12 +882,180 @@ val AlbanianStrings = AppStrings(
     gallery = "Galeria",
     camera = "Kamera",
     choosePhotoSource = "Zgjidhni burimin e fotos",
+
+    // Generic dialog buttons
+    ok = "OK",
+    confirm = "Konfirmo",
+    openButton = "Hap",
+
+    // Time picker / working hours
+    hoursOpenLabel = "Hapja",
+    hoursCloseLabel = "Mbyllja",
+
+    // Add Event date fields
+    dayLabel = "Dita",
+    dayPlaceholder = "DD",
+    monthLabel = "Muaji",
+    monthPlaceholder = "MM",
+    yearLabel = "Viti",
+    yearPlaceholder = "VVVV",
+    eventStartTimeLabel = "Ora e fillimit",
+
+    // Edit Business screen
+    basicInformationSection = "Informacion Bazë",
+    locationSectionShort = "Vendndodhja",
+    saveChanges = "Ruaj Ndryshimet",
+    businessUpdatedSuccess = "Biznesi u përditësua me sukses!",
+    categoryRequiredLabel = "Kategoria *",
+    descriptionRequiredLabel = "Përshkrimi *",
+    photoLimitReached = "Limiti i fotove u arrit për planin tuaj",
+    addJobPostingTitle = "Shto Vend Pune",
+    jobTitleLabel = "Titulli i Punës *",
+    jobTypeLabel = "Lloji i Punës *",
+    jobSalaryLabel = "Paga (Opsionale)",
+    jobSalaryPlaceholder = "p.sh. 1,500\$/muaj",
+    addJobButton = "Shto Punë",
+    jobTitleDescRequired = "Titulli dhe përshkrimi janë të detyrueshëm",
+    addPromotionTitle = "Shto Promocion",
+    promotionTitleLabel = "Titulli i Promocionit *",
+
+    // Add Story screen
+    addStoryTitle = "Shto Histori",
+    addPhotosButton = "Shto Foto",
+    captionPlaceholder = "Shkruani një përshkrim...",
+    storyLocationPlaceholder = "p.sh. Tiranë, Shqipëri",
+    postStory = "Posto Historinë",
+
+    // Admin screen
+    importSampleBusinesses = "Importo Biznese Shembull",
+    approveClaimTitle = "Mirato Kërkesën",
+    approveClaimMessage = "Jeni i sigurt që doni të miratoni kërkesën e %1\$s për \"%2\$s\"? Kjo do të transferojë pronësinë dhe do të verifikojë biznesin.",
+    approve = "Mirato",
+    rejectClaimTitle = "Refuzo Kërkesën",
+    rejectClaimMessage = "Jeni i sigurt që doni të refuzoni këtë kërkesë nga %1\$s?",
+    reject = "Refuzo",
+
+    // Business detail screen
+    writeReplyPlaceholder = "Shkruani një përgjigje...",
+    noLocationSetToast = "Nuk ka vendndodhje të vendosur për këtë biznes",
+    googleMapsNotInstalled = "Google Maps nuk është i instaluar",
+
+    // Business list screen
+    applyFilters = "Apliko Filtrat",
+    allFilterOption = "Të gjitha",
+
+    // Jobs screen
+    viewProfile = "Shiko Profilin",
+    jobsEmptyTitle = "Ende nuk ka vende pune",
+    jobsEmptySubtitle = "Bizneset që po punësojnë do të shfaqen këtu",
+
+    // Map / home screen
+    appTagline = "Direktoria e Bizneseve Shqiptare",
+    viewFullProfile = "Shiko Profilin e Plotë",
+    noBusinessesNearYou = "Ende nuk ka biznese pranë jush",
+    appGrowingMessage = "MeTont po rritet — kontrolloni përsëri së shpejti!",
+    communityAnnouncements = "Njoftime të Komunitetit",
+    noUpcomingEventsShort = "Nuk ka evente të ardhshme tani",
+    mostFavoritedWorldwide = "Më të Preferuarit në Botë",
+    noBusinessesYetHome = "Ende nuk ka biznese",
+
+    // Story viewer
+    viewBusiness = "Shiko Biznesin",
+    couldntOpenMaps = "Nuk u hap dot harta",
+
+    // Events screen
+    couldntOpenLink = "Nuk u hap dot lidhja",
+
+    // Reviews
+    loginRequiredForReview = "Duhet të jeni të kyçur për të dërguar një vlerësim",
+
+    // Subscription
+    freeTierName = "Falas",
+
+    // Edit Business screen (additional)
+    editBusinessTitle = "Ndrysho Biznesin",
+    savingLabel = "Duke ruajtur...",
+    promotionsEmptyTitle = "Ende nuk ka promocione.",
+    closedLabel = "Mbyllur",
+
+    // Subscription screen (plan details)
+    upgradeTitleTemplate = "Përmirëso \"%1\$s\"",
+    subscriptionHeaderSubtitle = "Ndihmoni biznesin tuaj të dallohet në komunitetin shqiptar",
+    perMonth = "në muaj",
+    forever = "përgjithmonë",
+    currentPlanButton = "Plani Aktual",
+    notAvailableDash = "—",
+    sendUpgradeRequest = "Dërgo kërkesën për përmirësim",
+    sendFeaturedRequest = "Dërgo kërkesën për t'u veçuar",
+    sendSponsorshipRequest = "Dërgo kërkesën për sponsorizim",
+    planFeatureNameCategory = "Emri dhe kategoria e biznesit",
+    planFeatureLocationOnMap = "Vendndodhja në hartë",
+    planFeature100CharDesc = "Përshkrim 100 karaktere",
+    planFeature1Photo = "1 foto",
+    planFeaturePhoneNumber = "Numri i telefonit",
+    planFeatureEmailWebsite = "Email dhe faqja web",
+    planFeatureExtendedDesc = "Përshkrim i zgjeruar",
+    planFeatureHoursOfOperation = "Orari i punës",
+    planFeaturePremiumBadge = "Distinktivi Premium",
+    planFeatureUp6Photos = "Deri në 6 foto",
+    planFeatureEverythingPremium = "Gjithçka në Premium",
+    planFeatureUp10Photos = "Deri në 10 foto",
+    planFeatureFeaturedBadge = "Distinktivi i Veçuar",
+    planFeatureFeaturedDiscoveryRow = "I veçuar në rreshtin e zbulimit",
+    planFeatureHighlightedListView = "I theksuar në pamjen e listës",
+    planFeatureUp14Photos = "Deri në 14 foto",
+    planFeatureHighlightedMapPin = "Shenjë e theksuar në hartë",
+    planFeatureTopSearchResults = "Në krye të rezultateve të kërkimit",
+    planFeatureSponsoredBadge = "Distinktivi Sponsorizuar",
+    planFeatureFeaturedDiscoverySection = "I veçuar në seksionin e zbulimit",
+    planFeaturePriorityCustomerSupport = "Mbështetje klientësh me përparësi",
+
+    // Admin screen (additional)
+    pendingClaimRequests = "Kërkesat në Pritje",
+    noPendingClaims = "Nuk ka kërkesa në pritje!",
+    allClaimsProcessed = "Të gjitha kërkesat janë përpunuar.",
+    pendingCountLabel = "në pritje",
+
+    // Exception/error messages
+    mustBeLoggedInToAddBusiness = "Duhet të jeni të kyçur për të shtuar një biznes",
+    reviewNotFound = "Vlerësimi nuk u gjet",
+    alreadyReportedReview = "E keni raportuar tashmë këtë vlerësim",
+    replyNotFound = "Përgjigja nuk u gjet",
+    reviewReportedSuccess = "Vlerësimi u raportua me sukses",
+    failedToAddBusinessPrefix = "Shtimi i biznesit dështoi",
+    failedToUploadImagesPrefix = "Ngarkimi i fotove dështoi",
+    unexpectedErrorPrefix = "Gabim i papritur",
+    failedToUploadPhotos = "Ngarkimi i fotove dështoi",
+    failedToUpdateBusiness = "Përditësimi i biznesit dështoi",
+    errorLoadingClaimsPrefix = "Gabim gjatë ngarkimit të kërkesave",
+    failedToApprovePrefix = "Miratimi dështoi",
+    failedToRejectPrefix = "Refuzimi dështoi",
+    importFailedPrefix = "Importimi dështoi",
+    claimApprovedTemplate = "Kërkesa u miratua — %1\$s tani i përket %2\$s",
+    claimRejectedMsg = "Kërkesa u refuzua",
+    importSuccessTemplate = "U importuan me sukses %1\$d biznese!",
+    mustBeLoggedInToPostStory = "Duhet të jeni të kyçur për të postuar një histori",
+    addAtLeastOnePhoto = "Ju lutemi shtoni të paktën një foto",
+    maxPhotosPerStory = "Maksimumi 10 foto për histori",
+    failedToPostStoryFallback = "Postimi i historisë dështoi",
     )
 
 val LocalAppStrings = staticCompositionLocalOf { EnglishStrings }
 
+// ViewModels and Repositories aren't Composables, so they can't read
+// LocalAppStrings — there's no CompositionLocal context down there. This is a
+// plain in-memory holder they can call instead (e.g. CurrentLanguage.strings().xxx)
+// for the handful of app-authored exception/error messages that originate outside
+// the UI layer. It's kept in sync with the real (Compose) language selection by
+// ProvideAppStrings below, which every screen already sits under.
+object CurrentLanguage {
+    var language: AppLanguage = AppLanguage.EN
+    fun strings(): AppStrings = if (language == AppLanguage.SQ) AlbanianStrings else EnglishStrings
+}
+
 @Composable
 fun ProvideAppStrings(language: AppLanguage, content: @Composable () -> Unit) {
+    CurrentLanguage.language = language
     val strings = if (language == AppLanguage.SQ) AlbanianStrings else EnglishStrings
     CompositionLocalProvider(LocalAppStrings provides strings) {
         content()

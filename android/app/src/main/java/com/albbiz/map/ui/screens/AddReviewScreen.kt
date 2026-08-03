@@ -204,7 +204,7 @@ fun AddReviewScreen(
                     // costs nothing and means a review can never silently submit with an
                     // empty userId if some future code path reaches this screen another way.
                     if (firebaseUser == null) {
-                        Toast.makeText(context, "You must be logged in to submit a review", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.loginRequiredForReview, Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     val userId = firebaseUser.uid

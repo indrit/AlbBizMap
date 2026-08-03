@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.albbiz.map.data.Story
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.StoriesViewModel
@@ -49,6 +50,7 @@ fun StoryViewerScreen(
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
 
     // Current story index
     var currentStoryIndex by remember { mutableStateOf(initialIndex) }
@@ -302,7 +304,7 @@ fun StoryViewerScreen(
                                         val uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$query")
                                         context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Couldn't open maps", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, strings.couldntOpenMaps, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             )
@@ -380,7 +382,7 @@ fun StoryViewerScreen(
                 ) {
                     Icon(Icons.Default.Business, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("View Business", fontWeight = FontWeight.Bold)
+                    Text(strings.viewBusiness, fontWeight = FontWeight.Bold)
                 }
             }
 

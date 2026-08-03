@@ -192,13 +192,13 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "MeTont",
+                        text = strings.appName,
                         color = MeTontWhite,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Albanian Business Directory",
+                        text = strings.appTagline,
                         color = MeTontWhite.copy(alpha = 0.8f),
                         fontSize = 13.sp
                     )

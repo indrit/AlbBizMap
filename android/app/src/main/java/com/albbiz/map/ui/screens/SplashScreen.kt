@@ -67,7 +67,11 @@ fun SplashScreen(
 
     LaunchedEffect(videoEnded) {
         if (videoEnded) {
-            delay(500)
+            // Bumped from 500ms — gives the location fetch kicked off alongside this
+            // screen (see MainActivity's "splash" composable) a little more runway to
+            // land before MapScreen composes, on top of the ~5s the video itself
+            // already takes.
+            delay(1200)
             if (!hasFinished) {
                 hasFinished = true
                 onSplashFinished()

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.google.android.gms.maps.model.LatLng
@@ -33,7 +34,7 @@ fun SectionTitle(title: String) {
 // Splits a stored "HH:mm" 24-hour string into (hour, minute), falling back to
 // 09:00 for anything unparseable (blank, malformed, or a leftover typed value
 // from before this became a picker).
-private fun parseStoredTime(time: String): Pair<Int, Int> {
+fun parseStoredTime(time: String): Pair<Int, Int> {
     val parts = time.split(":")
     val hour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 9
     val minute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0
@@ -42,7 +43,7 @@ private fun parseStoredTime(time: String): Pair<Int, Int> {
 
 // Friendly 12-hour display ("9:00 AM") for a stored "HH:mm" 24-hour string —
 // the stored format itself doesn't change, only how it's shown.
-private fun formatTimeDisplay(time: String): String {
+fun formatTimeDisplay(time: String): String {
     val (hour, minute) = parseStoredTime(time)
     val period = if (hour < 12) "AM" else "PM"
     val hour12 = when {
@@ -60,13 +61,14 @@ private fun formatTimeDisplay(time: String): String {
 // the rest of the app (and Firestore) already expects.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimePickerField(
+fun TimePickerField(
     label: String,
     time: String,
     onTimeChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showPicker by remember { mutableStateOf(false) }
+    val strings = LocalAppStrings.current
 
     Column(modifier = modifier) {
         Text(label, fontSize = 10.sp, color = MeTontGrey)
@@ -105,12 +107,12 @@ private fun TimePickerField(
                     onTimeChanged(String.format(Locale.US, "%02d:%02d", pickerState.hour, pickerState.minute))
                     showPicker = false
                 }) {
-                    Text("OK", color = MeTontRed, fontWeight = FontWeight.Bold)
+                    Text(strings.ok, color = MeTontRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPicker = false }) {
-                    Text("Cancel", color = MeTontGrey)
+                    Text(strings.cancel, color = MeTontGrey)
                 }
             }
         )
@@ -122,6 +124,7 @@ fun WorkingHoursEditor(
     hours: Map<String, String>,
     onHoursChanged: (Map<String, String>) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -152,7 +155,7 @@ fun WorkingHoursEditor(
 
                     if (isClosed) {
                         Text(
-                            "Closed",
+                            strings.closedLabel,
                             color = MeTontRed,
                             modifier = Modifier.weight(1f),
                             fontSize = 13.sp,
@@ -171,7 +174,7 @@ fun WorkingHoursEditor(
                                 modifier = Modifier.size(14.dp)
                             )
                             TimePickerField(
-                                label = "Open",
+                                label = strings.hoursOpenLabel,
                                 time = openTime,
                                 onTimeChanged = {
                                     openTime = it
@@ -181,7 +184,7 @@ fun WorkingHoursEditor(
                             )
                             Text("-", color = MeTontGrey, fontWeight = FontWeight.Bold)
                             TimePickerField(
-                                label = "Close",
+                                label = strings.hoursCloseLabel,
                                 time = closeTime,
                                 onTimeChanged = {
                                     closeTime = it

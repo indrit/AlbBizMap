@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Story
 import com.albbiz.map.data.StoriesRepository
+import com.albbiz.map.ui.CurrentLanguage
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,17 +79,17 @@ class StoriesViewModel(
         if (_addStoryState.value == AddStoryUiState.Loading) return
 
         val currentUser = FirebaseAuth.getInstance().currentUser ?: run {
-            _addStoryState.value = AddStoryUiState.Error("You must be logged in to post a story")
+            _addStoryState.value = AddStoryUiState.Error(CurrentLanguage.strings().mustBeLoggedInToPostStory)
             return
         }
 
         if (photoUris.isEmpty()) {
-            _addStoryState.value = AddStoryUiState.Error("Please add at least one photo")
+            _addStoryState.value = AddStoryUiState.Error(CurrentLanguage.strings().addAtLeastOnePhoto)
             return
         }
 
         if (photoUris.size > 10) {
-            _addStoryState.value = AddStoryUiState.Error("Maximum 10 photos per story")
+            _addStoryState.value = AddStoryUiState.Error(CurrentLanguage.strings().maxPhotosPerStory)
             return
         }
 
@@ -114,7 +115,7 @@ class StoriesViewModel(
                 }
                 .onFailure { e ->
                     _addStoryState.value = AddStoryUiState.Error(
-                        e.message ?: "Failed to post story"
+                        e.message ?: CurrentLanguage.strings().failedToPostStoryFallback
                     )
                 }
         }

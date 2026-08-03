@@ -87,6 +87,13 @@ class MapViewModel : ViewModel() {
     // what a plain `remember` in MapScreen was doing before.
     var hasMovedToInitialLocation: Boolean = false
 
+    // startLocationUpdates is now called from both the splash screen (to start the
+    // fetch as early as possible, in parallel with the splash video) and MapScreen's
+    // own effect (kept as a fallback in case that ever changes) — this guards against
+    // registering two separate FusedLocationProviderClient callbacks for the same
+    // session, which would otherwise both fire on every location update.
+    private var locationUpdatesStarted = false
+
     // ── DISCOVERY FLOWS ───────────────────────────────────────────
     val featured: StateFlow<List<Business>> = _businesses
         .mapLatest { list -> list.filter { it.isFeatured || it.isSponsored }.take(5) }
@@ -376,6 +383,9 @@ class MapViewModel : ViewModel() {
     }
 
     fun startLocationUpdates(context: Context) {
+        if (locationUpdatesStarted) return
+        locationUpdatesStarted = true
+
         val fusedClient = LocationServices.getFusedLocationProviderClient(context)
 
         // ── GET LAST KNOWN LOCATION IMMEDIATELY ───────────────────

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Review
 import com.albbiz.map.data.ReviewRepository
+import com.albbiz.map.ui.CurrentLanguage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,7 +99,7 @@ class ReviewViewModel(
         viewModelScope.launch {
             repo.reportReview(businessId, reviewId, userId)
                 .onSuccess {
-                    _reportMessage.value = "Review reported successfully"
+                    _reportMessage.value = CurrentLanguage.strings().reviewReportedSuccess
                 }
                 .onFailure { e ->
                     _reportMessage.value = e.message // shows "already reported" if applicable

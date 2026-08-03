@@ -2,6 +2,7 @@
 package com.albbiz.map.data
 
 import android.util.Log
+import com.albbiz.map.ui.CurrentLanguage
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -86,10 +87,10 @@ class ReviewRepository {
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(reviewRef)
                 val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
-                    ?: throw Exception("Review not found")
+                    ?: throw Exception(CurrentLanguage.strings().reviewNotFound)
 
                 if (userId in review.reportedBy) {
-                    throw Exception("You have already reported this review")
+                    throw Exception(CurrentLanguage.strings().alreadyReportedReview)
                 }
 
                 transaction.update(
@@ -128,7 +129,7 @@ class ReviewRepository {
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(reviewRef)
                 val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
-                    ?: throw Exception("Review not found")
+                    ?: throw Exception(CurrentLanguage.strings().reviewNotFound)
 
                 if (userId in review.likedBy) {
                     transaction.update(reviewRef, "likedBy", FieldValue.arrayRemove(userId))
@@ -237,7 +238,7 @@ class ReviewRepository {
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(replyRef)
                 val reply = snapshot.data?.let { Reply.fromMap(replyId, it) }
-                    ?: throw Exception("Reply not found")
+                    ?: throw Exception(CurrentLanguage.strings().replyNotFound)
 
                 if (userId in reply.likedBy) {
                     transaction.update(replyRef, "likedBy", FieldValue.arrayRemove(userId))

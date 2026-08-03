@@ -7,6 +7,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import com.albbiz.map.ui.CurrentLanguage
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -91,7 +92,7 @@ class FirestoreService {
             // at the UI level (MainActivity), this should never be called without a
             // real signed-in user — so it fails cleanly instead of masking the gap.
             val currentUser = Firebase.auth.currentUser
-                ?: return Result.failure(Exception("You must be logged in to add a business"))
+                ?: return Result.failure(Exception(CurrentLanguage.strings().mustBeLoggedInToAddBusiness))
 
             val docRef = if (business.id.isEmpty()) businessesRef.document() else businessesRef.document(business.id)
             val finalBusiness = business.copy(id = docRef.id, ownerId = currentUser.uid)
@@ -234,6 +235,36 @@ class FirestoreService {
             Result.success(ref.id)
         } catch (e: Exception) {
             Log.e(TAG, "Error adding event", e)
+            Result.failure(e)
+        }
+    }
+
+    // Events a given user submitted — powers "My Events" on the Profile screen,
+    // mirroring getBusinessesByOwner above.
+    fun getEventsByOrganizer(organizerId: String): Flow<List<Event>> = callbackFlow {
+        val listener = eventsRef
+            .whereEqualTo("organizerId", organizerId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Firestore: Error listening for organizer events", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val events = snapshot?.documents?.mapNotNull { doc ->
+                    doc.data?.let { Event.fromMap(doc.id, it) }
+                } ?: emptyList()
+                trySend(events)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun deleteEvent(eventId: String): Result<Unit> {
+        return try {
+            eventsRef.document(eventId).delete().await()
+            Log.d(TAG, "Event deleted: $eventId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting event", e)
             Result.failure(e)
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.albbiz.map.data.ClaimRequest
+import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.viewmodel.AdminViewModel
@@ -40,6 +41,7 @@ fun AdminScreen(
     val message by viewModel.message.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
 
     LaunchedEffect(currentUserId) {
         viewModel.checkAdminStatus(currentUserId)
@@ -200,7 +202,7 @@ fun AdminScreen(
                         ) {
                             Icon(Icons.Default.Upload, null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import Sample Businesses", fontWeight = FontWeight.Bold)
+                            Text(strings.importSampleBusinesses, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -214,7 +216,7 @@ fun AdminScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "Pending Claim Requests",
+                        strings.pendingClaimRequests,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -225,7 +227,7 @@ fun AdminScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            "${claimRequests.size} pending",
+                            "${claimRequests.size} ${strings.pendingCountLabel}",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                             color = if (claimRequests.isEmpty()) Color(0xFF4CAF50) else MeTontRed,
                             fontSize = 12.sp,
@@ -258,13 +260,13 @@ fun AdminScreen(
                                 tint = Color(0xFF4CAF50)
                             )
                             Text(
-                                "No pending claims!",
+                                strings.noPendingClaims,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF4CAF50)
                             )
                             Text(
-                                "All claim requests have been processed.",
+                                strings.allClaimsProcessed,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MeTontGrey
                             )
@@ -292,6 +294,7 @@ private fun ClaimRequestCard(
     onApprove: () -> Unit,
     onReject: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     var showApproveDialog by remember { mutableStateOf(false) }
     var showRejectDialog by remember { mutableStateOf(false) }
 
@@ -299,10 +302,10 @@ private fun ClaimRequestCard(
         AlertDialog(
             onDismissRequest = { showApproveDialog = false },
             title = {
-                Text("Approve Claim", fontWeight = FontWeight.Bold)
+                Text(strings.approveClaimTitle, fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("Are you sure you want to approve ${claim.userEmail}'s claim for \"${claim.businessName}\"? This will transfer ownership and verify the business.")
+                Text(String.format(strings.approveClaimMessage, claim.userEmail, claim.businessName))
             },
             confirmButton = {
                 Button(
@@ -315,12 +318,12 @@ private fun ClaimRequestCard(
                         containerColor = Color(0xFF4CAF50)
                     )
                 ) {
-                    Text("Approve", color = Color.White)
+                    Text(strings.approve, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showApproveDialog = false }) {
-                    Text("Cancel", color = MeTontGrey)
+                    Text(strings.cancel, color = MeTontGrey)
                 }
             }
         )
@@ -330,10 +333,10 @@ private fun ClaimRequestCard(
         AlertDialog(
             onDismissRequest = { showRejectDialog = false },
             title = {
-                Text("Reject Claim", fontWeight = FontWeight.Bold)
+                Text(strings.rejectClaimTitle, fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("Are you sure you want to reject this claim request from ${claim.userEmail}?")
+                Text(String.format(strings.rejectClaimMessage, claim.userEmail))
             },
             confirmButton = {
                 Button(
@@ -344,12 +347,12 @@ private fun ClaimRequestCard(
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
                 ) {
-                    Text("Reject", color = Color.White)
+                    Text(strings.reject, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRejectDialog = false }) {
-                    Text("Cancel", color = MeTontGrey)
+                    Text(strings.cancel, color = MeTontGrey)
                 }
             }
         )
@@ -468,7 +471,7 @@ private fun ClaimRequestCard(
                 ) {
                     Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Reject", fontWeight = FontWeight.Medium)
+                    Text(strings.reject, fontWeight = FontWeight.Medium)
                 }
                 Button(
                     onClick = { showApproveDialog = true },
@@ -481,7 +484,7 @@ private fun ClaimRequestCard(
                 ) {
                     Icon(Icons.Default.Check, null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Approve", fontWeight = FontWeight.Medium)
+                    Text(strings.approve, fontWeight = FontWeight.Medium)
                 }
             }
         }
