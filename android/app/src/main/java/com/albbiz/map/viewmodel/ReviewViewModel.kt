@@ -1,6 +1,7 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Review
@@ -62,6 +63,7 @@ class ReviewViewModel(
         comment: String,
         userId: String,
         userName: String,
+        photoUris: List<Uri> = emptyList(),
         onSuccess: () -> Unit
     ) {
         val review = Review(
@@ -80,12 +82,57 @@ class ReviewViewModel(
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                repo.addReview(businessId, review)
+                repo.addReview(businessId, review, photoUris)
                     .onSuccess { onSuccess() }
                     .onFailure { e -> _error.value = e.message }
                 _isLoading.value = false
             } finally {
                 submitMutex.unlock()
+            }
+        }
+    }
+
+    // EDIT A REVIEW (author only — the calling UI is expected to only show this
+    // to the review's own author, and Firestore rules enforce it server-side too)
+    private val updateReviewMutex = Mutex()
+
+    fun updateReview(
+        businessId: String,
+        reviewId: String,
+        rating: Int,
+        comment: String,
+        onSuccess: () -> Unit,
+        onFailure: () -> Unit = {}
+    ) {
+        if (!updateReviewMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                repo.updateReview(businessId, reviewId, rating, comment)
+                    .onSuccess { onSuccess() }
+                    .onFailure { onFailure() }
+            } finally {
+                updateReviewMutex.unlock()
+            }
+        }
+    }
+
+    // DELETE A REVIEW (author only, same enforcement note as above)
+    private val deleteReviewMutex = Mutex()
+
+    fun deleteReview(
+        businessId: String,
+        reviewId: String,
+        onSuccess: () -> Unit,
+        onFailure: () -> Unit = {}
+    ) {
+        if (!deleteReviewMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                repo.deleteReview(businessId, reviewId)
+                    .onSuccess { onSuccess() }
+                    .onFailure { onFailure() }
+            } finally {
+                deleteReviewMutex.unlock()
             }
         }
     }
@@ -175,6 +222,51 @@ class ReviewViewModel(
                     .onFailure { e -> _error.value = e.message }
             } finally {
                 replyMutex.unlock()
+            }
+        }
+    }
+
+    // EDIT A REPLY (author only)
+    private val updateReplyMutex = Mutex()
+
+    fun updateReply(
+        businessId: String,
+        reviewId: String,
+        replyId: String,
+        comment: String,
+        onSuccess: () -> Unit,
+        onFailure: () -> Unit = {}
+    ) {
+        if (!updateReplyMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                repo.updateReply(businessId, reviewId, replyId, comment)
+                    .onSuccess { onSuccess() }
+                    .onFailure { onFailure() }
+            } finally {
+                updateReplyMutex.unlock()
+            }
+        }
+    }
+
+    // DELETE A REPLY (author only)
+    private val deleteReplyMutex = Mutex()
+
+    fun deleteReply(
+        businessId: String,
+        reviewId: String,
+        replyId: String,
+        onSuccess: () -> Unit,
+        onFailure: () -> Unit = {}
+    ) {
+        if (!deleteReplyMutex.tryLock()) return
+        viewModelScope.launch {
+            try {
+                repo.deleteReply(businessId, reviewId, replyId)
+                    .onSuccess { onSuccess() }
+                    .onFailure { onFailure() }
+            } finally {
+                deleteReplyMutex.unlock()
             }
         }
     }

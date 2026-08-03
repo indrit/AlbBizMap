@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
@@ -307,23 +310,67 @@ fun BusinessDetailScreen(
                 item {
                     val pagerState = rememberPagerState(pageCount = { business.photos.size })
                     val photoScope = rememberCoroutineScope()
+                    var fullScreenOpen by remember { mutableStateOf(false) }
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HorizontalPager(
-                            state = pagerState,
-                            contentPadding = PaddingValues(end = 48.dp),
-                            pageSpacing = 8.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { page ->
-                            AsyncImage(
-                                model = business.photos[page],
-                                contentDescription = null,
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            HorizontalPager(
+                                state = pagerState,
+                                contentPadding = PaddingValues(end = 48.dp),
+                                pageSpacing = 8.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { page ->
+                                AsyncImage(
+                                    model = business.photos[page],
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable { fullScreenOpen = true },
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+
+                            // Google-Maps-style affordances layered on the hero photo
+                            // itself (photo count + an explicit expand hint) instead of
+                            // repeating the same images again in a second grid below —
+                            // that's what made the old "More Photos" section look like a
+                            // duplicate row of the same pictures.
+                            if (business.photos.size > 1) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(start = 12.dp, bottom = 12.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        "${pagerState.currentPage + 1}/${business.photos.size}",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { fullScreenOpen = true },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(240.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 8.dp, top = 8.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f))
+                            ) {
+                                Icon(
+                                    Icons.Default.Fullscreen,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
 
                         if (business.photos.size > 1) {
@@ -355,6 +402,14 @@ fun BusinessDetailScreen(
                                 }
                             }
                         }
+                    }
+
+                    if (fullScreenOpen) {
+                        FullScreenPhotoViewer(
+                            photos = business.photos,
+                            startPage = pagerState.currentPage,
+                            onDismiss = { fullScreenOpen = false }
+                        )
                     }
                 }
             }
@@ -690,6 +745,7 @@ fun BusinessDetailScreen(
 
 @Composable
 fun DetailPromotionItem(promotion: Promotion) {
+    val strings = LocalAppStrings.current
     Surface(
         color = Color(0xFFFFF9C4),
         shape = RoundedCornerShape(10.dp),
@@ -713,13 +769,23 @@ fun DetailPromotionItem(promotion: Promotion) {
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        "Code: ${promotion.discountCode}",
+                        "${strings.promotionCodePrefix}${promotion.discountCode}",
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
+            }
+            if (promotion.expiryDate != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val formatted = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+                    .format(Date(promotion.expiryDate))
+                Text(
+                    "${strings.promotionExpiresPrefix}$formatted",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MeTontGrey
+                )
             }
         }
     }
@@ -819,17 +885,31 @@ fun DetailReviewItem(
     reviewViewModel: ReviewViewModel = viewModel()
 ) {
     val strings = LocalAppStrings.current
+    val context = LocalContext.current
     val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
     val currentUserId = firebaseUser?.uid
     val currentUserName = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
         ?: firebaseUser?.email?.substringBefore("@") ?: ""
     val isLiked = currentUserId != null && currentUserId in review.likedBy
+    val isOwnReview = currentUserId != null && currentUserId == review.userId
     val repliesMap by reviewViewModel.replies.collectAsState()
     val replies = repliesMap[review.id] ?: emptyList()
 
     var showReplies by remember { mutableStateOf(false) }
     var showReplyInput by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
+    var fullScreenPhotoIndex by remember { mutableStateOf<Int?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editRating by remember { mutableIntStateOf(review.rating) }
+    var editComment by remember { mutableStateOf(review.comment) }
+    var isSubmittingEdit by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+    var replyPendingEdit by remember { mutableStateOf<Reply?>(null) }
+    var editReplyComment by remember { mutableStateOf("") }
+    var isSubmittingReplyEdit by remember { mutableStateOf(false) }
+    var replyPendingDelete by remember { mutableStateOf<Reply?>(null) }
+    var isDeletingReply by remember { mutableStateOf(false) }
 
     // Keyed on showReplies alone (not replies.size): loadReplies() attaches a live
     // Firestore listener that updates `replies` itself, so keying on its own output
@@ -895,6 +975,30 @@ fun DetailReviewItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Black.copy(alpha = 0.8f)
             )
+
+            // ── REVIEW PHOTOS ──────────────────────────────────────
+            // Small thumbnails only — same "tap for the real thing" pattern as
+            // the business's own photo section (hero + full-screen viewer)
+            // rather than showing them at full size inline in the feed.
+            if (review.photos.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    itemsIndexed(review.photos) { index, url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { fullScreenPhotoIndex = index },
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -970,6 +1074,27 @@ fun DetailReviewItem(
                             style = MaterialTheme.typography.labelSmall,
                             color = MeTontRed
                         )
+                    }
+                }
+
+                // Edit/delete — only the review's own author sees these
+                if (isOwnReview) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(
+                        onClick = {
+                            editRating = review.rating
+                            editComment = review.comment
+                            showEditDialog = true
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, tint = MeTontGrey, modifier = Modifier.size(16.dp))
+                    }
+                    IconButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, null, tint = MeTontGrey, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1111,12 +1236,258 @@ fun DetailReviewItem(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MeTontGrey
                                 )
+
+                                // Edit/delete — only the reply's own author sees these
+                                if (currentUserId != null && currentUserId == reply.userId) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = {
+                                            replyPendingEdit = reply
+                                            editReplyComment = reply.comment
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, null, tint = MeTontGrey, modifier = Modifier.size(13.dp))
+                                    }
+                                    IconButton(
+                                        onClick = { replyPendingDelete = reply },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, null, tint = MeTontGrey, modifier = Modifier.size(13.dp))
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    fullScreenPhotoIndex?.let { index ->
+        FullScreenPhotoViewer(
+            photos = review.photos,
+            startPage = index,
+            onDismiss = { fullScreenPhotoIndex = null }
+        )
+    }
+
+    // ── EDIT REVIEW DIALOG ─────────────────────────────────────────
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSubmittingEdit) showEditDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text(strings.editReviewTitle, fontWeight = FontWeight.Bold, color = MeTontRed)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (i in 1..5) {
+                            IconButton(
+                                onClick = { editRating = i },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (i <= editRating) Icons.Filled.Star else Icons.Outlined.Star,
+                                    contentDescription = null,
+                                    tint = if (i <= editRating) Color(0xFFFFC107) else MeTontGrey,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = editComment,
+                        onValueChange = { editComment = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editRating == 0 || editComment.isBlank() || isSubmittingEdit) return@Button
+                        isSubmittingEdit = true
+                        reviewViewModel.updateReview(
+                            businessId = businessId,
+                            reviewId = review.id,
+                            rating = editRating,
+                            comment = editComment.trim(),
+                            onSuccess = {
+                                isSubmittingEdit = false
+                                showEditDialog = false
+                                Toast.makeText(context, strings.reviewUpdated, Toast.LENGTH_SHORT).show()
+                            },
+                            onFailure = {
+                                isSubmittingEdit = false
+                                Toast.makeText(context, strings.reviewUpdateFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    enabled = !isSubmittingEdit && editRating > 0 && editComment.isNotBlank(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
+                ) { Text(strings.save, color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showEditDialog = false },
+                    enabled = !isSubmittingEdit
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
+    }
+
+    // ── DELETE REVIEW CONFIRMATION ──────────────────────────────────
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteConfirm = false },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(strings.deleteReviewConfirmTitle, fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(strings.deleteReviewConfirmMessage, color = MeTontGrey) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isDeleting) return@TextButton
+                        isDeleting = true
+                        reviewViewModel.deleteReview(
+                            businessId = businessId,
+                            reviewId = review.id,
+                            onSuccess = {
+                                isDeleting = false
+                                showDeleteConfirm = false
+                                Toast.makeText(context, strings.reviewDeleted, Toast.LENGTH_SHORT).show()
+                            },
+                            onFailure = {
+                                isDeleting = false
+                                Toast.makeText(context, strings.reviewDeleteFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text(strings.deleteReviewButton, color = MeTontRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    enabled = !isDeleting
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
+    }
+
+    // ── EDIT REPLY DIALOG ────────────────────────────────────────────
+    replyPendingEdit?.let { editingReply ->
+        AlertDialog(
+            onDismissRequest = { if (!isSubmittingReplyEdit) replyPendingEdit = null },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text(strings.editReplyTitle, fontWeight = FontWeight.Bold, color = MeTontRed)
+            },
+            text = {
+                OutlinedTextField(
+                    value = editReplyComment,
+                    onValueChange = { editReplyComment = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MeTontRed,
+                        cursorColor = MeTontRed
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editReplyComment.isBlank() || isSubmittingReplyEdit) return@Button
+                        isSubmittingReplyEdit = true
+                        reviewViewModel.updateReply(
+                            businessId = businessId,
+                            reviewId = review.id,
+                            replyId = editingReply.id,
+                            comment = editReplyComment.trim(),
+                            onSuccess = {
+                                isSubmittingReplyEdit = false
+                                replyPendingEdit = null
+                                Toast.makeText(context, strings.replyUpdated, Toast.LENGTH_SHORT).show()
+                            },
+                            onFailure = {
+                                isSubmittingReplyEdit = false
+                                Toast.makeText(context, strings.replyUpdateFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    enabled = !isSubmittingReplyEdit && editReplyComment.isNotBlank(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
+                ) { Text(strings.save, color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { replyPendingEdit = null },
+                    enabled = !isSubmittingReplyEdit
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
+    }
+
+    // ── DELETE REPLY CONFIRMATION ─────────────────────────────────────
+    replyPendingDelete?.let { deletingReply ->
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingReply) replyPendingDelete = null },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(strings.deleteReplyConfirmTitle, fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(strings.deleteReplyConfirmMessage, color = MeTontGrey) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isDeletingReply) return@TextButton
+                        isDeletingReply = true
+                        reviewViewModel.deleteReply(
+                            businessId = businessId,
+                            reviewId = review.id,
+                            replyId = deletingReply.id,
+                            onSuccess = {
+                                isDeletingReply = false
+                                replyPendingDelete = null
+                                Toast.makeText(context, strings.replyDeleted, Toast.LENGTH_SHORT).show()
+                            },
+                            onFailure = {
+                                isDeletingReply = false
+                                Toast.makeText(context, strings.replyDeleteFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    enabled = !isDeletingReply
+                ) {
+                    Text(strings.deleteReplyButton, color = MeTontRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { replyPendingDelete = null },
+                    enabled = !isDeletingReply
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
     }
 }
 
@@ -1139,6 +1510,75 @@ private fun DetailBadgeChip(label: String, color: Color, icon: ImageVector) {
                 color = color,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+// Full-bleed swipeable gallery opened by tapping the hero photo or the
+// expand icon on the business detail screen — mirrors the "tap a place's
+// photo, get a full-screen swipeable viewer" pattern from Google Maps,
+// rather than repeating the same images a second time in a grid.
+@Composable
+private fun FullScreenPhotoViewer(
+    photos: List<String>,
+    startPage: Int,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val pagerState = rememberPagerState(
+            initialPage = startPage,
+            pageCount = { photos.size }
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                AsyncImage(
+                    model = photos[page],
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 12.dp, top = 12.dp)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+            ) {
+                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+            }
+
+            if (photos.size > 1) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 16.dp, top = 20.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        "${pagerState.currentPage + 1}/${photos.size}",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }

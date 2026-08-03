@@ -1,10 +1,12 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.data
 
+import android.net.Uri
 import android.util.Log
 import com.albbiz.map.ui.CurrentLanguage
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.tasks.await
 class ReviewRepository {
 
     private val db = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
 
     companion object {
         private const val TAG = "AlbBizMap-ReviewRepo"
@@ -48,19 +51,96 @@ class ReviewRepository {
     }
 
     // ADD A NEW REVIEW
-    suspend fun addReview(businessId: String, review: Review): Result<String> {
+    suspend fun addReview(
+        businessId: String,
+        review: Review,
+        photoUris: List<Uri> = emptyList()
+    ): Result<String> {
         return try {
             val ref = db.collection("businesses")
                 .document(businessId)
                 .collection("reviews")
                 .document()
 
-            val finalReview = review.copy(id = ref.id)
+            // Same upload-then-write shape as StoriesRepository.addStory — the
+            // doc ID is generated up front (via .document(), before .set()) so
+            // uploaded photos can live under a path keyed by the review's real
+            // ID rather than a temp one.
+            val photoUrls = photoUris.mapIndexed { index, uri ->
+                val ref2 = storage.reference.child("reviews/$businessId/${ref.id}/photo_$index.jpg")
+                ref2.putFile(uri).await()
+                ref2.downloadUrl.await().toString()
+            }
+
+            val finalReview = review.copy(id = ref.id, photos = photoUrls)
             ref.set(finalReview.toMap()).await()
             updateBusinessStats(businessId)
             Result.success(ref.id)
         } catch (e: Exception) {
             Log.e(TAG, "Error adding review", e)
+            Result.failure(e)
+        }
+    }
+
+    // EDIT A REVIEW — Firestore rules already let a review's own author update
+    // any field on it, so no rules change was needed for this.
+    suspend fun updateReview(
+        businessId: String,
+        reviewId: String,
+        rating: Int,
+        comment: String
+    ): Result<Unit> {
+        return try {
+            val reviewRef = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+            reviewRef.update(
+                mapOf(
+                    "rating" to rating,
+                    "comment" to comment
+                )
+            ).await()
+            updateBusinessStats(businessId) // rating changed, average needs recomputing
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating review", e)
+            Result.failure(e)
+        }
+    }
+
+    // DELETE A REVIEW
+    suspend fun deleteReview(businessId: String, reviewId: String): Result<Unit> {
+        return try {
+            val reviewRef = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+
+            val snapshot = reviewRef.get().await()
+            val review = snapshot.data?.let { Review.fromMap(reviewId, it) }
+
+            reviewRef.delete().await()
+
+            // Best-effort cleanup of the review's own uploaded photos, same
+            // non-fatal pattern as EventsRepository.deleteEvent. Replies other
+            // users left under this review are NOT cascade-deleted here — a
+            // reply's delete rule only allows its own author, so batch-deleting
+            // someone else's reply would fail the whole operation. They're left
+            // as orphaned documents nothing in the UI ever surfaces again,
+            // rather than risking a partial/failed delete.
+            review?.photos?.forEach { url ->
+                try {
+                    storage.getReferenceFromUrl(url).delete().await()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deleting review photo", e)
+                }
+            }
+
+            updateBusinessStats(businessId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting review", e)
             Result.failure(e)
         }
     }
@@ -215,6 +295,51 @@ class ReviewRepository {
             Result.success(ref.id)
         } catch (e: Exception) {
             Log.e(TAG, "Error adding reply", e)
+            Result.failure(e)
+        }
+    }
+
+    // EDIT A REPLY (author only, enforced by Firestore rules)
+    suspend fun updateReply(
+        businessId: String,
+        reviewId: String,
+        replyId: String,
+        comment: String
+    ): Result<Unit> {
+        return try {
+            val replyRef = db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+                .collection("replies")
+                .document(replyId)
+            replyRef.update("comment", comment).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating reply", e)
+            Result.failure(e)
+        }
+    }
+
+    // DELETE A REPLY (author only). No photos or business stats involved here,
+    // unlike deleteReview — replies don't carry either.
+    suspend fun deleteReply(
+        businessId: String,
+        reviewId: String,
+        replyId: String
+    ): Result<Unit> {
+        return try {
+            db.collection("businesses")
+                .document(businessId)
+                .collection("reviews")
+                .document(reviewId)
+                .collection("replies")
+                .document(replyId)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting reply", e)
             Result.failure(e)
         }
     }

@@ -256,6 +256,10 @@ fun EditBusinessScreen(
     if (showAddPromoDialog) {
         var promoTitle by remember { mutableStateOf("") }
         var promoDescription by remember { mutableStateOf("") }
+        var promoDiscountCode by remember { mutableStateOf("") }
+        var promoExpiryDay by remember { mutableStateOf("") }
+        var promoExpiryMonth by remember { mutableStateOf("") }
+        var promoExpiryYear by remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { showAddPromoDialog = false },
@@ -289,6 +293,70 @@ fun EditBusinessScreen(
                             cursorColor = MeTontRed
                         )
                     )
+                    OutlinedTextField(
+                        value = promoDiscountCode,
+                        onValueChange = { promoDiscountCode = it },
+                        label = { Text(strings.promotionDiscountCodeLabel) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
+                    )
+                    Text(
+                        strings.promotionExpirySection,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MeTontGrey
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = promoExpiryDay,
+                            onValueChange = { if (it.length <= 2) promoExpiryDay = it },
+                            label = { Text(strings.dayLabel) },
+                            placeholder = { Text(strings.dayPlaceholder) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MeTontRed,
+                                cursorColor = MeTontRed
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        OutlinedTextField(
+                            value = promoExpiryMonth,
+                            onValueChange = { if (it.length <= 2) promoExpiryMonth = it },
+                            label = { Text(strings.monthLabel) },
+                            placeholder = { Text(strings.monthPlaceholder) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MeTontRed,
+                                cursorColor = MeTontRed
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        OutlinedTextField(
+                            value = promoExpiryYear,
+                            onValueChange = { if (it.length <= 4) promoExpiryYear = it },
+                            label = { Text(strings.yearLabel) },
+                            placeholder = { Text(strings.yearPlaceholder) },
+                            modifier = Modifier.weight(1.5f),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MeTontRed,
+                                cursorColor = MeTontRed
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -298,9 +366,34 @@ fun EditBusinessScreen(
                             Toast.makeText(context, strings.jobTitleDescRequired, Toast.LENGTH_SHORT).show()
                             return@Button
                         }
+
+                        // Expiry date is optional — only validate if the user typed
+                        // something into at least one of the three fields. Partial
+                        // entry (e.g. day + month but no year) is rejected rather
+                        // than silently guessed.
+                        val anyExpiryEntered = promoExpiryDay.isNotBlank() ||
+                            promoExpiryMonth.isNotBlank() || promoExpiryYear.isNotBlank()
+                        var expiryMillis: Long? = null
+                        if (anyExpiryEntered) {
+                            val dayInt = promoExpiryDay.toIntOrNull()
+                            val monthInt = promoExpiryMonth.toIntOrNull()
+                            val yearInt = promoExpiryYear.toIntOrNull()
+                            if (dayInt == null || monthInt == null || yearInt == null ||
+                                dayInt !in 1..31 || monthInt !in 1..12 || yearInt < 2024
+                            ) {
+                                Toast.makeText(context, strings.promotionInvalidExpiry, Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            expiryMillis = java.util.Calendar.getInstance().apply {
+                                set(yearInt, monthInt - 1, dayInt, 23, 59, 59)
+                            }.timeInMillis
+                        }
+
                         promotions = (promotions + Promotion(
                             title = promoTitle.trim(),
-                            description = promoDescription.trim()
+                            description = promoDescription.trim(),
+                            discountCode = promoDiscountCode.trim().ifBlank { null },
+                            expiryDate = expiryMillis
                         )).toMutableList()
                         showAddPromoDialog = false
                     },
@@ -671,6 +764,22 @@ fun EditBusinessScreen(
                                         maxLines = 2,
                                         color = MeTontGrey
                                     )
+                                    if (promo.discountCode != null || promo.expiryDate != null) {
+                                        val parts = mutableListOf<String>()
+                                        promo.discountCode?.let { parts.add("${strings.promotionCodePrefix}$it") }
+                                        promo.expiryDate?.let {
+                                            val formatted = java.text.SimpleDateFormat(
+                                                "MMM d, yyyy", java.util.Locale.getDefault()
+                                            ).format(java.util.Date(it))
+                                            parts.add("${strings.promotionExpiresPrefix}$formatted")
+                                        }
+                                        Text(
+                                            parts.joinToString("  •  "),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFFF57F17)
+                                        )
+                                    }
                                 }
                                 IconButton(onClick = {
                                     promotions = promotions.toMutableList().also { it.removeAt(index) }
