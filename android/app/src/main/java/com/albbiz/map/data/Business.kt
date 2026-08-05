@@ -80,7 +80,6 @@ data class Business(
             "isFeatured" to isFeatured,
             "promotions" to promotions.map { it.toMap() },
             "jobs" to jobs.map { it.toMap() },
-            "jobs" to jobs.map { it.toMap() },
             "likeCount" to likeCount,
             "likedBy" to likedBy
         )
@@ -101,8 +100,6 @@ data class Business(
                 email = map["email"] as? String ?: "",
                 website = map["website"] as? String ?: "",
                 isOpen24Hours = map["isOpen24Hours"] as? Boolean ?: false,
-                likeCount = (map["likeCount"] as? Number)?.toInt() ?: 0,
-                likedBy = (map["likedBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 workingHours = (map["workingHours"] as? Map<*, *>)
                     ?.entries
                     ?.associate { it.key.toString() to it.value.toString() }
@@ -131,7 +128,9 @@ data class Business(
                         val stringKeyedMap = jMap.entries.associate { entry -> entry.key.toString() to entry.value }
                         JobPosting.fromMap(stringKeyedMap)
                     }
-                } ?: emptyList()
+                } ?: emptyList(),
+                likeCount = (map["likeCount"] as? Number)?.toInt() ?: 0,
+                likedBy = (map["likedBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
             )
         }
     }

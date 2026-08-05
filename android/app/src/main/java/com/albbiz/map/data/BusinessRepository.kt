@@ -83,12 +83,6 @@ class BusinessRepository {
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            // If the user document doesn't exist yet, create it. Firestore rules
-            // require a create on users/{userId} to explicitly set isAdmin == false
-            // (so a client can never self-grant admin by omitting the field) — this
-            // is the only place in the app that ever creates this document (nothing
-            // does it at signup), so without isAdmin here, this create was silently
-            // rejected for every brand-new user's first-ever favorite tap.
             try {
                 db.collection("users").document(userId).set(
                     mapOf(
@@ -147,5 +141,34 @@ class BusinessRepository {
 
     suspend fun seedBusinessesFromJson(context: android.content.Context): Result<Int> {
         return firestoreService.seedBusinessesFromJson(context)
+    }
+
+    suspend fun updateSubscription(businessId: String, tier: String): Result<Unit> {
+        return try {
+            val updateData = when (tier) {
+                "premium" -> mapOf(
+                    "isPremium" to true,
+                    "premiumUntil" to System.currentTimeMillis() + (31L * 24 * 60 * 60 * 1000)
+                )
+                "featured" -> mapOf(
+                    "isFeatured" to true,
+                    "isPremium" to true, // Featured includes Premium
+                    "premiumUntil" to System.currentTimeMillis() + (31L * 24 * 60 * 60 * 1000)
+                )
+                "sponsored" -> mapOf(
+                    "isSponsored" to true,
+                    "isPremium" to true, // Sponsored includes Premium
+                    "premiumUntil" to System.currentTimeMillis() + (31L * 24 * 60 * 60 * 1000),
+                    "sponsoredUntil" to System.currentTimeMillis() + (31L * 24 * 60 * 60 * 1000)
+                )
+                else -> emptyMap()
+            }
+            if (updateData.isNotEmpty()) {
+                db.collection("businesses").document(businessId).update(updateData).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

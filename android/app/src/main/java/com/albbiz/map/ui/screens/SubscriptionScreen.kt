@@ -1,8 +1,10 @@
 // Bismillah Hir Rahman Nir Raheem
 package com.albbiz.map.ui.screens
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,59 +19,40 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.albbiz.map.R
+import com.albbiz.map.data.Business
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
 import com.albbiz.map.ui.theme.TierBronze
-import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.ui.theme.TierGold
+import com.albbiz.map.ui.theme.TierSilver
+import com.albbiz.map.viewmodel.BillingViewModel
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import com.albbiz.map.R
-import com.albbiz.map.data.Business
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionScreen(
-    // Every upgrade is scoped to exactly one business — there's no longer a
-    // generic entry point into this screen, so this is never null in practice.
-    // The plan cards below use this to show which plan the business is
-    // actually on right now and to say which business the request e-mail is
-    // for, instead of it being ambiguous when an account owns more than one.
     business: Business,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    billingViewModel: BillingViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val strings = LocalAppStrings.current
     val user = FirebaseAuth.getInstance().currentUser
     val userEmail = user?.email ?: ""
 
-    // Same highest-tier-wins precedence used everywhere else (UserProfileScreen's
-    // badge, MapViewModel's topPicks sort, Business.maxPhotos). These are internal
-    // comparison keys, not display text, so they stay in English regardless of
-    // language — only the strings shown to the user (title/buttonText below) change.
     val currentTier = when {
         business.isSponsored -> "Sponsored"
         business.isFeatured -> "Featured"
         business.isPremium -> "Premium"
         else -> "Free"
-    }
-
-    fun requestEmailIntent(planName: String, price: String): Intent {
-        return Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:admin@metont.com")
-            putExtra(Intent.EXTRA_SUBJECT, "$planName Upgrade Request - MeTont")
-            putExtra(
-                Intent.EXTRA_TEXT,
-                "Hello,\n\nI would like to upgrade \"${business.name}\" (ID: ${business.id}) to " +
-                    "$planName ($price).\n\nAccount: $userEmail\n\nThank you!"
-            )
-        }
     }
 
     Scaffold(
@@ -95,7 +78,6 @@ fun SubscriptionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                //.background(Color(0xFFF5F5F5))
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
@@ -103,7 +85,7 @@ fun SubscriptionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── HEADER ────────────────────────────────────────────
+            // Header
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -128,16 +110,10 @@ fun SubscriptionScreen(
                         color = Color.White,
                         textAlign = TextAlign.Center
                     )
-                    Text(
-                        strings.subscriptionHeaderSubtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
 
-            // ── FREE PLAN ─────────────────────────────────────────
+            // FREE PLAN
             PlanCard(
                 title = strings.freeTierName,
                 price = "$0",
@@ -148,119 +124,70 @@ fun SubscriptionScreen(
                     PlanFeature(strings.planFeatureNameCategory, true),
                     PlanFeature(strings.planFeatureLocationOnMap, true),
                     PlanFeature(strings.planFeature100CharDesc, true),
-                    PlanFeature(strings.planFeature1Photo, true),
-                    PlanFeature(strings.planFeaturePhoneNumber, false),
-                    PlanFeature(strings.planFeatureEmailWebsite, false),
-                    PlanFeature(strings.planFeatureExtendedDesc, false),
-                    PlanFeature(strings.planFeatureHoursOfOperation, false),
-                    PlanFeature(strings.planFeaturePremiumBadge, false)
+                    PlanFeature(strings.planFeature1Photo, true)
                 ),
                 buttonText = if (currentTier == "Free") strings.currentPlanButton else strings.notAvailableDash,
                 onButtonClick = {}
             )
 
-            // ── PREMIUM PLAN ──────────────────────────────────────
+            // PREMIUM PLAN
             PlanCard(
                 title = strings.premium,
                 price = "$2.99",
                 period = strings.perMonth,
                 accentColor = TierBronze,
-               // badgeIcon = R.drawable.metont_bronze,
                 isCurrentPlan = currentTier == "Premium",
                 features = listOf(
-                    PlanFeature(strings.planFeatureNameCategory, true),
-                    PlanFeature(strings.planFeatureLocationOnMap, true),
-                    PlanFeature(strings.planFeature100CharDesc, true),
+                    PlanFeature(strings.planFeatureEverythingPremium, true),
                     PlanFeature(strings.planFeatureUp6Photos, true),
                     PlanFeature(strings.planFeaturePhoneNumber, true),
                     PlanFeature(strings.planFeatureEmailWebsite, true),
-                    PlanFeature(strings.planFeatureExtendedDesc, true),
-                    PlanFeature(strings.planFeatureHoursOfOperation, true),
                     PlanFeature(strings.planFeaturePremiumBadge, true)
                 ),
                 buttonText = if (currentTier == "Premium") strings.currentPlanButton else strings.requestUpgrade,
                 onButtonClick = {
-                    context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Premium", "$2.99/month"), strings.sendUpgradeRequest)
-                    )
+                    billingViewModel.launchBillingFlow(context as Activity, "premium_subscription", business.id)
                 }
             )
 
-            // ── FEATURED PLAN ─────────────────────────────────────
+            // FEATURED PLAN
             PlanCard(
                 title = strings.featured2,
                 price = "$9.99",
                 period = strings.perMonth,
                 accentColor = TierSilver,
-                //badgeIcon = R.drawable.metont_silver,
                 isCurrentPlan = currentTier == "Featured",
                 features = listOf(
                     PlanFeature(strings.planFeatureEverythingPremium, true),
                     PlanFeature(strings.planFeatureUp10Photos, true),
                     PlanFeature(strings.planFeatureFeaturedBadge, true),
-                    PlanFeature(strings.planFeatureFeaturedDiscoveryRow, true),
-                    PlanFeature(strings.planFeatureHighlightedListView, true)
+                    PlanFeature(strings.planFeatureFeaturedDiscoveryRow, true)
                 ),
                 buttonText = if (currentTier == "Featured") strings.currentPlanButton else strings.requestFeatured,
                 onButtonClick = {
-                    context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Featured", "$9.99/month"), strings.sendFeaturedRequest)
-                    )
+                    billingViewModel.launchBillingFlow(context as Activity, "featured_subscription", business.id)
                 }
             )
 
-            // ── SPONSORED PLAN ────────────────────────────────────
+            // SPONSORED PLAN
             PlanCard(
                 title = strings.sponsored,
                 price = "$19.99",
                 period = strings.perMonth,
                 accentColor = TierGold,
-                //badgeIcon = R.drawable.metont_gold,
                 isCurrentPlan = currentTier == "Sponsored",
                 features = listOf(
                     PlanFeature(strings.planFeatureEverythingPremium, true),
                     PlanFeature(strings.planFeatureUp14Photos, true),
                     PlanFeature(strings.planFeatureHighlightedMapPin, true),
                     PlanFeature(strings.planFeatureTopSearchResults, true),
-                    PlanFeature(strings.planFeatureSponsoredBadge, true),
-                    PlanFeature(strings.planFeatureFeaturedDiscoverySection, true),
-                    PlanFeature(strings.planFeaturePriorityCustomerSupport, true)
+                    PlanFeature(strings.planFeatureSponsoredBadge, true)
                 ),
                 buttonText = if (currentTier == "Sponsored") strings.currentPlanButton else strings.requestSponsorship,
                 onButtonClick = {
-                    context.startActivity(
-                        Intent.createChooser(requestEmailIntent("Sponsored", "$19.99/month"), strings.sendSponsorshipRequest)
-                    )
+                    billingViewModel.launchBillingFlow(context as Activity, "sponsored_subscription", business.id)
                 }
             )
-
-            // ── INFO NOTE ─────────────────────────────────────────
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        null,
-                        tint = MeTontRed,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        strings.manualPaymentNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MeTontGrey
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -289,7 +216,6 @@ private fun PlanCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ── PLAN HEADER ───────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -335,7 +261,6 @@ private fun PlanCard(
                 }
             }
 
-            // ── PRICE ─────────────────────────────────────────────
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     price,
@@ -354,7 +279,6 @@ private fun PlanCard(
 
             HorizontalDivider(color = Color(0xFFF0F0F0))
 
-            // ── FEATURES ──────────────────────────────────────────
             features.forEach { feature ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -376,7 +300,6 @@ private fun PlanCard(
                 }
             }
 
-            // ── BUTTON ────────────────────────────────────────────
             Button(
                 onClick = onButtonClick,
                 modifier = Modifier

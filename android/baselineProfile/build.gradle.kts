@@ -28,18 +28,16 @@ val benchmarkTestPassword: String = readLocalProperty("benchmark.test.password")
 
 android {
     namespace = "com.albbiz.map.baselineprofile"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
         minSdk = 28
-        targetSdk = 37
+        targetSdk = 36
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -50,10 +48,11 @@ android {
     }
 
     targetProjectPath = ":app"
-    kotlinOptions {
-        jvmTarget = "11"
-    }
 
+    @Suppress("DEPRECATION")
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
 
 // This is the configuration block for the Baseline Profile plugin.
@@ -67,7 +66,7 @@ dependencies {
     implementation(libs.androidx.espresso.core)
     implementation(libs.androidx.uiautomator)
     implementation(libs.androidx.benchmark.macro.junit4)
-    implementation(libs.core.ktx)
+    implementation(libs.androidx.core.ktx)
 }
 
 androidComponents {

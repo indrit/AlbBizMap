@@ -9,25 +9,31 @@ plugins {
 
 android {
     namespace = "com.albbiz.map"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.albbiz.map"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 4
-        versionName = "1.2"
+        targetSdk = 36
+        versionCode = 5
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
+            
+            signingConfig = signingConfigs.getByName("debug") // Note: Replace with your release config when ready
         }
     }
 
@@ -60,7 +66,6 @@ dependencies {
 
     implementation(libs.material)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    //new line
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -75,30 +80,33 @@ dependencies {
     // Google Maps
     implementation("com.google.android.gms:play-services-maps:19.0.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
-    implementation("com.google.maps.android:maps-compose:6.4.0")
-    implementation("com.google.maps.android:maps-compose-utils:6.4.0")
-    implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation(libs.google.maps.compose)
+    implementation(libs.google.maps.compose.utils)
+    implementation(libs.google.maps.utils)
+    
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.androidx.profileinstaller)
 
+    // Google Sign-In with Credential Manager
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // In-App Purchases
+    implementation(libs.billing.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    
     "baselineProfile"(project(":baselineprofile"))
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
 
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
-
-    // Google Sign-In via Credential Manager
-    implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-
 }

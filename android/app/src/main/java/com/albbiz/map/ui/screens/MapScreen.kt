@@ -90,6 +90,19 @@ fun loadMarkerFromAssets(context: Context, fileName: String): BitmapDescriptor? 
     }
 }
 
+fun loadMarkerFromResource(context: Context, resId: Int): BitmapDescriptor? {
+    return try {
+        val bitmap = BitmapFactory.decodeResource(context.resources, resId)
+        if (bitmap != null) {
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 120, 120, false)
+            BitmapDescriptorFactory.fromBitmap(scaledBitmap)
+        } else null
+    } catch (e: Exception) {
+        Log.e("AlbBizMap", "Error loading resource pin: ${e.message}")
+        null
+    }
+}
+
 data class BusinessClusterItem(
     val business: Business,
     private val pos: LatLng = business.location?.let {
@@ -105,10 +118,6 @@ data class BusinessClusterItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    // Takes a sortBy mode to hand straight to BusinessListScreen — the drawer's
-    // "Businesses" item passes "default", while the home screen's "Most
-    // Favorited Worldwide" See more button passes "mostFavorited" so the full
-    // directory opens already sorted the same way as the carousel it came from.
     onListClick: (String) -> Unit = {},
     onAddBusinessClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
@@ -129,10 +138,6 @@ fun MapScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val strings = LocalAppStrings.current
 
-    // Read reactively from AuthViewModel instead of a value passed down through
-    // NavHost's route builder — that builder only runs once (cached via remember),
-    // so a plain String parameter here would freeze at its first-composition value
-    // and never reflect later profile changes.
     val currentUser by authViewModel.currentUser.collectAsState()
     val currentUserName = currentUser?.displayName?.takeIf { it.isNotBlank() }
         ?: currentUser?.email?.substringBefore("@") ?: "User"
@@ -144,41 +149,26 @@ fun MapScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val nearMeBusinesses by viewModel.nearMe.collectAsState()
     val mostFavoritedBusinesses by viewModel.mostFavorited.collectAsState()
-    // Previously unused — "Top Recommended" below used to filter the raw business
-    // list by tier only, with no distance limit, so it could surface a sponsored
-    // business on the other side of the country. topPicks already existed in the
-    // ViewModel doing the right thing (tier-eligible AND within 50km, sorted by
-    // tier then distance) but was never actually collected here.
     val topPicksBusinesses by viewModel.topPicks.collectAsState()
 
     val eventsRepository = remember { EventsRepository() }
-    // Must remember() the Flow itself, not just the repository — see EventsScreen.kt
-    // for why calling .getEvents() fresh inline here would otherwise tear down and
-    // reattach a live Firestore listener on every recomposition of this screen.
     val eventsFlow = remember { eventsRepository.getEvents() }
     val announcements by eventsFlow.collectAsState(initial = emptyList())
 
-    // Stories
     val stories by storiesViewModel.stories.collectAsState()
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val groupedStories = remember(stories) {
         stories.groupBy { it.businessId ?: it.userId }
     }
 
     var selectedSheetBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
-    var markerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    
+    // TIER MARKERS
+    var markerFree by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var markerPremium by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var markerFeatured by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var markerSponsored by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
-    // GoogleMap takes real time to initialize (EGL surface/context creation) — flips
-    // true only once it reports its first frame via onMapLoaded below. Because this
-    // is a plain remember (not hoisted), it naturally resets to false every time this
-    // screen is freshly composed, i.e. every time the map is navigated to. Used for
-    // two things: showing a loading overlay instead of a blank map area, and — more
-    // importantly — refusing to navigate away from this screen until it's true, so a
-    // burst of rapid taps can't tear GoogleMap's view down mid-initialization (that
-    // was the actual cause of the blank-screen bug on rapid clicks: navigateSafe's
-    // debounce only checks that the destination has been *composed*, not that this
-    // slow-to-initialize child has actually finished rendering).
     var mapReady by remember { mutableStateOf(false) }
 
     val sheetState = rememberBottomSheetScaffoldState()
@@ -190,21 +180,17 @@ fun MapScreen(
             } else {
                 sheetState.bottomSheetState.partialExpand()
             }
-        } catch (e: Exception) {
-            // Interrupted mid-animation (e.g. a drag gesture, or racing another
-            // animation like the camera move). SheetState doesn't expose a public
-            // snapTo() to force the target state here, but this LaunchedEffect
-            // re-runs on every selectedSheetBusiness change anyway, so simply
-            // swallowing the exception is enough to stop it from crashing the
-            // screen instead of leaving it uncaught.
-        }
+        } catch (e: Exception) {}
     }
 
     LaunchedEffect(Unit) {
         MapsInitializer.initialize(context, MapsInitializer.Renderer.LATEST) {
             scope.launch {
                 delay(400)
-                markerIcon = loadMarkerFromAssets(context, "albanian_pin.png")
+                markerFree = loadMarkerFromAssets(context, "albanian_pin.png")
+                markerPremium = loadMarkerFromResource(context, R.drawable.metont_bronze)
+                markerFeatured = loadMarkerFromResource(context, R.drawable.metont_silver)
+                markerSponsored = loadMarkerFromResource(context, R.drawable.metont_gold)
             }
         }
     }
@@ -240,17 +226,6 @@ fun MapScreen(
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        // Location permission + the first fix are now requested from the splash screen
-        // (see MainActivity's "splash" composable), running in parallel with the splash
-        // video instead of only starting once this screen composes. That means by the
-        // time we get here there's a real location already available most of the time —
-        // reading viewModel.userLocation.value directly (a StateFlow's current value is
-        // always readable synchronously, unlike the collectAsState() below which may not
-        // have delivered its first value into this composition yet) lets us seed the
-        // camera at the real location immediately instead of unconditionally starting at
-        // Tirana and jumping once location arrives. Tirana is now only ever used as a
-        // genuine fallback — permission denied, or the fix genuinely hasn't come back
-        // yet — not as the default starting point.
         val alreadyKnownLocation = viewModel.userLocation.value
         position = when {
             viewModel.hasMovedToInitialLocation ->
@@ -264,10 +239,6 @@ fun MapScreen(
         }
     }
 
-    // Snap directly to the user's location instead of animate()-ing to it — animate()
-    // is interruptible and throws if a gesture or recomposition cuts it off mid-flight,
-    // which was a real source of exceptions here before. A direct position assignment
-    // can't be interrupted, so there's nothing to catch.
     LaunchedEffect(userLocation) {
         if (!viewModel.hasMovedToInitialLocation) {
             userLocation?.let { location ->
@@ -281,11 +252,6 @@ fun MapScreen(
         }
     }
 
-    // Instead of cancelling an in-flight drawer animation and retrying (which broke on
-    // rapid taps — a cancelled coroutine can't run further suspend cleanup code, so the
-    // recovery call threw too), simply ignore clicks while an animation is already
-    // running. The IconButton below also disables itself while this is true, so rapid
-    // taps are dropped at the source instead of racing each other.
     var isDrawerBusy by remember { mutableStateOf(false) }
 
     val openDrawer: () -> Unit = {
@@ -295,8 +261,6 @@ fun MapScreen(
                 try {
                     drawerState.open()
                 } catch (e: Exception) {
-                    // Interrupted (e.g. by a gesture) — nothing to recover, the drawer
-                    // will settle on whatever state it's already in.
                 } finally {
                     isDrawerBusy = false
                 }
@@ -311,7 +275,6 @@ fun MapScreen(
                 try {
                     drawerState.close()
                 } catch (e: Exception) {
-                    // Same as above — ignore, don't attempt further suspend calls here.
                 } finally {
                     isDrawerBusy = false
                 }
@@ -319,13 +282,6 @@ fun MapScreen(
         }
     }
 
-    // ModalNavigationDrawer only auto-intercepts the system back button once the drawer
-    // has FULLY settled at Open (drawerState.isOpen). While it's still mid-animation
-    // opening — exactly the window where a quick back-tap right after the hamburger tap
-    // lands — that interception isn't active yet, so the back press falls through to
-    // Navigation's own back handling and pops the nav back stack instead of just closing
-    // the drawer. Covering isDrawerBusy too closes that gap for the whole
-    // opening/open/closing duration, not just once settled.
     BackHandler(enabled = isDrawerBusy || drawerState.isOpen) {
         closeDrawer()
     }
@@ -402,9 +358,6 @@ fun MapScreen(
                     onClick = { closeDrawer(); if (mapReady) onFavoritesClick() },
                     icon = { Icon(Icons.Default.Favorite, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
-                    // Tagged so the Baseline Profile benchmark can reproduce the actual
-                    // reported trigger: navigate to another screen, back out, then spam
-                    // the hamburger — not just open/close the drawer in isolation.
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .testTag("drawerFavoritesItem")
@@ -455,7 +408,7 @@ fun MapScreen(
                 )
 
                 Text(
-                    "MeTont v1.0.0",
+                    "MeTont v1.2.0",
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     color = MeTontGrey,
                     fontSize = 11.sp,
@@ -516,7 +469,6 @@ fun MapScreen(
                           .navigationBarsPadding()
                   ) {
                     if (selectedSheetBusiness != null) {
-                        // BUSINESS DETAIL IN SHEET
                         val biz = selectedSheetBusiness!!
                         Column(
                             modifier = Modifier
@@ -604,7 +556,6 @@ fun MapScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                // Add Story circle
                                 item {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -636,7 +587,6 @@ fun MapScreen(
                                     }
                                 }
 
-                                // Story circles
                                 items(groupedStories.entries.toList()) { (_, storyGroup) ->
                                     val hasViewed = storiesViewModel.hasViewedAllStories(storyGroup)
                                     val firstStory = storyGroup.first()
@@ -669,7 +619,7 @@ fun MapScreen(
                                                 color = when (firstStory.type) {
                                                     "community" -> Color(0xFF2196F3)
                                                     "business" -> MeTontRed
-                                                    "new_business" -> Color(0xFF4CAF50) // Green
+                                                    "new_business" -> Color(0xFF4CAF50)
                                                     else -> MeTontGrey
                                                 }
                                             ) {
@@ -705,11 +655,6 @@ fun MapScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // TOP RECOMMENDED — now backed by topPicks (tier-eligible AND
-                            // within 50km, see the comment where topPicksBusinesses is
-                            // collected above), and using the same full-width vertical
-                            // FeaturedPickCard layout as Near You, capped at 2 with the
-                            // same "See more" toggle used by the other sections.
                             if (topPicksBusinesses.isNotEmpty()) {
                                 var topRecommendedExpanded by remember { mutableStateOf(false) }
                                 val visibleTopPicks = if (topRecommendedExpanded) topPicksBusinesses else topPicksBusinesses.take(2)
@@ -741,10 +686,6 @@ fun MapScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
-                            // NEAR YOU — the "Featured Local Picks" style: full-width
-                            // vertical photo cards. Capped at 2 with "See more" since each
-                            // card is tall and would otherwise push everything else below
-                            // it far down the sheet.
                             Text(
                                 "Near You",
                                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
@@ -789,9 +730,6 @@ fun MapScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // COMMUNITY ANNOUNCEMENTS — capped at 6; "See more" leaves the
-                            // home screen entirely and opens the full Events list, same as
-                            // tapping an individual card already does.
                             Text(strings.communityAnnouncements, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                             if (announcements.isEmpty()) {
                                 Text(strings.noUpcomingEventsShort, modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
@@ -831,9 +769,6 @@ fun MapScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // MOST FAVORITED WORLDWIDE — capped at 6; "See more" leaves the
-                            // home screen and opens the full directory sorted the same way
-                            // (by likeCount), instead of expanding in place.
                             Text(strings.mostFavoritedWorldwide, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                             if (mostFavoritedBusinesses.isEmpty()) {
                                 Text(strings.noBusinessesYetHome, modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = MeTontGrey)
@@ -865,19 +800,6 @@ fun MapScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    // A System Trace of a hamburger-triggered freeze showed Maps SDK doing
-                    // real re-initialization work (MapContainer.ensureMapStarted,
-                    // GmmEventBusImpl.register, PhoenixGoogleMapActivityEnvironment.getMap/
-                    // getGmmCamera/createGmmCamera) directly inside a Compose applyChanges
-                    // pass — i.e. triggered BY a recomposition, not by navigation. onMapLoaded
-                    // and onMapClick below were plain inline lambdas, so GoogleMap saw a brand
-                    // new callback reference on every recomposition (including whichever one
-                    // the drawer's own state/animation was causing), and appears to redo
-                    // listener registration each time it does. rememberUpdatedState +
-                    // remember gives GoogleMap one stable callback reference for the whole
-                    // composable's lifetime, while still always running the latest logic
-                    // inside it — same fix shape as the MapProperties/MapUiSettings remember
-                    // above, just for callbacks instead of data objects.
                     val currentOnMapLoaded by rememberUpdatedState { mapReady = true }
                     val stableOnMapLoaded = remember { { currentOnMapLoaded() } }
 
@@ -891,10 +813,6 @@ fun MapScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        // remember'd so these keep stable identity across recompositions —
-                        // constructing new instances every recomposition was one of the
-                        // triggers behind Maps SDK repeatedly re-resolving the map instance
-                        // (PhoenixGoogleMapActivityEnvironment.getMap(), seen 91x in one trace).
                         properties = remember(hasLocationPermission) { MapProperties(isMyLocationEnabled = hasLocationPermission) },
                         uiSettings = remember { MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false) },
                         onMapLoaded = stableOnMapLoaded,
@@ -911,14 +829,46 @@ fun MapScreen(
                             onClusterItemClick = { item ->
                                 selectedSheetBusiness = item.business
                                 true
+                            },
+                            clusterItemContent = { item ->
+                                val business = item.business
+                                val icon = when {
+                                    business.isSponsored -> markerSponsored
+                                    business.isFeatured -> markerFeatured
+                                    business.isPremium -> markerPremium
+                                    else -> markerFree
+                                }
+                                // Clustering doesn't directly take BitmapDescriptor for content,
+                                // but we can use Marker inside. However, maps-compose Clustering
+                                // uses standard markers if content is null.
+                                // For custom tier markers, it's best to handle them in Clustering renderer
+                                // or use custom clusterItemContent with Image.
+                                val iconRes = when {
+                                    business.isSponsored -> R.drawable.metont_gold
+                                    business.isFeatured -> R.drawable.metont_silver
+                                    business.isPremium -> R.drawable.metont_bronze
+                                    else -> null
+                                }
+                                
+                                if (iconRes != null) {
+                                    Image(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                } else {
+                                    // Default asset marker
+                                    Image(
+                                        painter = painterResource(id = R.drawable.metont_nobackgroundcolor), // Fallback
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        alpha = 0.8f
+                                    )
+                                }
                             }
                         )
                     }
 
-                    // LOADING OVERLAY — covers the map area with an intentional
-                    // loading state instead of leaving it blank while GoogleMap
-                    // initializes. See the mapReady comment above for why this
-                    // matters beyond just cosmetics.
                     if (!mapReady) {
                         Box(
                             modifier = Modifier
@@ -1020,9 +970,6 @@ fun MapScreen(
                         }
                         FloatingActionButton(
                             onClick = {
-                                // Snap directly instead of animate()-ing — no risk of an
-                                // interrupted-animation exception from a second tap, and
-                                // no job bookkeeping needed either.
                                 val target = userLocation ?: TIRANA_LOCATION
                                 cameraPositionState.position = CameraPosition.fromLatLngZoom(target, 15f)
                             },
@@ -1054,9 +1001,6 @@ fun BadgeChip(label: String, color: Color) {
     }
 }
 
-// Toggle shown under Top Recommended and Near You — those sections cap
-// themselves at 2 items by default and hand this button the current
-// expanded/collapsed state plus a callback to flip it in place.
 @Composable
 private fun SeeMoreButton(
     expanded: Boolean,
@@ -1082,10 +1026,6 @@ private fun SeeMoreButton(
     }
 }
 
-// Shown under Community Announcements and Most Favorited Worldwide — those
-// sections cap themselves at 6 items and never expand in place; this always
-// navigates away to a full dedicated screen instead, so it uses a forward
-// chevron rather than SeeMoreButton's up/down toggle arrow.
 @Composable
 private fun SeeMoreNavButton(
     onClick: () -> Unit,
@@ -1110,10 +1050,6 @@ private fun SeeMoreNavButton(
     }
 }
 
-// Full-width card used by "Near You" — a large photo on top (with a tier
-// badge overlaid for sponsored/featured/premium businesses) and
-// name/category/rating in a white strip below. Stacked vertically instead of
-// side-scrolling like the smaller MapBusinessCard used by the other carousels.
 @Composable
 private fun FeaturedPickCard(
     business: Business,
@@ -1149,10 +1085,6 @@ private fun FeaturedPickCard(
                         Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(36.dp))
                     }
                 }
-                // Same tier badge system used everywhere else in the app (business
-                // list rows, detail page) — gold/silver/bronze for
-                // sponsored/featured/premium — rather than a one-off badge design
-                // just for this card.
                 val tierColor = when {
                     business.isSponsored -> TierGold
                     business.isFeatured -> TierSilver
@@ -1204,11 +1136,6 @@ private fun FeaturedPickCard(
     }
 }
 
-// Shared card for the map bottom sheet's carousels (Top Recommended, Near You,
-// Most Favorited Worldwide) — previously each of the three duplicated the same
-// layout inline with a circular category-icon placeholder and no photo at all.
-// Consolidated into one composable so the photo treatment (and any future
-// styling) only needs to change in one place instead of three.
 @Composable
 private fun MapBusinessCard(
     business: Business,
