@@ -24,9 +24,17 @@ class BillingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // Play Billing Library 8 removed the no-arg enablePendingPurchases(). Per
+    // the migration guide, PendingPurchasesParams.newBuilder().enableOneTimeProducts()
+    // is the exact functional equivalent of the old no-arg call, so behavior
+    // here is unchanged — just the required syntax for PBL 8+.
     private var billingClient = BillingClient.newBuilder(application)
         .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases()
+        .enablePendingPurchases(
+            PendingPurchasesParams.newBuilder()
+                .enableOneTimeProducts()
+                .build()
+        )
         .build()
 
     private val _isBillingConnected = MutableStateFlow(false)
@@ -77,9 +85,13 @@ class BillingViewModel(application: Application) : AndroidViewModel(application)
             .setProductList(productList)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        // PBL 8 changed this callback's signature: it now hands back a
+        // QueryProductDetailsResult (successfully fetched products plus an
+        // unfetchedProductList for ones that couldn't be found) instead of a
+        // plain List<ProductDetails> directly.
+        billingClient.queryProductDetailsAsync(params) { billingResult, queryProductDetailsResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                _products.value = productDetailsList
+                _products.value = queryProductDetailsResult.productDetailsList
             }
         }
     }

@@ -5,6 +5,7 @@
 package com.albbiz.map.ui.screens
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -88,9 +89,12 @@ private suspend fun requestGoogleIdToken(context: Context): String? {
         }
     } catch (e: GetCredentialException) {
         // Includes user cancellation (tapped outside the picker), no Google
-        // account on the device, or the request being misconfigured (e.g. the
-        // TODO above not being filled in yet) — all surfaced as null here and
-        // handled as a normal auth error by the caller.
+        // account on the device, or the request being misconfigured — all
+        // surfaced as null here and handled as a normal auth error by the
+        // caller, so the user doesn't see a scary error for a plain cancel.
+        // Logged with the real exception type/message though, since "null" on
+        // its own is indistinguishable from a genuine cancel while debugging.
+        Log.e("GoogleSignIn", "requestGoogleIdToken failed: type=${e.type} message=${e.message}", e)
         null
     }
 }
