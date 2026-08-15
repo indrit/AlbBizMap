@@ -1,0 +1,5 @@
+# Robots.txt for metont.com
+User-agent: *
+Allow: /
+
+Sitemap: https://metont.com/sitemap.xml

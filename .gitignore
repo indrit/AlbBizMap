@@ -1,0 +1,27 @@
+# Security & Keys (Do NOT push to Git)
+android/keystores/
+android/pass-paths-keys.txt
+android/app/release/
+*.keystore
+*.jks
+local.properties
+
+# Build & Output Cache
+.gradle/
+build/
+android/build/
+android/app/build/
+android/baselineprofile/build/
+hs_err_pid*.log
+replay_pid*.log
+*.log
+
+# Dependencies
+node_modules/
+web/node_modules/
+.idea/
+android/.idea/
+
+# OS Temp Files
+.DS_Store
+Thumbs.db

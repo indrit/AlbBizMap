@@ -1,0 +1,80 @@
+// Bismillah Hir Rahman Nir Raheem
+
+export type AppLanguage = 'en' | 'sq';
+
+export const TRANSLATIONS = {
+  en: {
+    appName: "MeTont",
+    searchPlaceholder: "Search businesses, categories, cities...",
+    nearMe: "Near Me",
+    addBusiness: "Add My Business",
+    directory: "Directory",
+    sponsoredNearYou: "Sponsored Near You",
+    featuredBusinesses: "Featured Businesses",
+    topRated: "Top Rated Businesses",
+    communityEvents: "Community Events",
+    jobBoard: "Job Postings",
+    stories: "Community Stories",
+    signIn: "Sign In",
+    signUp: "Create Account",
+    profile: "My Profile",
+    pricing: "Plans & Pricing",
+    privacyPolicy: "Privacy Policy",
+    termsOfService: "Terms of Service",
+    verified: "Verified",
+    albanianOwned: "Albanian Owned",
+    sponsored: "Sponsored",
+    premium: "Premium",
+    getDirections: "Get Directions",
+    writeReview: "Write Review",
+    claimBusiness: "Claim Business",
+    contactOwner: "Contact Owner",
+    allCategories: "All Categories",
+    restaurant: "Restaurant",
+    cafe: "Cafe",
+    market: "Market",
+    contractor: "Contractor",
+    lawyer: "Lawyer",
+    dentist: "Dentist",
+    other: "Other"
+  },
+  sq: {
+    appName: "MeTont",
+    searchPlaceholder: "Kërko biznese, kategori, qytete...",
+    nearMe: "Pranë Meje",
+    addBusiness: "Shto Biznesin Tim",
+    directory: "Drejtori",
+    sponsoredNearYou: "Sponsorizuar Pranë Jush",
+    featuredBusinesses: "Bizneset e Rëndësishme",
+    topRated: "Më të Vlerësuarit",
+    communityEvents: "Ngjarjet e Komunitetit",
+    jobBoard: "Oferta Pune",
+    stories: "Histori & Stories",
+    signIn: "Hyr",
+    signUp: "Krijo Llogari",
+    profile: "Profili Im",
+    pricing: "Planet & Çmimet",
+    privacyPolicy: "Politika e Privatësisë",
+    termsOfService: "Kushtet e Shërbimit",
+    verified: "Verifikuar",
+    albanianOwned: "Pronë Shqiptare",
+    sponsored: "Sponsorizuar",
+    premium: "Premium",
+    getDirections: "Drejtimet",
+    writeReview: "Shkruaj Vlerësim",
+    claimBusiness: "Kërko Biznesin",
+    contactOwner: "Konto Pronarin",
+    allCategories: "Të gjitha",
+    restaurant: "Restorant",
+    cafe: "Kafe",
+    market: "Market",
+    contractor: "Ndërtim",
+    lawyer: "Avokat",
+    dentist: "Stomatolog",
+    other: "Të tjera"
+  }
+};
+
+export function getTranslation(lang: AppLanguage) {
+  return TRANSLATIONS[lang] || TRANSLATIONS.en;
+}

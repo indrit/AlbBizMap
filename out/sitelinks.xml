@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitelinks xmlns="http://www.google.com/schemas/sitelinks/1.0">
+  <site name="MeTont" url="https://metont.com">
+    <sitelink name="Business Directory" url="https://metont.com/#directory" description="Browse verified Albanian businesses worldwide" />
+    <sitelink name="Add My Business" url="https://metont.com/#add-business" description="Register your Albanian business on Web, Android, and iOS" />
+    <sitelink name="Plans &amp; Pricing" url="https://metont.com/#pricing" description="Explore Premium, Featured, and Sponsored plans" />
+    <sitelink name="Privacy Policy" url="https://metont.com/#privacy-policy" description="Privacy rights and data protection policy" />
+    <sitelink name="Terms of Service" url="https://metont.com/#terms-of-service" description="Terms and conditions for MeTont services" />
+  </site>
+</sitelinks>
