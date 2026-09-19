@@ -25,3 +25,10 @@ android/.idea/
 # OS Temp Files
 .DS_Store
 Thumbs.db
+
+# Xcode / iOS
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/**/DerivedData/
+ios/**/.build/
+ios/**/*.xcscmblueprint

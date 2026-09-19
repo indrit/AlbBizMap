@@ -8,9 +8,9 @@ public struct BusinessListScreen: View {
     public let sortBy: String
     public let onBackClick: () -> Void
     public let onBusinessClick: (String) -> Void
-    public let onNavigateToAuth: (() -> Void) -> Void
+    public let onNavigateToAuth: (@escaping () -> Void) -> Void
     
-    public init(viewModel: MapViewModel, sortBy: String = "default", onBackClick: @escaping () -> Void, onBusinessClick: @escaping (String) -> Void, onNavigateToAuth: @escaping ((() -> Void)) -> Void) {
+    public init(viewModel: MapViewModel, sortBy: String = "default", onBackClick: @escaping () -> Void, onBusinessClick: @escaping (String) -> Void, onNavigateToAuth: @escaping (@escaping () -> Void) -> Void) {
         self.viewModel = viewModel
         self.sortBy = sortBy
         self.onBackClick = onBackClick

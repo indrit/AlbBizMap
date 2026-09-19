@@ -10,7 +10,7 @@ public struct BusinessDetailScreen: View {
     public let onEditClick: () -> Void
     public let onBackClick: () -> Void
     public let onUpgradeClick: () -> Void
-    public let onNavigateToAuth: (() -> Void) -> Void
+    public let onNavigateToAuth: (@escaping () -> Void) -> Void
     @ObservedObject public var mapViewModel: MapViewModel
     
     public init(
@@ -20,7 +20,7 @@ public struct BusinessDetailScreen: View {
         onEditClick: @escaping () -> Void,
         onBackClick: @escaping () -> Void,
         onUpgradeClick: @escaping () -> Void,
-        onNavigateToAuth: @escaping ((() -> Void)) -> Void,
+        onNavigateToAuth: @escaping (@escaping () -> Void) -> Void,
         mapViewModel: MapViewModel
     ) {
         self.business = business

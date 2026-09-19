@@ -273,6 +273,17 @@ public struct ContentView: View {
                             }
                         },
                         currentLanguage: currentLanguage,
+                        currentUserName: {
+                            let fullName = [authViewModel.currentUser?.firstName, authViewModel.currentUser?.lastName]
+                                .compactMap { $0 }
+                                .filter { !$0.isEmpty }
+                                .joined(separator: " ")
+                            if !fullName.isEmpty { return fullName }
+                            if let email = authViewModel.currentUser?.email, !email.isEmpty {
+                                return String(email.split(separator: "@").first ?? "User")
+                            }
+                            return "User"
+                        }(),
                         onLogout: {
                             closeAllOverlays()
                             authViewModel.logout()
