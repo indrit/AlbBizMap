@@ -88,6 +88,7 @@ public struct ContentView: View {
                     if showProfileOverlay {
                         UserProfileScreen(
                             viewModel: authViewModel,
+                            mapViewModel: mapViewModel,
                             onBackClick: { showProfileOverlay = false },
                             onLogout: {
                                 closeAllOverlays()
@@ -95,6 +96,10 @@ public struct ContentView: View {
                             },
                             onAdminClick: { showAdminOverlay = true },
                             onMyBusinessesClick: { showMyBusinessesOverlay = true },
+                            onMyEventsClick: {
+                                showProfileOverlay = false
+                                showEventsOverlay = true
+                            },
                             currentLanguage: currentLanguage,
                             onLanguageChange: { currentLanguage = $0 }
                         )

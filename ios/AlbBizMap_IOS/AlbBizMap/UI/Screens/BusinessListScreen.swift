@@ -55,8 +55,12 @@ public struct BusinessListScreen: View {
                                 business: biz,
                                 isFavorite: viewModel.favoriteIds.contains(biz.id),
                                 onFavoriteToggle: {
-                                    onNavigateToAuth {
+                                    if AuthManager.shared.isLoggedIn {
                                         viewModel.toggleFavorite(businessId: biz.id, userId: AuthManager.shared.currentUser?.uid ?? "")
+                                    } else {
+                                        onNavigateToAuth {
+                                            viewModel.toggleFavorite(businessId: biz.id, userId: AuthManager.shared.currentUser?.uid ?? "")
+                                        }
                                     }
                                 },
                                 onClick: {

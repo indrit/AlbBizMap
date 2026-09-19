@@ -79,8 +79,12 @@ public struct BusinessDetailScreen: View {
                         
                         let isFav = mapViewModel.favoriteIds.contains(business.id)
                         Button(action: {
-                            onNavigateToAuth {
+                            if AuthManager.shared.isLoggedIn {
                                 mapViewModel.toggleFavorite(businessId: business.id, userId: currentUserId)
+                            } else {
+                                onNavigateToAuth {
+                                    mapViewModel.toggleFavorite(businessId: business.id, userId: AuthManager.shared.currentUser?.uid ?? "")
+                                }
                             }
                         }) {
                             Image(systemName: isFav ? "heart.fill" : "heart")

@@ -3,132 +3,320 @@ import SwiftUI
 
 public struct UserProfileScreen: View {
     @Environment(\.appStrings) private var strings
-    
+
     @ObservedObject public var viewModel: AuthViewModel
+    @ObservedObject public var mapViewModel: MapViewModel
     public let onBackClick: () -> Void
     public let onLogout: () -> Void
     public let onAdminClick: () -> Void
     public let onMyBusinessesClick: () -> Void
+    public let onMyEventsClick: () -> Void
     public let currentLanguage: AppLanguage
     public let onLanguageChange: (AppLanguage) -> Void
-    
+
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
+    @State private var isSaving: Bool = false
+    @State private var saveMessage: String? = nil
+
     public init(
         viewModel: AuthViewModel,
+        mapViewModel: MapViewModel,
         onBackClick: @escaping () -> Void,
         onLogout: @escaping () -> Void,
         onAdminClick: @escaping () -> Void,
         onMyBusinessesClick: @escaping () -> Void,
+        onMyEventsClick: @escaping () -> Void,
         currentLanguage: AppLanguage,
         onLanguageChange: @escaping (AppLanguage) -> Void
     ) {
         self.viewModel = viewModel
+        self.mapViewModel = mapViewModel
         self.onBackClick = onBackClick
         self.onLogout = onLogout
         self.onAdminClick = onAdminClick
         self.onMyBusinessesClick = onMyBusinessesClick
+        self.onMyEventsClick = onMyEventsClick
         self.currentLanguage = currentLanguage
         self.onLanguageChange = onLanguageChange
     }
-    
+
+    private var ownedBusinesses: [Business] {
+        guard let uid = viewModel.currentUser?.uid else { return [] }
+        return mapViewModel.businesses.filter { $0.ownerId == uid }
+    }
+
+    private var ownedEventCount: Int {
+        guard let uid = viewModel.currentUser?.uid else { return 0 }
+        return EventsRepository.shared.events.filter { $0.organizerId == uid }.count
+    }
+
+    private var tierColor: Color? {
+        if ownedBusinesses.contains(where: { $0.isSponsored }) { return .tierGold }
+        if ownedBusinesses.contains(where: { $0.isFeatured }) { return .tierSilver }
+        if ownedBusinesses.contains(where: { $0.isPremium }) { return .tierBronze }
+        return nil
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: onBackClick) {
-                    Image(systemName: "chevron.left").font(.title2).foregroundColor(.meTontBlack)
-                }
-                Text(strings.myProfile)
-                    .font(.title2).fontWeight(.bold)
-                Spacer()
-            }
-            .padding().background(Color.white)
-            
+            topAppBar
+
             ScrollView {
-                VStack(spacing: 20) {
-                    // Profile Header Card
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.meTontRed.opacity(0.1))
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.meTontRed)
-                        }
-                        
-                        Text("\(viewModel.currentUser?.firstName ?? "User") \(viewModel.currentUser?.lastName ?? "")")
-                            .font(.title3).fontWeight(.bold)
-                        Text(viewModel.currentUser?.email ?? "")
-                            .font(.subheadline).foregroundColor(.gray)
+                VStack(spacing: 0) {
+                    header
+                        .padding(.bottom, 16)
+
+                    personalInfoCard
+                        .padding(.horizontal, 16)
+
+                    Spacer().frame(height: 12)
+
+                    navCard(
+                        icon: "storefront.fill",
+                        title: strings.myBusinesses,
+                        subtitle: ownedBusinesses.isEmpty
+                            ? strings.myBusinessesSubtitle
+                            : "\(ownedBusinesses.count) \(ownedBusinesses.count == 1 ? "business" : "businesses")",
+                        action: onMyBusinessesClick
+                    )
+                    .padding(.horizontal, 16)
+
+                    Spacer().frame(height: 12)
+
+                    navCard(
+                        icon: "calendar",
+                        title: strings.myEvents,
+                        subtitle: ownedEventCount > 0
+                            ? "\(ownedEventCount) \(ownedEventCount == 1 ? "event" : "events")"
+                            : strings.myEventsSubtitle,
+                        action: onMyEventsClick
+                    )
+                    .padding(.horizontal, 16)
+
+                    if viewModel.currentUser?.isAdmin == true {
+                        Spacer().frame(height: 12)
+                        navCard(
+                            icon: "shield.fill",
+                            title: "Admin Panel",
+                            subtitle: "Manage claims and data",
+                            background: Color(red: 0xFF/255.0, green: 0xEB/255.0, blue: 0xEE/255.0),
+                            action: onAdminClick
+                        )
+                        .padding(.horizontal, 16)
                     }
-                    .padding(20)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.white)
-                    .cornerRadius(16)
-                    
-                    // Options Card
-                    VStack(spacing: 0) {
-                        profileOptionRow(icon: "building.2.fill", title: strings.myBusinesses) {
-                            onMyBusinessesClick()
-                        }
-                        Divider()
-                        
-                        if viewModel.currentUser?.isAdmin == true {
-                            profileOptionRow(icon: "shield.fill", title: "Admin Dashboard", color: .purple) {
-                                onAdminClick()
-                            }
-                            Divider()
-                        }
-                        
-                        // Language Switcher Row
-                        HStack {
-                            Image(systemName: "globe")
-                                .foregroundColor(.meTontRed)
-                                .frame(width: 24)
-                            Text("Language")
-                                .font(.body)
-                            Spacer()
-                            Picker("Language", selection: Binding(
-                                get: { currentLanguage },
-                                set: { onLanguageChange($0) }
-                            )) {
-                                Text("English").tag(AppLanguage.en)
-                                Text("Shqip").tag(AppLanguage.sq)
-                            }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .frame(width: 140)
-                        }
-                        .padding(16)
-                        
-                        Divider()
-                        
-                        profileOptionRow(icon: "rectangle.portrait.and.arrow.right", title: strings.logout, color: .red) {
-                            onLogout()
-                        }
-                    }
-                    .background(Color.white)
-                    .cornerRadius(16)
+
+                    Spacer().frame(height: 12)
+
+                    languageCard
+                        .padding(.horizontal, 16)
+
+                    Spacer().frame(height: 12)
+
+                    logoutButton
+                        .padding(.horizontal, 16)
+
+                    Spacer().frame(height: 32)
                 }
-                .padding(16)
             }
         }
         .background(Color.meTontBackground)
+        .onAppear {
+            if let name = viewModel.currentUser?.firstName, !name.isEmpty {
+                firstName = viewModel.currentUser?.firstName ?? ""
+                lastName = viewModel.currentUser?.lastName ?? ""
+            }
+        }
     }
-    
-    private func profileOptionRow(icon: String, title: String, color: Color = .meTontBlack, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.headline)
-                    .foregroundColor(color)
-                    .frame(width: 24)
-                Text(title)
-                    .font(.body)
-                    .foregroundColor(color)
-                Spacer()
-                Image(systemName: "chevron.right")
+
+    private var topAppBar: some View {
+        HStack(spacing: 8) {
+            Button(action: onBackClick) {
+                Image(systemName: "chevron.left").foregroundColor(.white)
+            }
+            Text(strings.myProfile)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.meTontRed)
+    }
+
+    private var header: some View {
+        VStack(spacing: 8) {
+            if let tierColor {
+                ZStack {
+                    Circle().fill(Color.white.opacity(0.15)).frame(width: 80, height: 80)
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 34))
+                        .foregroundColor(tierColor)
+                }
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.white)
+            }
+
+            Text(firstName.isEmpty ? "User" : "\(firstName) \(lastName)")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+            Text(viewModel.currentUser?.email ?? "")
+                .font(.system(size: 13))
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(Color.meTontRed)
+    }
+
+    private var personalInfoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(strings.personalInformation)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.meTontRed)
+
+            profileTextField(title: strings.firstName, text: $firstName)
+            profileTextField(title: strings.lastName, text: $lastName)
+
+            if let saveMessage {
+                Text(saveMessage)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            .padding(16)
+
+            Button(action: saveProfile) {
+                HStack {
+                    if isSaving {
+                        ProgressView().tint(.white)
+                    }
+                    Text(strings.saveProfile).fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(Color.meTontRed)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isSaving)
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    private func profileTextField(title: String, text: Binding<String>) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "person.fill").foregroundColor(.meTontRed)
+            TextField(title, text: text)
+        }
+        .padding(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))
+    }
+
+    private func navCard(icon: String, title: String, subtitle: String, background: Color = .white, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 26))
+                .foregroundColor(.meTontRed)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.meTontRed)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+            Button(action: action) {
+                Text(strings.openButton)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.meTontRed)
+                    .cornerRadius(8)
+            }
+        }
+        .padding(16)
+        .background(background)
+        .cornerRadius(16)
+    }
+
+    private var languageCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Language / Gjuha")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.meTontRed)
+            HStack(spacing: 8) {
+                languageButton(title: "🇬🇧 English", isSelected: currentLanguage == .en) {
+                    onLanguageChange(.en)
+                }
+                languageButton(title: "🇦🇱 Shqip", isSelected: currentLanguage == .sq) {
+                    onLanguageChange(.sq)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    private func languageButton(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14))
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .foregroundColor(isSelected ? .white : .meTontRed)
+                .background(isSelected ? Color.meTontRed : Color.clear)
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed, lineWidth: 1))
+        }
+    }
+
+    private var logoutButton: some View {
+        Button(action: {
+            viewModel.logout()
+            onLogout()
+        }) {
+            HStack {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text(strings.logout).fontWeight(.bold)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .foregroundColor(.meTontRed)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed, lineWidth: 1))
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    private func saveProfile() {
+        guard !firstName.trimmingCharacters(in: .whitespaces).isEmpty else {
+            saveMessage = strings.firstNameRequired
+            return
+        }
+        isSaving = true
+        saveMessage = nil
+        let displayName = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+        Task {
+            let result = await AuthManager.shared.updateDisplayName(displayName)
+            await MainActor.run {
+                isSaving = false
+                switch result {
+                case .success:
+                    viewModel.currentUser?.firstName = firstName
+                    viewModel.currentUser?.lastName = lastName
+                    saveMessage = strings.profileSaved
+                case .failure:
+                    saveMessage = strings.profileSaveFailed
+                }
+            }
         }
     }
 }

@@ -12,4 +12,8 @@ public extension Color {
     static let meTontLightGrey = Color(red: 0xF5 / 255.0, green: 0xF5 / 255.0, blue: 0xF5 / 255.0)
     static let meTontBackground = Color(red: 0xFA / 255.0, green: 0xFA / 255.0, blue: 0xFA / 255.0)
     static let meTontGold = Color(red: 255/255.0, green: 215/255.0, blue: 0/255.0)
+    // Tier badge colors for map-screen carousel cards (matches Android Theme.kt).
+    static let tierGold = Color(red: 0xC7 / 255.0, green: 0xBF / 255.0, blue: 0x3F / 255.0)   // Sponsored
+    static let tierSilver = Color(red: 0xC0 / 255.0, green: 0xC0 / 255.0, blue: 0xC0 / 255.0) // Featured
+    static let tierBronze = Color(red: 0xCD / 255.0, green: 0x7F / 255.0, blue: 0x32 / 255.0)  // Premium
 }

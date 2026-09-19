@@ -5,6 +5,17 @@ import SwiftUI
 public struct AppStrings {
     // General
     public var appName: String
+    public var all: String
+    public var topRecommended: String
+    public var nearYou: String
+    public var communityAnnouncements: String
+    public var mostFavoritedWorldwide: String
+    public var noUpcomingEventsShort: String
+    public var noBusinessesYetHome: String
+    public var noBusinessesNearYou: String
+    public var appGrowingMessage: String
+    public var seeMore: String
+    public var seeLess: String
     public var save: String
     public var cancel: String
     public var back: String
@@ -15,6 +26,7 @@ public struct AppStrings {
     // Auth
     public var welcomeTitle: String
     public var welcomeDesc: String
+    public var appTagline: String
     public var getStarted: String
     public var signIn: String
     public var signUp: String
@@ -61,6 +73,9 @@ public struct AppStrings {
     public var workingHours: String
     public var promotions: String
     public var jobs: String
+    public var jobsEmptyTitle: String
+    public var jobsEmptySubtitle: String
+    public var viewProfile: String
     public var readMore: String
     public var readLess: String
     public var category: String
@@ -92,6 +107,7 @@ public struct AppStrings {
     public var changePhoto: String
     public var promoted: String
     public var viewEventWebsite: String
+    public var couldntOpenLink: String
     
     // Reviews
     public var rateThisBusiness: String
@@ -116,6 +132,9 @@ public struct AppStrings {
     public var noBusinessesYet: String
     public var noBusinessesYetSubtitle: String
     public var myBusinessesSubtitle: String
+    public var myEvents: String
+    public var myEventsSubtitle: String
+    public var openButton: String
     public var noSearchResults: String
     public var upgradePremiumTitle: String
     
@@ -188,6 +207,17 @@ public struct AppStrings {
     
     public static let english = AppStrings(
         appName: "MeTont",
+        all: "All",
+        topRecommended: "Top Recommended",
+        nearYou: "Near You",
+        communityAnnouncements: "Community Announcements",
+        mostFavoritedWorldwide: "Most Favorited Worldwide",
+        noUpcomingEventsShort: "No upcoming events",
+        noBusinessesYetHome: "No businesses yet",
+        noBusinessesNearYou: "No businesses near you",
+        appGrowingMessage: "The app is still growing in your area",
+        seeMore: "See more",
+        seeLess: "See less",
         save: "Save",
         cancel: "Cancel",
         back: "Back",
@@ -196,6 +226,7 @@ public struct AppStrings {
         welcomeUser: "Welcome",
         welcomeTitle: "Welcome to Albanian Business App",
         welcomeDesc: "Register your business, or explore the Albanian business map in your area and beyond.",
+        appTagline: "Albanian Business Directory",
         getStarted: "Get Started",
         signIn: "Sign In",
         signUp: "Create Account",
@@ -236,6 +267,9 @@ public struct AppStrings {
         workingHours: "Working Hours",
         promotions: "Promotions & Deals",
         jobs: "Job Postings",
+        jobsEmptyTitle: "No job postings yet",
+        jobsEmptySubtitle: "Check back soon for new openings",
+        viewProfile: "View Profile",
         readMore: "Read more",
         readLess: "Read less",
         category: "Category",
@@ -263,6 +297,7 @@ public struct AppStrings {
         changePhoto: "Change Photo",
         promoted: "PROMOTED",
         viewEventWebsite: "View Event Website",
+        couldntOpenLink: "Couldn't open link",
         rateThisBusiness: "Rate this business",
         tapStarToRate: "Tap a star to select a rating",
         shareExperience: "Share your experience...",
@@ -281,6 +316,9 @@ public struct AppStrings {
         noBusinessesYet: "You don't have any businesses yet",
         noBusinessesYetSubtitle: "Add your business to reach more customers",
         myBusinessesSubtitle: "Manage your business listings",
+        myEvents: "My Events",
+        myEventsSubtitle: "Manage your events",
+        openButton: "Open",
         noSearchResults: "No results found",
         upgradePremiumTitle: "Upgrade to Premium",
         firstNameRequired: "First name is required",
@@ -347,6 +385,17 @@ public struct AppStrings {
     
     public static let albanian = AppStrings(
         appName: "MeTont",
+        all: "Të gjitha",
+        topRecommended: "Më të Rekomanduarat",
+        nearYou: "Afër Jush",
+        communityAnnouncements: "Njoftime nga Komuniteti",
+        mostFavoritedWorldwide: "Më të Preferuarat Botërisht",
+        noUpcomingEventsShort: "Nuk ka evente të ardhshme",
+        noBusinessesYetHome: "Ende nuk ka biznese",
+        noBusinessesNearYou: "Nuk ka biznese afër jush",
+        appGrowingMessage: "Aplikacioni po rritet ende në zonën tuaj",
+        seeMore: "Më shumë",
+        seeLess: "Më pak",
         save: "Ruaj",
         cancel: "Anulo",
         back: "Kthehu",
@@ -355,6 +404,7 @@ public struct AppStrings {
         welcomeUser: "Mirë se vini",
         welcomeTitle: "Mirësevini në MeTont",
         welcomeDesc: "Regjistroni biznesin tuaj, ose eksploroni hartën e bizneseve shqiptare në zonën tuaj dhe më gjerë.",
+        appTagline: "Direktoria e Bizneseve Shqiptare",
         getStarted: "Fillo Tani",
         signIn: "Hyr",
         signUp: "Krijo Llogari",
@@ -395,6 +445,9 @@ public struct AppStrings {
         workingHours: "Orari i Punës",
         promotions: "Promocione dhe Oferta",
         jobs: "Oferta Pune",
+        jobsEmptyTitle: "Ende nuk ka oferta pune",
+        jobsEmptySubtitle: "Kontrolloni së shpejti për vende të reja pune",
+        viewProfile: "Shiko Profilin",
         readMore: "Lexo më shumë",
         readLess: "Lexo më pak",
         category: "Kategoria",
@@ -422,6 +475,7 @@ public struct AppStrings {
         changePhoto: "Ndrysho Foton",
         promoted: "PROMOVUAR",
         viewEventWebsite: "Shiko Faqen e Ngjarjes",
+        couldntOpenLink: "Nuk mund të hapej lidhja",
         rateThisBusiness: "Vlerëso këtë biznes",
         tapStarToRate: "Trokitni një yll për të vlerësuar",
         shareExperience: "Ndani përvojën tuaj...",
@@ -440,6 +494,9 @@ public struct AppStrings {
         noBusinessesYet: "Ende nuk keni asnjë biznes",
         noBusinessesYetSubtitle: "Shtoni biznesin tuaj për të arritur më shumë klientë",
         myBusinessesSubtitle: "Menaxhoni listimet e biznesit tuaj",
+        myEvents: "Ngjarjet e Mia",
+        myEventsSubtitle: "Menaxhoni ngjarjet tuaja",
+        openButton: "Hap",
         noSearchResults: "Nuk u gjetën rezultate",
         upgradePremiumTitle: "Kalo në Premium",
         firstNameRequired: "Emri është i detyrueshëm",
