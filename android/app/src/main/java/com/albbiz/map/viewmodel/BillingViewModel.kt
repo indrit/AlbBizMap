@@ -141,7 +141,7 @@ class BillingViewModel(application: Application) : AndroidViewModel(application)
         // belongs to instead of just losing track of it.
         val billingFlowParams = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(productDetailsParamsList)
-            .setObfuscatedAccountIdParams(businessId)
+            .setObfuscatedAccountId(businessId)
             .build()
 
         billingClient.launchBillingFlow(activity, billingFlowParams)

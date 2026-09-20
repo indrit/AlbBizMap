@@ -12,11 +12,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.albbiz.map.ui.AppLanguage
+import com.albbiz.map.ui.AuthGatePrompt
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.ProvideAppStrings
 import com.albbiz.map.ui.screens.*
@@ -671,26 +670,19 @@ class MainActivity : ComponentActivity() {
                                 // instead of just yanking the guest away from what they
                                 // were doing. Declining just closes the prompt and
                                 // forgets the pending action; confirming opens the auth
-                                // overlay above, which resumes it on success.
+                                // overlay above, which resumes it on success. Custom
+                                // scrim/card/lock-icon design matching the iOS
+                                // AuthGatePrompt, replacing the plain AlertDialog this
+                                // used to be.
                                 if (showLoginPrompt) {
-                                    AlertDialog(
-                                        onDismissRequest = {
+                                    AuthGatePrompt(
+                                        onConfirm = {
+                                            showLoginPrompt = false
+                                            showAuthOverlay = true
+                                        },
+                                        onDismiss = {
                                             showLoginPrompt = false
                                             pendingLoginAction = null
-                                        },
-                                        title = { Text(strings.signIn) },
-                                        text = { Text(strings.signInToContinue) },
-                                        confirmButton = {
-                                            TextButton(onClick = {
-                                                showLoginPrompt = false
-                                                showAuthOverlay = true
-                                            }) { Text(strings.signIn) }
-                                        },
-                                        dismissButton = {
-                                            TextButton(onClick = {
-                                                showLoginPrompt = false
-                                                pendingLoginAction = null
-                                            }) { Text(strings.notNow) }
                                         }
                                     )
                                 }
