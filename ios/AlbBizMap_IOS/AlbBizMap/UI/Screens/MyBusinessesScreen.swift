@@ -32,7 +32,12 @@ public struct MyBusinessesScreen: View {
             .padding().background(Color.white)
             
             let uid = AuthManager.shared.currentUser?.uid ?? ""
-            let myBizList = viewModel.businesses.filter { $0.ownerId == uid }
+            // Owner-scoped listener (FirestoreService.ownedBusinesses) rather than
+            // filtering viewModel.businesses — the latter only ever holds active
+            // businesses, so a business the owner deactivated via Edit Business'
+            // Active Status toggle would otherwise vanish from here with no way
+            // back to reactivate it.
+            let myBizList = FirestoreService.shared.ownedBusinesses.filter { $0.ownerId == uid }
             
             if myBizList.isEmpty {
                 VStack(spacing: 12) {
@@ -55,16 +60,32 @@ public struct MyBusinessesScreen: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(myBizList) { biz in
-                            BusinessCardView(
-                                business: biz,
-                                isFavorite: viewModel.favoriteIds.contains(biz.id),
-                                onFavoriteToggle: {
-                                    viewModel.toggleFavorite(businessId: biz.id, userId: uid)
-                                },
-                                onClick: {
-                                    onBusinessClick(biz.id)
+                            ZStack(alignment: .topTrailing) {
+                                BusinessCardView(
+                                    business: biz,
+                                    isFavorite: viewModel.favoriteIds.contains(biz.id),
+                                    onFavoriteToggle: {
+                                        viewModel.toggleFavorite(businessId: biz.id, userId: uid)
+                                    },
+                                    onClick: {
+                                        onBusinessClick(biz.id)
+                                    }
+                                )
+                                // Owner-only visibility cue — the public map/list only
+                                // ever show active businesses, so this only ever shows
+                                // here, on the owner's own management screen.
+                                if !biz.isActive {
+                                    Text(strings.inactiveLabel)
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Color(red: 1, green: 0.651, blue: 0.149))
+                                        .cornerRadius(8)
+                                        .padding(.top, 8)
+                                        .padding(.trailing, 20)
                                 }
-                            )
+                            }
                         }
                     }
                     .padding(16)

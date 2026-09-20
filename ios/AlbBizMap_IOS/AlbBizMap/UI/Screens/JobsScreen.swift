@@ -106,7 +106,7 @@ private struct JobListingCard: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.meTontRed)
                 if !business.category.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text("• \(business.category)")
+                    Text("• \(BusinessCategory.displayName(for: business.category))")
                         .font(.system(size: 12))
                         .foregroundColor(.meTontGrey)
                 }

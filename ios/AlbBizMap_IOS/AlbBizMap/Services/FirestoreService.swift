@@ -11,6 +11,13 @@ public class FirestoreService: ObservableObject {
     @Published public var businesses: [Business] = []
     @Published public var claimRequests: [ClaimRequest] = []
     @Published public var favoriteIds: Set<String> = []
+    // Owner's own businesses, unfiltered by isActive — unlike `businesses`
+    // above (which only ever holds active ones, matching the public map/list
+    // query), an owner still needs to see and manage a business they've
+    // deactivated via the new Active Status toggle, so this is a separate
+    // listener scoped to ownerId instead of a client-side filter over the
+    // already-filtered `businesses` array.
+    @Published public var ownedBusinesses: [Business] = []
 
     private let db = Firestore.firestore()
     private lazy var businessesRef = db.collection("businesses")
@@ -20,6 +27,7 @@ public class FirestoreService: ObservableObject {
 
     private var businessesListener: ListenerRegistration?
     private var claimsListener: ListenerRegistration?
+    private var ownedBusinessesListener: ListenerRegistration?
 
     private init() {
         startListening()
@@ -60,6 +68,31 @@ public class FirestoreService: ObservableObject {
             }
     }
 
+    // Called on login/logout (AuthManager.loadUserBackedState) — mirrors
+    // Android's getBusinessesByOwner(uid): a live listener scoped to ownerId,
+    // deliberately with no isActive filter so a deactivated business still
+    // shows up here for its owner to manage/reactivate.
+    public func listenToOwnedBusinesses(userId: String) {
+        ownedBusinessesListener?.remove()
+        guard !userId.isEmpty else {
+            DispatchQueue.main.async { self.ownedBusinesses = [] }
+            return
+        }
+        ownedBusinessesListener = businessesRef
+            .whereField("ownerId", isEqualTo: userId)
+            .addSnapshotListener { [weak self] snapshot, error in
+                if let error = error {
+                    print("Firestore: Error listening for owned businesses: \(error)")
+                    return
+                }
+                guard let snapshot = snapshot else { return }
+                let parsed = snapshot.documents.compactMap { doc -> Business? in
+                    Business.fromMap(id: doc.documentID, map: doc.data())
+                }
+                DispatchQueue.main.async { self?.ownedBusinesses = parsed }
+            }
+    }
+
     // MARK: - Businesses
 
     public func addBusiness(_ business: Business) async -> Result<String, Error> {
@@ -80,6 +113,8 @@ public class FirestoreService: ObservableObject {
         var finalBusiness = business
         finalBusiness.id = docRef.documentID
         finalBusiness.ownerId = currentUser.uid
+        finalBusiness.ownerEmail = currentUser.email ?? ""
+        finalBusiness.ownerName = currentUser.displayName ?? ""
         do {
             try await docRef.setData(finalBusiness.toMap().compactMapValues { $0 })
             return .success(docRef.documentID)
@@ -230,14 +265,52 @@ public class FirestoreService: ObservableObject {
         }
     }
 
+    // Update business ownerId and set isVerified. Also refreshes
+    // ownerEmail/ownerName to the claimant's — otherwise a claim that
+    // actually transfers ownership (type == "claim") would leave the
+    // business's stored owner contact info pointing at the old owner.
     public func approveClaim(_ claim: ClaimRequest) async -> Result<Void, Error> {
         do {
             try await businessesRef.document(claim.businessId).updateData([
                 "ownerId": claim.userId,
+                "ownerEmail": claim.userEmail,
+                "ownerName": claim.userName,
                 "isVerified": true
             ])
             try await claimRequestsRef.document(claim.id).updateData(["status": "approved"])
             return .success(())
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    // Stopgap for the missing RTDN/Cloud-Function subscription-expiry pipeline —
+    // see Business.isEffectivelyPremium/Featured/Sponsored, which already hide
+    // expired perks everywhere they're displayed regardless of this. This is
+    // what actually cleans up the stored flags themselves, so the Admin tab's
+    // Businesses & Plans table (which deliberately shows raw, un-masked state)
+    // stops listing them. Takes the already-loaded list rather than re-querying.
+    public func clearExpiredPlans(_ businesses: [Business]) async -> Result<Int, Error> {
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        var clearedCount = 0
+        do {
+            for business in businesses {
+                var updates: [String: Any] = [:]
+                if business.isPremium, let until = business.premiumUntil, until < now {
+                    updates["isPremium"] = false
+                }
+                if business.isFeatured, let until = business.premiumUntil, until < now {
+                    updates["isFeatured"] = false
+                }
+                if business.isSponsored, let until = business.sponsoredUntil, until < now {
+                    updates["isSponsored"] = false
+                }
+                if !updates.isEmpty {
+                    try await businessesRef.document(business.id).updateData(updates)
+                    clearedCount += 1
+                }
+            }
+            return .success(clearedCount)
         } catch {
             return .failure(error)
         }

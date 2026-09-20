@@ -24,6 +24,10 @@ public struct DrawerMenuView: View {
         currentUserName.split(separator: " ").first.map(String.init) ?? currentUserName
     }
     
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+    
     public var body: some View {
         ZStack(alignment: .leading) {
             if isOpen {
@@ -100,7 +104,15 @@ public struct DrawerMenuView: View {
                     drawerItem(icon: "rectangle.portrait.and.arrow.right", title: strings.logout, iconColor: .meTontRed, textColor: .meTontRed, bold: true) {
                         onLogout()
                     }
-                    .padding(.bottom, 12)
+
+                    // Matches Android's drawer footer, but reads the app's real
+                    // marketing version at runtime (CFBundleShortVersionString)
+                    // instead of a hardcoded string, so it never goes stale.
+                    Text("\(strings.appName) v\(appVersion)")
+                        .font(.caption2)
+                        .foregroundColor(.meTontGrey)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 12)
                 }
                 .frame(width: 280)
                 .background(Color.white)

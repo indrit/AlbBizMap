@@ -30,6 +30,7 @@ public struct AddBusinessScreen: View {
                     locationCard
                     contactCard
                     workingHoursCard
+                    albanianOwnedCard
 
                     if let err = viewModel.errorMessage {
                         Text(err)
@@ -236,6 +237,21 @@ public struct AddBusinessScreen: View {
 
             if !viewModel.isOpen24Hours {
                 WorkingHoursEditorView(hours: $viewModel.workingHours)
+            }
+        }
+    }
+
+    // MARK: - Albanian Owned
+
+    private var albanianOwnedCard: some View {
+        SectionCard(title: strings.albanianOwned) {
+            HStack {
+                Text(strings.albanianOwnedQuestion)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Toggle("", isOn: $viewModel.isAlbanianOwned)
+                    .labelsHidden()
+                    .tint(.meTontRed)
             }
         }
     }

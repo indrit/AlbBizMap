@@ -15,16 +15,16 @@ public struct FeaturedPickCard: View {
     }
 
     private var tierColor: Color? {
-        if business.isSponsored { return .tierGold }
-        if business.isFeatured { return .tierSilver }
-        if business.isPremium { return .tierBronze }
+        if business.isEffectivelySponsored { return .tierGold }
+        if business.isEffectivelyFeatured { return .tierSilver }
+        if business.isEffectivelyPremium { return .tierBronze }
         return nil
     }
 
     private var tierLabel: String? {
-        if business.isSponsored { return strings.sponsored }
-        if business.isFeatured { return strings.featured2 }
-        if business.isPremium { return strings.premium }
+        if business.isEffectivelySponsored { return strings.sponsored }
+        if business.isEffectivelyFeatured { return strings.featured2 }
+        if business.isEffectivelyPremium { return strings.premium }
         return nil
     }
 
@@ -58,7 +58,7 @@ public struct FeaturedPickCard: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.meTontBlack)
                         .lineLimit(1)
-                    Text(business.category.uppercased())
+                    Text(BusinessCategory.displayName(for: business.category).uppercased())
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.meTontRed)
                     HStack(spacing: 2) {
@@ -102,7 +102,7 @@ public struct FeaturedPickCard: View {
     private var placeholderPhoto: some View {
         ZStack {
             Color(red: 0xFB / 255.0, green: 0xEA / 255.0, blue: 0xEA / 255.0)
-            Image(systemName: BusinessCategory.allCases.first { $0.rawValue.lowercased() == business.category.lowercased() }?.iconName ?? "briefcase.fill")
+            Image(systemName: BusinessCategory.match(business.category)?.iconName ?? "briefcase.fill")
                 .font(.system(size: 36))
                 .foregroundColor(.meTontRed)
         }

@@ -103,6 +103,50 @@ public struct AppStrings {
     public var category: String
     public var verified: String
     public var albanianOwned: String
+    public var albanianOwnedQuestion: String
+    public var claimThisBusiness: String
+    public var claimBusinessDialogDescription: String
+    public var claimReasonLabel: String
+    public var claimReasonPlaceholder: String
+    public var submitClaimButton: String
+    public var claimSubmittedSuccess: String
+    public var claimSubmitFailed: String
+    public var claimReasonRequired: String
+    public var claimAlreadySubmitted: String
+    public var getVerifiedTitle: String
+    public var requestVerification: String
+    public var requestVerificationDescription: String
+    public var requestVerificationDialogDescription: String
+    public var verificationRequestSubmitted: String
+    public var verificationAlreadySubmitted: String
+    public var adminBusinessClaims: String
+    public var adminVerificationRequests: String
+    public var adminBusinessesAndPlans: String
+    public var adminNoPendingVerification: String
+    public var adminAllVerificationProcessed: String
+    public var adminNoActivePlans: String
+    public var adminTableBusinessColumn: String
+    public var adminTableTierColumn: String
+    public var adminTableExpiresColumn: String
+    public var adminNoExpiry: String
+    public var businessActiveStatus: String
+    public var businessActiveDescription: String
+    public var businessInactiveDescription: String
+    public var inactiveLabel: String
+    public var clearExpiredPlansButton: String
+    public var clearExpiredPlansNoneFound: String
+    public var clearExpiredPlansSuccessTemplate: String
+    public var clearExpiredPlansFailedPrefix: String
+    public var expiredLabel: String
+    public var importSampleBusinesses: String
+    public var noPendingClaims: String
+    public var allClaimsProcessed: String
+    public var approveClaimTitle: String
+    public var approveClaimMessage: String
+    public var approve: String
+    public var rejectClaimTitle: String
+    public var rejectClaimMessage: String
+    public var reject: String
     public var premium: String
     public var featured2: String
     public var sponsored: String
@@ -394,6 +438,50 @@ public struct AppStrings {
         category: "Category",
         verified: "Verified",
         albanianOwned: "Albanian Owned",
+        albanianOwnedQuestion: "Is this business Albanian-owned?",
+        claimThisBusiness: "Claim This Business",
+        claimBusinessDialogDescription: "Tell us why you're the owner of this business. Our team will review your request.",
+        claimReasonLabel: "Reason",
+        claimReasonPlaceholder: "e.g. I run this business, here's how you can verify it...",
+        submitClaimButton: "Submit Claim",
+        claimSubmittedSuccess: "Claim request submitted! We'll review it soon.",
+        claimSubmitFailed: "Failed to submit claim",
+        claimReasonRequired: "Please enter a reason",
+        claimAlreadySubmitted: "Claim submitted — pending review",
+        getVerifiedTitle: "Get Verified",
+        requestVerification: "Request Verification",
+        requestVerificationDescription: "Get a Verified badge on your business so customers know it's the real deal.",
+        requestVerificationDialogDescription: "Tell us a bit about your business — this helps our team verify it faster.",
+        verificationRequestSubmitted: "Verification request submitted! We'll review it soon.",
+        verificationAlreadySubmitted: "Verification requested — pending review",
+        adminBusinessClaims: "Business Claims",
+        adminVerificationRequests: "Verification Requests",
+        adminBusinessesAndPlans: "Businesses & Plans",
+        adminNoPendingVerification: "No pending verification requests",
+        adminAllVerificationProcessed: "All verification requests processed",
+        adminNoActivePlans: "No businesses on a paid plan yet",
+        adminTableBusinessColumn: "Business",
+        adminTableTierColumn: "Tier",
+        adminTableExpiresColumn: "Expires",
+        adminNoExpiry: "—",
+        businessActiveStatus: "Business is Active",
+        businessActiveDescription: "Your business is visible on the map and in search.",
+        businessInactiveDescription: "Your business is hidden from the map and search. Turn this back on anytime.",
+        inactiveLabel: "Inactive",
+        clearExpiredPlansButton: "Clear Expired Plans",
+        clearExpiredPlansNoneFound: "No expired plans to clear.",
+        clearExpiredPlansSuccessTemplate: "Cleared %d expired plan(s).",
+        clearExpiredPlansFailedPrefix: "Failed to clear expired plans",
+        expiredLabel: "Expired",
+        importSampleBusinesses: "Import Sample Businesses",
+        noPendingClaims: "No pending claims!",
+        allClaimsProcessed: "All claim requests have been processed.",
+        approveClaimTitle: "Approve Claim",
+        approveClaimMessage: "Are you sure you want to approve %@'s claim for \"%@\"? This will transfer ownership and verify the business.",
+        approve: "Approve",
+        rejectClaimTitle: "Reject Claim",
+        rejectClaimMessage: "Are you sure you want to reject this claim request from %@?",
+        reject: "Reject",
         premium: "Premium",
         featured2: "Featured",
         sponsored: "Sponsored",
@@ -669,6 +757,50 @@ public struct AppStrings {
         category: "Kategoria",
         verified: "Verifikuar",
         albanianOwned: "Pronë Shqiptare",
+        albanianOwnedQuestion: "A është ky biznes në pronësi shqiptare?",
+        claimThisBusiness: "Kërko Pronësinë e Biznesit",
+        claimBusinessDialogDescription: "Na tregoni pse jeni pronari i këtij biznesi. Ekipi ynë do ta shqyrtojë kërkesën tuaj.",
+        claimReasonLabel: "Arsyeja",
+        claimReasonPlaceholder: "p.sh. unë e drejtoj këtë biznes, ja si mund ta verifikoni...",
+        submitClaimButton: "Dërgo Kërkesën",
+        claimSubmittedSuccess: "Kërkesa u dërgua! Do ta shqyrtojmë së shpejti.",
+        claimSubmitFailed: "Dërgimi i kërkesës dështoi",
+        claimReasonRequired: "Ju lutemi shkruani një arsye",
+        claimAlreadySubmitted: "Kërkesa u dërgua — në pritje të shqyrtimit",
+        getVerifiedTitle: "Bëhu i Verifikuar",
+        requestVerification: "Kërko Verifikim",
+        requestVerificationDescription: "Merr distinktivin Verifikuar për biznesin tënd që klientët ta dinë se është i vërtetë.",
+        requestVerificationDialogDescription: "Na tregoni pak për biznesin tuaj — kjo na ndihmon ta verifikojmë më shpejt.",
+        verificationRequestSubmitted: "Kërkesa për verifikim u dërgua! Do ta shqyrtojmë së shpejti.",
+        verificationAlreadySubmitted: "Verifikimi u kërkua — në pritje të shqyrtimit",
+        adminBusinessClaims: "Kërkesa për Pronësi",
+        adminVerificationRequests: "Kërkesa për Verifikim",
+        adminBusinessesAndPlans: "Bizneset & Planet",
+        adminNoPendingVerification: "Nuk ka kërkesa verifikimi në pritje",
+        adminAllVerificationProcessed: "Të gjitha kërkesat për verifikim janë shqyrtuar",
+        adminNoActivePlans: "Ende asnjë biznes me plan me pagesë",
+        adminTableBusinessColumn: "Biznesi",
+        adminTableTierColumn: "Plani",
+        adminTableExpiresColumn: "Skadon",
+        adminNoExpiry: "—",
+        businessActiveStatus: "Biznesi Aktiv",
+        businessActiveDescription: "Biznesi juaj është i dukshëm në hartë dhe në kërkim.",
+        businessInactiveDescription: "Biznesi juaj është i fshehur nga harta dhe kërkimi. Mund ta riaktivizoni kur të doni.",
+        inactiveLabel: "Joaktiv",
+        clearExpiredPlansButton: "Pastro Planet e Skaduara",
+        clearExpiredPlansNoneFound: "Nuk ka plane të skaduara për të pastruar.",
+        clearExpiredPlansSuccessTemplate: "U pastruan %d plan(e) të skaduara.",
+        clearExpiredPlansFailedPrefix: "Pastrimi i planeve të skaduara dështoi",
+        expiredLabel: "Skaduar",
+        importSampleBusinesses: "Importo Biznese Shembull",
+        noPendingClaims: "Nuk ka kërkesa në pritje!",
+        allClaimsProcessed: "Të gjitha kërkesat janë përpunuar.",
+        approveClaimTitle: "Mirato Kërkesën",
+        approveClaimMessage: "Jeni i sigurt që doni të miratoni kërkesën e %@ për \"%@\"? Kjo do të transferojë pronësinë dhe do të verifikojë biznesin.",
+        approve: "Mirato",
+        rejectClaimTitle: "Refuzo Kërkesën",
+        rejectClaimMessage: "Jeni i sigurt që doni të refuzoni këtë kërkesë nga %@?",
+        reject: "Refuzo",
         premium: "Premium",
         featured2: "I Veçuar",
         sponsored: "Sponsorizuar",

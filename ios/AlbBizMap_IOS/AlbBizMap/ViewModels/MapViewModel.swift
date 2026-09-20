@@ -68,8 +68,8 @@ public class MapViewModel: ObservableObject {
             result.sort { $0.id > $1.id }
         default:
             result.sort { b1, b2 in
-                if b1.isSponsored != b2.isSponsored { return b1.isSponsored }
-                if b1.isFeatured != b2.isFeatured { return b1.isFeatured }
+                if b1.isEffectivelySponsored != b2.isEffectivelySponsored { return b1.isEffectivelySponsored }
+                if b1.isEffectivelyFeatured != b2.isEffectivelyFeatured { return b1.isEffectivelyFeatured }
                 return b1.rating > b2.rating
             }
         }
@@ -91,7 +91,7 @@ public class MapViewModel: ObservableObject {
 
         if !listSelectedCategories.isEmpty {
             result = result.filter { biz in
-                listSelectedCategories.contains { $0.lowercased() == biz.category.lowercased() }
+                listSelectedCategories.contains { $0.lowercased() == BusinessCategory.displayName(for: biz.category).lowercased() }
             }
         }
 
@@ -116,8 +116,8 @@ public class MapViewModel: ObservableObject {
             result.sort { $0.id > $1.id }
         default:
             result.sort { b1, b2 in
-                if b1.isSponsored != b2.isSponsored { return b1.isSponsored }
-                if b1.isFeatured != b2.isFeatured { return b1.isFeatured }
+                if b1.isEffectivelySponsored != b2.isEffectivelySponsored { return b1.isEffectivelySponsored }
+                if b1.isEffectivelyFeatured != b2.isEffectivelyFeatured { return b1.isEffectivelyFeatured }
                 return b1.rating > b2.rating
             }
         }
@@ -220,8 +220,8 @@ public class MapViewModel: ObservableObject {
         return withDistance
             .filter { $0.distance <= 50.0 }
             .sorted { a, b in
-                if a.business.isSponsored != b.business.isSponsored { return a.business.isSponsored }
-                if a.business.isFeatured != b.business.isFeatured { return a.business.isFeatured }
+                if a.business.isEffectivelySponsored != b.business.isEffectivelySponsored { return a.business.isEffectivelySponsored }
+                if a.business.isEffectivelyFeatured != b.business.isEffectivelyFeatured { return a.business.isEffectivelyFeatured }
                 return a.distance < b.distance
             }
             .prefix(10)
@@ -234,15 +234,15 @@ public class MapViewModel: ObservableObject {
     public var topPicks: [Business] {
         let userLoc = LocationManager.shared.userLocation
         let withDistance: [(business: Business, distance: Double)] = businesses
-            .filter { $0.isActive && ($0.isSponsored || $0.isFeatured) }
+            .filter { $0.isActive && ($0.isEffectivelySponsored || $0.isEffectivelyFeatured) }
             .map { biz in
                 let d = userLoc.flatMap { distanceKm(from: $0, to: biz.location) } ?? Double.greatestFiniteMagnitude
                 return (biz, d)
             }
         return withDistance
             .sorted { a, b in
-                if a.business.isSponsored != b.business.isSponsored { return a.business.isSponsored }
-                if a.business.isFeatured != b.business.isFeatured { return a.business.isFeatured }
+                if a.business.isEffectivelySponsored != b.business.isEffectivelySponsored { return a.business.isEffectivelySponsored }
+                if a.business.isEffectivelyFeatured != b.business.isEffectivelyFeatured { return a.business.isEffectivelyFeatured }
                 return a.distance < b.distance
             }
             .prefix(10)

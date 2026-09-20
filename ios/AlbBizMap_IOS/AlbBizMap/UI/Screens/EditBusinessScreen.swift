@@ -31,6 +31,8 @@ public struct EditBusinessScreen: View {
     @State private var promotions: [Promotion]
     @State private var existingPhotos: [String]
     @State private var newPhotosData: [Data] = []
+    @State private var isAlbanianOwned: Bool
+    @State private var isBusinessActive: Bool
 
     @State private var photosPickerItem: PhotosPickerItem? = nil
     @State private var showImageSourceDialog = false
@@ -57,12 +59,14 @@ public struct EditBusinessScreen: View {
         _address = State(initialValue: business.address)
         _city = State(initialValue: business.city)
         _country = State(initialValue: business.country)
-        _category = State(initialValue: BusinessCategory(rawValue: business.category))
+        _category = State(initialValue: BusinessCategory.match(business.category))
         _isOpen24Hours = State(initialValue: business.isOpen24Hours)
         _workingHours = State(initialValue: business.workingHours)
         _jobs = State(initialValue: business.jobs)
         _promotions = State(initialValue: business.promotions)
         _existingPhotos = State(initialValue: business.photos)
+        _isAlbanianOwned = State(initialValue: business.isAlbanianOwned)
+        _isBusinessActive = State(initialValue: business.isActive)
     }
 
     private var remainingPhotoSlots: Int {
@@ -78,10 +82,12 @@ public struct EditBusinessScreen: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
+                        activeStatusCard
                         basicInfoCard
                         locationCard
                         contactCard
                         workingHoursCard
+                        albanianOwnedCard
                         photosCard
                         jobsCard
                         promotionsCard
@@ -141,6 +147,53 @@ public struct EditBusinessScreen: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.meTontRed)
+    }
+
+    // MARK: - Active status
+
+    // Reuses the existing isActive field (already what the map/list filters
+    // businesses on) as a reversible "hide my listing" toggle — deliberately
+    // not a delete button. Placed first/most prominent since it affects
+    // whether the business is visible at all, matching Android.
+    private var activeStatusCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(strings.businessActiveStatus)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(isBusinessActive ? .meTontBlack : Color(red: 0.9, green: 0.32, blue: 0))
+                Spacer()
+                Toggle("", isOn: $isBusinessActive)
+                    .labelsHidden()
+                    .tint(.meTontRed)
+            }
+            Text(isBusinessActive ? strings.businessActiveDescription : strings.businessInactiveDescription)
+                .font(.caption)
+                .foregroundColor(.meTontGrey)
+        }
+        .padding(16)
+        .background(isBusinessActive ? Color.white : Color(red: 1, green: 0.953, blue: 0.878))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isBusinessActive ? Color.clear : Color(red: 1, green: 0.651, blue: 0.149), lineWidth: 1)
+        )
+        .cornerRadius(16)
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Albanian owned
+
+    private var albanianOwnedCard: some View {
+        SectionCard(title: strings.albanianOwned) {
+            HStack {
+                Text(strings.albanianOwnedQuestion)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Toggle("", isOn: $isAlbanianOwned)
+                    .labelsHidden()
+                    .tint(.meTontRed)
+            }
+        }
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Basic info
@@ -552,7 +605,7 @@ public struct EditBusinessScreen: View {
             var updated = business
             updated.name = trimmedName
             updated.description = trimmedDescription
-            updated.category = category.rawValue
+            updated.category = category.storageKey
             updated.address = trimmedAddress
             updated.city = trimmedCity
             updated.country = country.trimmingCharacters(in: .whitespaces)
@@ -562,6 +615,8 @@ public struct EditBusinessScreen: View {
             updated.location = GeoPointLocation(latitude: coord.latitude, longitude: coord.longitude)
             updated.isOpen24Hours = isOpen24Hours
             updated.workingHours = isOpen24Hours ? [:] : workingHours
+            updated.isAlbanianOwned = isAlbanianOwned
+            updated.isActive = isBusinessActive
             updated.jobs = jobs
             updated.promotions = promotions
             updated.photos = finalPhotos

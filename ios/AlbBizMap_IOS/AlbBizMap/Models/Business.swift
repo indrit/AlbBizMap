@@ -110,6 +110,8 @@ public struct Business: Identifiable, Codable, Hashable {
     public var isPremium: Bool
     public var premiumUntil: Int64?
     public var ownerId: String
+    public var ownerEmail: String
+    public var ownerName: String
     public var isVerified: Bool
     public var isAlbanianOwned: Bool
     public var isFeatured: Bool
@@ -142,6 +144,8 @@ public struct Business: Identifiable, Codable, Hashable {
         isPremium: Bool = false,
         premiumUntil: Int64? = nil,
         ownerId: String = "",
+        ownerEmail: String = "",
+        ownerName: String = "",
         isVerified: Bool = false,
         isAlbanianOwned: Bool = false,
         isFeatured: Bool = false,
@@ -173,6 +177,8 @@ public struct Business: Identifiable, Codable, Hashable {
         self.isPremium = isPremium
         self.premiumUntil = premiumUntil
         self.ownerId = ownerId
+        self.ownerEmail = ownerEmail
+        self.ownerName = ownerName
         self.isVerified = isVerified
         self.isAlbanianOwned = isAlbanianOwned
         self.isFeatured = isFeatured
@@ -182,10 +188,26 @@ public struct Business: Identifiable, Codable, Hashable {
         self.likedBy = likedBy
     }
     
+    // True while the flag is set AND its matching expiry timestamp hasn't
+    // passed yet (a nil timestamp means "no expiry recorded" — treated as
+    // still active rather than expired, matching Android). Featured has no
+    // timestamp of its own — updateSubscription() writes premiumUntil for
+    // both the "premium" and "featured" purchase tiers, so isEffectivelyFeatured
+    // checks premiumUntil too.
+    public var isEffectivelyPremium: Bool {
+        isPremium && (premiumUntil == nil || premiumUntil! > Int64(Date().timeIntervalSince1970 * 1000))
+    }
+    public var isEffectivelyFeatured: Bool {
+        isFeatured && (premiumUntil == nil || premiumUntil! > Int64(Date().timeIntervalSince1970 * 1000))
+    }
+    public var isEffectivelySponsored: Bool {
+        isSponsored && (sponsoredUntil == nil || sponsoredUntil! > Int64(Date().timeIntervalSince1970 * 1000))
+    }
+
     public var maxPhotos: Int {
-        if isSponsored { return 14 }
-        if isFeatured { return 10 }
-        if isPremium { return 6 }
+        if isEffectivelySponsored { return 14 }
+        if isEffectivelyFeatured { return 10 }
+        if isEffectivelyPremium { return 6 }
         return 1
     }
     
@@ -213,6 +235,8 @@ public struct Business: Identifiable, Codable, Hashable {
             "isPremium": isPremium,
             "premiumUntil": premiumUntil,
             "ownerId": ownerId,
+            "ownerEmail": ownerEmail,
+            "ownerName": ownerName,
             "isVerified": isVerified,
             "isAlbanianOwned": isAlbanianOwned,
             "isFeatured": isFeatured,
@@ -271,6 +295,8 @@ public struct Business: Identifiable, Codable, Hashable {
             isPremium: map["isPremium"] as? Bool ?? false,
             premiumUntil: (map["premiumUntil"] as? NSNumber)?.int64Value,
             ownerId: map["ownerId"] as? String ?? "",
+            ownerEmail: map["ownerEmail"] as? String ?? "",
+            ownerName: map["ownerName"] as? String ?? "",
             isVerified: map["isVerified"] as? Bool ?? false,
             isAlbanianOwned: map["isAlbanianOwned"] as? Bool ?? false,
             isFeatured: map["isFeatured"] as? Bool ?? false,

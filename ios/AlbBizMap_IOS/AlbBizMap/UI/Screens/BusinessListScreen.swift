@@ -29,7 +29,7 @@ public struct BusinessListScreen: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if viewModel.listSearchQuery.isEmpty {
-                        discoveryRow(title: strings.featured, businesses: viewModel.businesses.filter { $0.isFeatured || $0.isSponsored })
+                        discoveryRow(title: strings.featured, businesses: viewModel.businesses.filter { $0.isEffectivelyFeatured || $0.isEffectivelySponsored })
                         discoveryRow(title: strings.recentlyAdded, businesses: Array(viewModel.businesses.sorted { $0.id > $1.id }.prefix(5)))
                         discoveryRow(title: strings.topRated, businesses: Array(viewModel.businesses.sorted { $0.rating > $1.rating }.prefix(5)))
 
@@ -156,7 +156,7 @@ public struct BusinessListScreen: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.black)
                         .lineLimit(1)
-                    Text(biz.category)
+                    Text(BusinessCategory.displayName(for: biz.category))
                         .font(.system(size: 11))
                         .foregroundColor(.meTontRed)
                     HStack(spacing: 2) {

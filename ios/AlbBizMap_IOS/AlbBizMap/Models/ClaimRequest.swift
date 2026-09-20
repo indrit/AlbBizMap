@@ -10,6 +10,11 @@ public struct ClaimRequest: Identifiable, Codable, Hashable {
     public var userEmail: String
     public var reason: String
     public var status: String // pending, approved, rejected
+    // "claim": user doesn't yet own this listing, wants ownerId reassigned to them.
+    // "verification": user already owns this listing, just wants isVerified set —
+    // approving still calls the same ownerId-reassign code, but it's a no-op since
+    // userId already equals the business's current ownerId.
+    public var type: String
     public var createdAt: Int64
     
     public init(
@@ -21,6 +26,7 @@ public struct ClaimRequest: Identifiable, Codable, Hashable {
         userEmail: String = "",
         reason: String = "",
         status: String = "pending",
+        type: String = "claim",
         createdAt: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
     ) {
         self.id = id
@@ -31,6 +37,7 @@ public struct ClaimRequest: Identifiable, Codable, Hashable {
         self.userEmail = userEmail
         self.reason = reason
         self.status = status
+        self.type = type
         self.createdAt = createdAt
     }
     
@@ -44,6 +51,7 @@ public struct ClaimRequest: Identifiable, Codable, Hashable {
             "userEmail": userEmail,
             "reason": reason,
             "status": status,
+            "type": type,
             "createdAt": createdAt
         ]
     }
@@ -58,6 +66,7 @@ public struct ClaimRequest: Identifiable, Codable, Hashable {
             userEmail: map["userEmail"] as? String ?? "",
             reason: map["reason"] as? String ?? "",
             status: map["status"] as? String ?? "pending",
+            type: map["type"] as? String ?? "claim",
             createdAt: (map["createdAt"] as? NSNumber)?.int64Value ?? Int64(Date().timeIntervalSince1970 * 1000)
         )
     }

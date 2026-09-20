@@ -43,11 +43,11 @@ public struct BusinessCardView: View {
                         }
                     }
 
-                    Text(business.category)
+                    Text(BusinessCategory.displayName(for: business.category))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.meTontRed)
 
-                    if business.isVerified || business.isAlbanianOwned || business.isSponsored || business.isFeatured || business.isPremium {
+                    if business.isVerified || business.isAlbanianOwned || business.isEffectivelySponsored || business.isEffectivelyFeatured || business.isEffectivelyPremium {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 4) {
                                 if business.isVerified {
@@ -56,11 +56,11 @@ public struct BusinessCardView: View {
                                 if business.isAlbanianOwned {
                                     badgeChip(strings.albanianOwned, color: .meTontRed)
                                 }
-                                if business.isSponsored {
+                                if business.isEffectivelySponsored {
                                     badgeChip(strings.sponsored, color: .tierGold)
-                                } else if business.isFeatured {
+                                } else if business.isEffectivelyFeatured {
                                     badgeChip(strings.featured2, color: .tierSilver)
-                                } else if business.isPremium {
+                                } else if business.isEffectivelyPremium {
                                     badgeChip(strings.premium, color: .tierBronze)
                                 }
                             }

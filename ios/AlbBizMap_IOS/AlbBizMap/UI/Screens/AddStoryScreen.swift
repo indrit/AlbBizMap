@@ -213,7 +213,7 @@ public struct AddStoryScreen: View {
                 Menu {
                     ForEach(myBusinesses) { business in
                         Button(action: { selectedBusiness = business }) {
-                            Text("\(business.name) — \(business.category)")
+                            Text("\(business.name) — \(BusinessCategory.displayName(for: business.category))")
                         }
                     }
                 } label: {

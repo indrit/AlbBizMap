@@ -14,9 +14,9 @@ public struct MapBusinessCard: View {
     }
 
     private var accentColor: Color {
-        if business.isSponsored { return .tierGold }
-        if business.isFeatured { return .tierSilver }
-        if business.isPremium { return .tierBronze }
+        if business.isEffectivelySponsored { return .tierGold }
+        if business.isEffectivelyFeatured { return .tierSilver }
+        if business.isEffectivelyPremium { return .tierBronze }
         return .meTontRed
     }
 
@@ -32,7 +32,7 @@ public struct MapBusinessCard: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.meTontBlack)
                         .lineLimit(1)
-                    Text(business.category)
+                    Text(BusinessCategory.displayName(for: business.category))
                         .font(.system(size: 11))
                         .foregroundColor(accentColor)
                     HStack(spacing: 2) {
@@ -73,7 +73,7 @@ public struct MapBusinessCard: View {
     private var placeholderThumbnail: some View {
         ZStack {
             accentColor.opacity(0.12)
-            Image(systemName: BusinessCategory.allCases.first { $0.rawValue.lowercased() == business.category.lowercased() }?.iconName ?? "briefcase.fill")
+            Image(systemName: BusinessCategory.match(business.category)?.iconName ?? "briefcase.fill")
                 .font(.system(size: 18))
                 .foregroundColor(accentColor)
         }

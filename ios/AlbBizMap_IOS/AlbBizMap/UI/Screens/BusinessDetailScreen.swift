@@ -33,7 +33,60 @@ public struct BusinessDetailScreen: View {
         self.mapViewModel = mapViewModel
     }
 
+    // ── CLAIM THIS BUSINESS / GET VERIFIED ──────────────────────────────
+    @State private var showClaimDialog = false
+    @State private var claimReason: String = ""
+    @State private var claimSubmitting = false
+    // Only tracks "submitted this screen visit", not a persisted check against
+    // existing pending claims — good enough to stop an accidental double-submit
+    // in one sitting, matching Android.
+    @State private var claimJustSubmitted = false
+    // Distinguishes "claiming someone else's/unclaimed listing" from "I already
+    // own this, requesting the Verified badge for it" — same submit/dialog
+    // machinery underneath, just different button/dialog copy.
+    @State private var isOwnerVerificationRequest = false
+    @State private var claimError: String? = nil
+
+    private func submitClaim() {
+        if claimReason.trimmingCharacters(in: .whitespaces).isEmpty {
+            claimError = strings.claimReasonRequired
+            return
+        }
+        guard let user = AuthManager.shared.currentUser else {
+            showClaimDialog = false
+            onNavigateToAuth { }
+            return
+        }
+        claimError = nil
+        claimSubmitting = true
+        Task {
+            let userName = [user.firstName, user.lastName].filter { !$0.isEmpty }.joined(separator: " ")
+            let claim = ClaimRequest(
+                businessId: business.id,
+                businessName: business.name,
+                userId: user.uid,
+                userName: userName,
+                userEmail: user.email,
+                reason: claimReason.trimmingCharacters(in: .whitespaces),
+                type: isOwnerVerificationRequest ? "verification" : "claim"
+            )
+            let result = await FirestoreService.shared.submitClaimRequest(claim)
+            await MainActor.run {
+                claimSubmitting = false
+                switch result {
+                case .success:
+                    showClaimDialog = false
+                    claimReason = ""
+                    claimJustSubmitted = true
+                case .failure(let error):
+                    claimError = "\(strings.claimSubmitFailed): \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
     public var body: some View {
+        ZStack {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 topBar
@@ -45,7 +98,7 @@ public struct BusinessDetailScreen: View {
                             Text(business.name)
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            Text(business.category)
+                            Text(BusinessCategory.displayName(for: business.category))
                                 .font(.subheadline)
                                 .foregroundColor(.meTontRed)
                                 .fontWeight(.semibold)
@@ -68,7 +121,9 @@ public struct BusinessDetailScreen: View {
                         }
                     }
 
-                    // Badges
+                    // Badges — highest tier only (Sponsored > Featured > Premium),
+                    // not stacked, and using the effective (non-expired) flags so a
+                    // lapsed subscription's badge disappears immediately.
                     HStack(spacing: 8) {
                         if business.isVerified {
                             badgeView(text: strings.verified, icon: "checkmark.seal.fill", color: .blue)
@@ -76,8 +131,12 @@ public struct BusinessDetailScreen: View {
                         if business.isAlbanianOwned {
                             badgeView(text: strings.albanianOwned, icon: "flag.fill", color: .meTontRed)
                         }
-                        if business.isPremium {
-                            badgeView(text: strings.premium, icon: "crown.fill", color: .orange)
+                        if business.isEffectivelySponsored {
+                            badgeView(text: strings.sponsored, icon: "megaphone.fill", color: .tierGold)
+                        } else if business.isEffectivelyFeatured {
+                            badgeView(text: strings.featured2, icon: "flame.fill", color: .tierSilver)
+                        } else if business.isEffectivelyPremium {
+                            badgeView(text: strings.premium, icon: "crown.fill", color: .tierBronze)
                         }
                     }
 
@@ -182,10 +241,35 @@ public struct BusinessDetailScreen: View {
                                 .foregroundColor(.meTontBlack)
                                 .cornerRadius(10)
                             }
+                        } else if !business.isVerified {
+                            Button(action: {
+                                let claimAction: () -> Void = {
+                                    claimReason = ""
+                                    isOwnerVerificationRequest = false
+                                    showClaimDialog = true
+                                }
+                                if AuthManager.shared.isLoggedIn {
+                                    claimAction()
+                                } else {
+                                    onNavigateToAuth(claimAction)
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "checkmark.seal")
+                                    Text(claimJustSubmitted ? strings.claimAlreadySubmitted : strings.claimThisBusiness)
+                                        .lineLimit(1)
+                                }
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.meTontRed, lineWidth: 1))
+                                .foregroundColor(.meTontRed)
+                            }
+                            .disabled(claimJustSubmitted)
                         }
                     }
 
-                    if !business.isPremium && business.ownerId == currentUserId {
+                    if !business.isEffectivelySponsored && business.ownerId == currentUserId {
                         Button(action: onUpgradeClick) {
                             HStack {
                                 Image(systemName: "crown.fill")
@@ -199,6 +283,54 @@ public struct BusinessDetailScreen: View {
                             .foregroundColor(.orange)
                             .cornerRadius(10)
                         }
+                        .padding(.top, 4)
+                    }
+
+                    // Only the owner sees this — it's how you earn the Verified badge
+                    // on a business you already added yourself, as opposed to the
+                    // Claim This Business button above (non-owners only), which is
+                    // for taking over a listing that isn't linked to your account yet.
+                    if business.ownerId == currentUserId && !business.isVerified {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundColor(Color(red: 0.129, green: 0.396, blue: 0.753))
+                                Text(strings.getVerifiedTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(red: 0.084, green: 0.396, blue: 0.753))
+                            }
+                            Text(strings.requestVerificationDescription)
+                                .font(.caption)
+                                .foregroundColor(.meTontGrey)
+
+                            if claimJustSubmitted {
+                                Text(strings.verificationAlreadySubmitted)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(red: 0.084, green: 0.396, blue: 0.753))
+                            } else {
+                                Button(action: {
+                                    claimReason = ""
+                                    isOwnerVerificationRequest = true
+                                    showClaimDialog = true
+                                }) {
+                                    Text(strings.requestVerification)
+                                        .fontWeight(.bold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(Color(red: 0.129, green: 0.396, blue: 0.753))
+                                        .foregroundColor(.white)
+                                        .cornerRadius(10)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(Color(red: 0.890, green: 0.949, blue: 0.992))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color(red: 0.129, green: 0.396, blue: 0.753), lineWidth: 1)
+                        )
+                        .cornerRadius(16)
                         .padding(.top, 4)
                     }
                 }
@@ -216,6 +348,72 @@ public struct BusinessDetailScreen: View {
             }
         }
         .background(Color.white)
+
+            if showClaimDialog {
+                claimDialog
+            }
+        }
+    }
+
+    private var claimDialog: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { if !claimSubmitting { showClaimDialog = false } }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(isOwnerVerificationRequest ? strings.requestVerification : strings.claimThisBusiness)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.meTontRed)
+
+                Text(isOwnerVerificationRequest ? strings.requestVerificationDialogDescription : strings.claimBusinessDialogDescription)
+                    .font(.caption)
+                    .foregroundColor(.meTontGrey)
+
+                Text(strings.claimReasonLabel)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                TextEditor(text: $claimReason)
+                    .frame(height: 100)
+                    .padding(8)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))
+                    .disabled(claimSubmitting)
+
+                if let claimError {
+                    Text(claimError)
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                }
+
+                HStack {
+                    Spacer()
+                    Button(strings.cancel) {
+                        showClaimDialog = false
+                    }
+                    .disabled(claimSubmitting)
+                    .foregroundColor(.meTontGrey)
+
+                    Button(action: submitClaim) {
+                        if claimSubmitting {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(strings.submitClaimButton)
+                        }
+                    }
+                    .disabled(claimSubmitting)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.meTontRed)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+            }
+            .padding(20)
+            .background(Color.white)
+            .cornerRadius(20)
+            .padding(.horizontal, 24)
+        }
     }
 
     // Firebase only ever gives a single displayName, so Auth's own

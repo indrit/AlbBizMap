@@ -18,9 +18,9 @@ public struct SubscriptionScreen: View {
     private enum Tier { case free, premium, featured, sponsored }
 
     private var currentTier: Tier {
-        if business.isSponsored { return .sponsored }
-        if business.isFeatured { return .featured }
-        if business.isPremium { return .premium }
+        if business.isEffectivelySponsored { return .sponsored }
+        if business.isEffectivelyFeatured { return .featured }
+        if business.isEffectivelyPremium { return .premium }
         return .free
     }
 

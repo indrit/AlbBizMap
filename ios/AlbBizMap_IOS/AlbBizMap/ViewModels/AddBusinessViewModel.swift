@@ -16,6 +16,7 @@ public class AddBusinessViewModel: ObservableObject {
     @Published public var website: String = ""
     @Published public var isOpen24Hours: Bool = false
     @Published public var workingHours: [String: String] = [:]
+    @Published public var isAlbanianOwned: Bool = false
 
     // A brand-new business always starts on the free tier (Business.maxPhotos
     // returns 1 until isPremium/isFeatured/isSponsored is set), same as Android's
@@ -94,7 +95,7 @@ public class AddBusinessViewModel: ObservableObject {
         let biz = Business(
             id: businessId,
             name: name.trimmingCharacters(in: .whitespaces),
-            category: category.rawValue,
+            category: category.storageKey,
             description: description.trimmingCharacters(in: .whitespaces),
             address: address.trimmingCharacters(in: .whitespaces),
             city: city.trimmingCharacters(in: .whitespaces),
@@ -106,7 +107,8 @@ public class AddBusinessViewModel: ObservableObject {
             workingHours: isOpen24Hours ? [:] : workingHours,
             location: GeoPointLocation(latitude: coord.latitude, longitude: coord.longitude),
             photos: photoUrls,
-            ownerId: ownerId
+            ownerId: ownerId,
+            isAlbanianOwned: isAlbanianOwned
         )
 
         await MainActor.run { self.isSubmitting = true }

@@ -41,9 +41,11 @@ public struct UserProfileScreen: View {
         self.onLanguageChange = onLanguageChange
     }
 
+    // Owner-scoped listener (unfiltered by isActive) rather than filtering
+    // mapViewModel.businesses, which only ever holds active ones.
     private var ownedBusinesses: [Business] {
         guard let uid = viewModel.currentUser?.uid else { return [] }
-        return mapViewModel.businesses.filter { $0.ownerId == uid }
+        return FirestoreService.shared.ownedBusinesses.filter { $0.ownerId == uid }
     }
 
     private var ownedEventCount: Int {
@@ -55,9 +57,9 @@ public struct UserProfileScreen: View {
     // (sponsored > featured > premium), shown as the real MeTont coin badge
     // instead of a generic icon.
     private var tierBadgeResourceName: String? {
-        if ownedBusinesses.contains(where: { $0.isSponsored }) { return "metont_gold" }
-        if ownedBusinesses.contains(where: { $0.isFeatured }) { return "metont_silver" }
-        if ownedBusinesses.contains(where: { $0.isPremium }) { return "metont_bronze" }
+        if ownedBusinesses.contains(where: { $0.isEffectivelySponsored }) { return "metont_gold" }
+        if ownedBusinesses.contains(where: { $0.isEffectivelyFeatured }) { return "metont_silver" }
+        if ownedBusinesses.contains(where: { $0.isEffectivelyPremium }) { return "metont_bronze" }
         return nil
     }
 

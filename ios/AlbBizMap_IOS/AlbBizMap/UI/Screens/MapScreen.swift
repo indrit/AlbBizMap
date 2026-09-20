@@ -72,7 +72,7 @@ public struct MapScreen: View {
                             }) {
                                 VStack(spacing: 2) {
                                     ZStack {
-                                        Circle().fill(biz.isSponsored ? Color.meTontGold : Color.meTontRed)
+                                        Circle().fill(biz.isEffectivelySponsored ? Color.meTontGold : Color.meTontRed)
                                             .frame(width: 36, height: 36)
                                         Image(systemName: "mappin.circle.fill")
                                             .foregroundColor(.white)
@@ -259,7 +259,7 @@ public struct MapScreen: View {
                                         Text(biz.name)
                                             .foregroundColor(.meTontBlack)
                                             .fontWeight(.medium)
-                                        Text(biz.category)
+                                        Text(BusinessCategory.displayName(for: biz.category))
                                             .font(.caption)
                                             .foregroundColor(.meTontRed)
                                     }

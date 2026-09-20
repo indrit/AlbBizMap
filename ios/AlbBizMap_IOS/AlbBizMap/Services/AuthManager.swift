@@ -66,6 +66,7 @@ public class AuthManager: ObservableObject {
                 self.currentUser = nil
                 self.isLoggedIn = false
                 Task { await FirestoreService.shared.loadFavorites(userId: "") }
+                FirestoreService.shared.listenToOwnedBusinesses(userId: "")
             }
         }
     }
@@ -75,6 +76,7 @@ public class AuthManager: ObservableObject {
     // (users/{uid}.isAdmin) — fetched once on login, mirroring Android's
     // getFavoriteIds()/isUserAdmin() calls right after sign-in.
     private func loadUserBackedState(uid: String) {
+        FirestoreService.shared.listenToOwnedBusinesses(userId: uid)
         Task {
             await FirestoreService.shared.loadFavorites(userId: uid)
             let admin = await FirestoreService.shared.isUserAdmin(userId: uid)
