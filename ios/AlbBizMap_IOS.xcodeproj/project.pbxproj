@@ -1,0 +1,415 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		71DEA3BCF9002765F2BBED10 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */; };
+		AC149830305F40610052EEDB /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = AC14982F305F40610052EEDB /* FirebaseAuth */; };
+		AC149832305F40610052EEDB /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC149831305F40610052EEDB /* FirebaseCore */; };
+		AC149835305F40C90052EEDB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AC149834305F40C90052EEDB /* GoogleSignIn */; };
+		AC149837305F40C90052EEDB /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AC149836305F40C90052EEDB /* GoogleSignInSwift */; };
+		EE12076F74B590BCAFADB0F3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 3898E62DBF4E475C3A866258 /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		ACB6FF2D305EF29B0059F718 /* AlbBizMap_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlbBizMap_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACD6679F305EFF3E00A050E4 /* AlbBizMap-IOS-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "AlbBizMap-IOS-Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		ACB6FF2F305EF29B0059F718 /* AlbBizMap_IOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AlbBizMap_IOS;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ACB6FF2A305EF29B0059F718 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				AC149832305F40610052EEDB /* FirebaseCore in Frameworks */,
+				AC149830305F40610052EEDB /* FirebaseAuth in Frameworks */,
+				AC149835305F40C90052EEDB /* GoogleSignIn in Frameworks */,
+				AC149837305F40C90052EEDB /* GoogleSignInSwift in Frameworks */,
+				71DEA3BCF9002765F2BBED10 /* FirebaseFirestore in Frameworks */,
+				EE12076F74B590BCAFADB0F3 /* FirebaseStorage in Frameworks */,
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		ACB6FF24305EF29B0059F718 = {
+			isa = PBXGroup;
+			children = (
+				ACD6679F305EFF3E00A050E4 /* AlbBizMap-IOS-Info.plist */,
+				ACB6FF2F305EF29B0059F718 /* AlbBizMap_IOS */,
+				ACB6FF2E305EF29B0059F718 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ACB6FF2E305EF29B0059F718 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ACB6FF2D305EF29B0059F718 /* AlbBizMap_IOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ACB6FF2C305EF29B0059F718 /* AlbBizMap_IOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACB6FF38305EF29C0059F718 /* Build configuration list for PBXNativeTarget "AlbBizMap_IOS" */;
+			buildPhases = (
+				ACB6FF29305EF29B0059F718 /* Sources */,
+				ACB6FF2A305EF29B0059F718 /* Frameworks */,
+				ACB6FF2B305EF29B0059F718 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				ACB6FF2F305EF29B0059F718 /* AlbBizMap_IOS */,
+			);
+			name = AlbBizMap_IOS;
+			packageProductDependencies = (
+				AC14982F305F40610052EEDB /* FirebaseAuth */,
+				AC149831305F40610052EEDB /* FirebaseCore */,
+				AC149834305F40C90052EEDB /* GoogleSignIn */,
+				AC149836305F40C90052EEDB /* GoogleSignInSwift */,
+				0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */,
+				3898E62DBF4E475C3A866258 /* FirebaseStorage */,
+			);
+			productName = AlbBizMap_IOS;
+			productReference = ACB6FF2D305EF29B0059F718 /* AlbBizMap_IOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ACB6FF25305EF29B0059F718 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					ACB6FF2C305EF29B0059F718 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = ACB6FF28305EF29B0059F718 /* Build configuration list for PBXProject "AlbBizMap_IOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = ACB6FF24305EF29B0059F718;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				AC149833305F40C90052EEDB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = ACB6FF2E305EF29B0059F718 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ACB6FF2C305EF29B0059F718 /* AlbBizMap_IOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACB6FF2B305EF29B0059F718 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ACB6FF29305EF29B0059F718 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		ACB6FF36305EF29C0059F718 /* Debug configuration for PBXProject "AlbBizMap_IOS" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		ACB6FF37305EF29C0059F718 /* Release configuration for PBXProject "AlbBizMap_IOS" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		ACB6FF39305EF29C0059F718 /* Debug configuration for PBXNativeTarget "AlbBizMap_IOS" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AlbBizMap_IOS/AlbBizMap_IOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8Q2Z49V24S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.albbiz.map;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		ACB6FF3A305EF29C0059F718 /* Release configuration for PBXNativeTarget "AlbBizMap_IOS" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AlbBizMap_IOS/AlbBizMap_IOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8Q2Z49V24S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.albbiz.map;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ACB6FF28305EF29B0059F718 /* Build configuration list for PBXProject "AlbBizMap_IOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB6FF36305EF29C0059F718 /* Debug configuration for PBXProject "AlbBizMap_IOS" */,
+				ACB6FF37305EF29C0059F718 /* Release configuration for PBXProject "AlbBizMap_IOS" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		ACB6FF38305EF29C0059F718 /* Build configuration list for PBXNativeTarget "AlbBizMap_IOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB6FF39305EF29C0059F718 /* Debug configuration for PBXNativeTarget "AlbBizMap_IOS" */,
+				ACB6FF3A305EF29C0059F718 /* Release configuration for PBXNativeTarget "AlbBizMap_IOS" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.19.2;
+			};
+		};
+		AC149833305F40C90052EEDB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		3898E62DBF4E475C3A866258 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		AC14982F305F40610052EEDB /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		AC149831305F40610052EEDB /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		AC149834305F40C90052EEDB /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC149833305F40C90052EEDB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		AC149836305F40C90052EEDB /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC149833305F40C90052EEDB /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = ACB6FF25305EF29B0059F718 /* Project object */;
+	validationLevel = 1;
+}
