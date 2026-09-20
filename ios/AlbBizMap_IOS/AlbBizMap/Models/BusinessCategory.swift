@@ -24,7 +24,7 @@ public enum BusinessCategory: String, CaseIterable, Identifiable, Codable {
         case .cafe: return "cup.and.saucer.fill"
         case .market: return "cart.fill"
         case .contractor: return "hammer.fill"
-        case .lawyer: return "gavel"
+        case .lawyer: return "building.columns.fill"
         case .dentist: return "cross.case.fill"
         case .barber: return "scissors"
         case .beautySalon: return "sparkles"

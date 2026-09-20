@@ -53,16 +53,30 @@ public struct StoryViewerScreen: View {
                         } placeholder: {
                             ProgressView()
                         }
-                    }
-                    
-                    if !story.text.isEmpty {
-                        Text(story.text)
-                            .font(.body)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(10)
-                            .padding()
+
+                        if !story.text.isEmpty {
+                            Text(story.text)
+                                .font(.body)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.black.opacity(0.6))
+                                .cornerRadius(10)
+                                .padding()
+                        }
+                    } else {
+                        // No photo (e.g. a free-tier business's auto "Just opened"
+                        // story) — show a colored background with the story text
+                        // as a big centered headline instead of a blank black
+                        // screen, matching Android's StoryViewerScreen fallback.
+                        ZStack {
+                            storyBackgroundColor(for: story.type)
+                            Text(story.text)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(32)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     
                     if let bizId = story.businessId {
@@ -90,6 +104,14 @@ public struct StoryViewerScreen: View {
             } else {
                 onClose()
             }
+        }
+    }
+
+    private func storyBackgroundColor(for type: String) -> Color {
+        switch type {
+        case "community": return Color(red: 0x21 / 255.0, green: 0x96 / 255.0, blue: 0xF3 / 255.0)
+        case "business": return .meTontRed
+        default: return Color(red: 0x1A / 255.0, green: 0x1A / 255.0, blue: 0x1A / 255.0)
         }
     }
 }

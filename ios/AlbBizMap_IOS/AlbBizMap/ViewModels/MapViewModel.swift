@@ -9,6 +9,26 @@ public class MapViewModel: ObservableObject {
     @Published public var selectedBusinessId: String? = nil
     @Published public var favoriteIds: Set<String> = []
     @Published public var listSortBy: String = "default" // default, mostFavorited, topRated, recentlyAdded
+
+    // List View's own independent copy of search/filter state, separate from the
+    // map's searchQuery/selectedCategory above — mirrors Android's listSearchQuery
+    // comment: sharing state with the map caused the two screens to stomp on each
+    // other's filters.
+    @Published public var listSearchQuery: String = ""
+    @Published public var listSelectedCategories: Set<String> = []
+    @Published public var listSelectedCountries: Set<String> = []
+    @Published public var listSelectedCities: Set<String> = []
+
+    // Mirrors favoriteIds below: forwarded from FirestoreService's own
+    // @Published businesses via Combine so that any change to a business
+    // document (including a like/unlike, which only touches Firestore
+    // directly through a transaction) actually triggers objectWillChange on
+    // this view model and re-renders whatever's observing it. Before this
+    // was a plain computed property reading FirestoreService.shared.businesses
+    // on each access — correct data, but nothing ever told SwiftUI to re-read
+    // it, so a like's count/icon only ever caught up after an unrelated
+    // re-render (e.g. leaving and reopening the screen).
+    @Published public var businesses: [Business] = []
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -16,10 +36,9 @@ public class MapViewModel: ObservableObject {
         FirestoreService.shared.$favoriteIds
             .assign(to: \.favoriteIds, on: self)
             .store(in: &cancellables)
-    }
-    
-    public var businesses: [Business] {
-        FirestoreService.shared.businesses
+        FirestoreService.shared.$businesses
+            .assign(to: \.businesses, on: self)
+            .store(in: &cancellables)
     }
     
     public var filteredBusinesses: [Business] {
@@ -58,9 +77,109 @@ public class MapViewModel: ObservableObject {
         return result
     }
     
+    public var listFilteredBusinesses: [Business] {
+        var result = businesses.filter { $0.isActive }
+
+        if !listSearchQuery.trimmingCharacters(in: .whitespaces).isEmpty {
+            let q = listSearchQuery.lowercased()
+            result = result.filter {
+                $0.name.lowercased().contains(q) ||
+                $0.category.lowercased().contains(q) ||
+                $0.address.lowercased().contains(q)
+            }
+        }
+
+        if !listSelectedCategories.isEmpty {
+            result = result.filter { biz in
+                listSelectedCategories.contains { $0.lowercased() == biz.category.lowercased() }
+            }
+        }
+
+        if !listSelectedCountries.isEmpty {
+            result = result.filter { biz in
+                listSelectedCountries.contains { $0.lowercased() == biz.country.lowercased() }
+            }
+        }
+
+        if !listSelectedCities.isEmpty {
+            result = result.filter { biz in
+                listSelectedCities.contains { $0.lowercased() == biz.city.lowercased() }
+            }
+        }
+
+        switch listSortBy {
+        case "mostFavorited":
+            result.sort { $0.likeCount > $1.likeCount }
+        case "topRated":
+            result.sort { $0.rating > $1.rating }
+        case "recentlyAdded":
+            result.sort { $0.id > $1.id }
+        default:
+            result.sort { b1, b2 in
+                if b1.isSponsored != b2.isSponsored { return b1.isSponsored }
+                if b1.isFeatured != b2.isFeatured { return b1.isFeatured }
+                return b1.rating > b2.rating
+            }
+        }
+
+        return result
+    }
+
+    // Distinct, sorted country/city values available to filter by — city options
+    // narrow to whichever countries are currently selected, same as Android.
+    public var availableCountries: [String] {
+        Array(Set(businesses.map { $0.country }.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty })).sorted()
+    }
+
+    public var availableCities: [String] {
+        let scoped = businesses.filter { biz in
+            listSelectedCountries.isEmpty || listSelectedCountries.contains { $0.lowercased() == biz.country.lowercased() }
+        }
+        return Array(Set(scoped.map { $0.city }.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty })).sorted()
+    }
+
+    public func onListCategoryToggle(_ category: String) {
+        if listSelectedCategories.contains(where: { $0.lowercased() == category.lowercased() }) {
+            listSelectedCategories = listSelectedCategories.filter { $0.lowercased() != category.lowercased() }
+        } else {
+            listSelectedCategories.insert(category)
+        }
+    }
+
+    public func onListCategoryClearAll() {
+        listSelectedCategories = []
+    }
+
+    public func onListCountryToggle(_ country: String) {
+        if listSelectedCountries.contains(where: { $0.lowercased() == country.lowercased() }) {
+            listSelectedCountries = listSelectedCountries.filter { $0.lowercased() != country.lowercased() }
+        } else {
+            listSelectedCountries.insert(country)
+        }
+    }
+
+    public func onListCountryClearAll() {
+        listSelectedCountries = []
+        listSelectedCities = []
+    }
+
+    public func onListCityToggle(_ city: String) {
+        if listSelectedCities.contains(where: { $0.lowercased() == city.lowercased() }) {
+            listSelectedCities = listSelectedCities.filter { $0.lowercased() != city.lowercased() }
+        } else {
+            listSelectedCities.insert(city)
+        }
+    }
+
+    public func onListCityClearAll() {
+        listSelectedCities = []
+    }
+
     public func resetListFilters() {
-        searchQuery = ""
-        selectedCategory = nil
+        listSearchQuery = ""
+        listSelectedCategories = []
+        listSelectedCountries = []
+        listSelectedCities = []
         listSortBy = "default"
     }
     

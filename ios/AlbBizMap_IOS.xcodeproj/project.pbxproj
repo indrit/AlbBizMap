@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		71DEA3BCF9002765F2BBED10 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */; };
 		AC149830305F40610052EEDB /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = AC14982F305F40610052EEDB /* FirebaseAuth */; };
 		AC149832305F40610052EEDB /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC149831305F40610052EEDB /* FirebaseCore */; };
 		AC149835305F40C90052EEDB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AC149834305F40C90052EEDB /* GoogleSignIn */; };
 		AC149837305F40C90052EEDB /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AC149836305F40C90052EEDB /* GoogleSignInSwift */; };
+		EE12076F74B590BCAFADB0F3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 3898E62DBF4E475C3A866258 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +36,8 @@
 				AC149830305F40610052EEDB /* FirebaseAuth in Frameworks */,
 				AC149835305F40C90052EEDB /* GoogleSignIn in Frameworks */,
 				AC149837305F40C90052EEDB /* GoogleSignInSwift in Frameworks */,
+				71DEA3BCF9002765F2BBED10 /* FirebaseFirestore in Frameworks */,
+				EE12076F74B590BCAFADB0F3 /* FirebaseStorage in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -78,6 +82,8 @@
 				AC149831305F40610052EEDB /* FirebaseCore */,
 				AC149834305F40C90052EEDB /* GoogleSignIn */,
 				AC149836305F40C90052EEDB /* GoogleSignInSwift */,
+				0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */,
+				3898E62DBF4E475C3A866258 /* FirebaseStorage */,
 			);
 			productName = AlbBizMap_IOS;
 			productReference = ACB6FF2D305EF29B0059F718 /* AlbBizMap_IOS.app */;
@@ -269,6 +275,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -305,6 +312,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -370,6 +378,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0109F8E4DC6800417E2DCCCD /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		3898E62DBF4E475C3A866258 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		AC14982F305F40610052EEDB /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AC14982E305F40610052EEDB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

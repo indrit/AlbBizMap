@@ -51,10 +51,13 @@ public struct UserProfileScreen: View {
         return EventsRepository.shared.events.filter { $0.organizerId == uid }.count
     }
 
-    private var tierColor: Color? {
-        if ownedBusinesses.contains(where: { $0.isSponsored }) { return .tierGold }
-        if ownedBusinesses.contains(where: { $0.isFeatured }) { return .tierSilver }
-        if ownedBusinesses.contains(where: { $0.isPremium }) { return .tierBronze }
+    // Mirrors Android's UserProfileScreen: highest-tier owned business wins
+    // (sponsored > featured > premium), shown as the real MeTont coin badge
+    // instead of a generic icon.
+    private var tierBadgeResourceName: String? {
+        if ownedBusinesses.contains(where: { $0.isSponsored }) { return "metont_gold" }
+        if ownedBusinesses.contains(where: { $0.isFeatured }) { return "metont_silver" }
+        if ownedBusinesses.contains(where: { $0.isPremium }) { return "metont_bronze" }
         return nil
     }
 
@@ -146,13 +149,9 @@ public struct UserProfileScreen: View {
 
     private var header: some View {
         VStack(spacing: 8) {
-            if let tierColor {
-                ZStack {
-                    Circle().fill(Color.white.opacity(0.15)).frame(width: 80, height: 80)
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 34))
-                        .foregroundColor(tierColor)
-                }
+            if let tierBadgeResourceName {
+                TierBadgeImage(resourceName: tierBadgeResourceName)
+                    .frame(width: 80, height: 80)
             } else {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 60))

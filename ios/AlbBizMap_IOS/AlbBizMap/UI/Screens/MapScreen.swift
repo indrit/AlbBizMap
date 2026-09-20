@@ -20,9 +20,11 @@ public struct MapScreen: View {
     public let onStoryClick: (Int) -> Void
     public let onBusinessClick: (String) -> Void
     
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
-        span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
     )
     @State private var showSearch: Bool = false
     
@@ -61,28 +63,30 @@ public struct MapScreen: View {
             topAppBar
             
             ZStack(alignment: .top) {
-                // Native MapKit Map
-                Map(coordinateRegion: $region, annotationItems: viewModel.filteredBusinesses) { biz in
-                    MapAnnotation(coordinate: biz.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)) {
-                        Button(action: {
-                            onBusinessClick(biz.id)
-                        }) {
-                            VStack(spacing: 2) {
-                                ZStack {
-                                    Circle().fill(biz.isSponsored ? Color.meTontGold : Color.meTontRed)
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: "mappin.circle.fill")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 24))
+                // Native MapKit Map (iOS 17+ MapContentBuilder API)
+                Map(position: $cameraPosition) {
+                    ForEach(viewModel.filteredBusinesses) { biz in
+                        Annotation(biz.name, coordinate: biz.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)) {
+                            Button(action: {
+                                onBusinessClick(biz.id)
+                            }) {
+                                VStack(spacing: 2) {
+                                    ZStack {
+                                        Circle().fill(biz.isSponsored ? Color.meTontGold : Color.meTontRed)
+                                            .frame(width: 36, height: 36)
+                                        Image(systemName: "mappin.circle.fill")
+                                            .foregroundColor(.white)
+                                            .font(.system(size: 24))
+                                    }
+                                    Text(biz.name)
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.white)
+                                        .cornerRadius(6)
+                                        .shadow(radius: 2)
                                 }
-                                Text(biz.name)
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.white)
-                                    .cornerRadius(6)
-                                    .shadow(radius: 2)
                             }
                         }
                     }
@@ -112,6 +116,45 @@ public struct MapScreen: View {
                         onMostFavoritedSeeMore: { onListClick("mostFavorited") }
                     )
                 }
+
+                // FAB buttons — matches Android's Add Business + My Location FABs,
+                // stacked above the bottom sheet's peek height (140).
+                VStack(spacing: 12) {
+                    Button(action: onAddBusinessClick) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 52, height: 52)
+                            .background(Color.meTontRed)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                    }
+                    Button(action: {
+                        // Falls back to Tirana when location isn't available yet,
+                        // matching Android's TIRANA_LOCATION fallback.
+                        let target = LocationManager.shared.userLocation
+                            ?? CLLocationCoordinate2D(latitude: 41.3275, longitude: 19.8187)
+                        withAnimation {
+                            cameraPosition = .region(
+                                MKCoordinateRegion(
+                                    center: target,
+                                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                )
+                            )
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.meTontRed)
+                            .frame(width: 52, height: 52)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, 16)
+                .padding(.bottom, 140)
             }
         }
         .edgesIgnoringSafeArea(.bottom)

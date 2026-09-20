@@ -18,6 +18,7 @@ public struct ContentView: View {
     @State private var showAddBusinessOverlay: Bool = false
     @State private var showBusinessListOverlay: Bool = false
     @State private var showMyBusinessesOverlay: Bool = false
+    @State private var showMyEventsOverlay: Bool = false
     @State private var showJobsOverlay: Bool = false
     @State private var showAdminOverlay: Bool = false
     @State private var showSubscriptionOverlay: Bool = false
@@ -98,7 +99,7 @@ public struct ContentView: View {
                             onMyBusinessesClick: { showMyBusinessesOverlay = true },
                             onMyEventsClick: {
                                 showProfileOverlay = false
-                                showEventsOverlay = true
+                                showMyEventsOverlay = true
                             },
                             currentLanguage: currentLanguage,
                             onLanguageChange: { currentLanguage = $0 }
@@ -128,6 +129,16 @@ public struct ContentView: View {
                         EventsScreen(
                             onBackClick: { showEventsOverlay = false },
                             onAddEventClick: {
+                                requireLoginOrPrompt { showAddEventOverlay = true }
+                            }
+                        )
+                    }
+                    
+                    if showMyEventsOverlay {
+                        MyEventsScreen(
+                            onBackClick: { showMyEventsOverlay = false },
+                            onAddEventClick: {
+                                showMyEventsOverlay = false
                                 requireLoginOrPrompt { showAddEventOverlay = true }
                             }
                         )
@@ -298,6 +309,17 @@ public struct ContentView: View {
                 }
             }
         }
+        // Business Detail's own overlays (Write Review, Edit Business) only
+        // got reset by its explicit back-arrow tap. Every other way of
+        // opening a business — map pin, list, favorites, a story, a
+        // recommendation card — just sets selectedBusinessId directly, so a
+        // sheet left open would silently reappear on the next business
+        // opened that way. Resetting on every change (including a switch to
+        // a different business, not just back to none) closes that gap.
+        .onChange(of: selectedBusinessId) { _, _ in
+            showAddReviewOverlay = false
+            showEditBusinessOverlay = false
+        }
         .environment(\.appStrings, appStrings)
     }
     
@@ -318,6 +340,7 @@ public struct ContentView: View {
         showAddBusinessOverlay = false
         showBusinessListOverlay = false
         showMyBusinessesOverlay = false
+        showMyEventsOverlay = false
         showJobsOverlay = false
         showAdminOverlay = false
         showSubscriptionOverlay = false

@@ -59,6 +59,8 @@ public struct AppStrings {
     public var recentlyAdded: String
     public var topRated: String
     public var allBusinesses: String
+    public var allFilterOption: String
+    public var applyFilters: String
     public var getDirections: String
     public var nearMe: String
     
@@ -66,6 +68,26 @@ public struct AppStrings {
     public var recentReviews: String
     public var noReviewsYet: String
     public var writeReview: String
+    public var writeReplyPlaceholder: String
+    public var reply: String
+    public var viewReplies: String
+    public var hideReplies: String
+    public var editReviewTitle: String
+    public var deleteReviewConfirmTitle: String
+    public var deleteReviewConfirmMessage: String
+    public var deleteReviewButton: String
+    public var reviewUpdated: String
+    public var reviewUpdateFailed: String
+    public var reviewDeleted: String
+    public var reviewDeleteFailed: String
+    public var editReplyTitle: String
+    public var replyUpdated: String
+    public var replyUpdateFailed: String
+    public var deleteReplyConfirmTitle: String
+    public var deleteReplyConfirmMessage: String
+    public var deleteReplyButton: String
+    public var replyDeleted: String
+    public var replyDeleteFailed: String
     public var editBusiness: String
     public var upgradePremium: String
     public var viewPlans: String
@@ -115,6 +137,11 @@ public struct AppStrings {
     public var shareExperience: String
     public var submitReview: String
     public var submitting: String
+    public var addStoryTitle: String
+    public var addPhotosButton: String
+    public var captionPlaceholder: String
+    public var storyLocationPlaceholder: String
+    public var postStory: String
     
     // Subscription
     public var choosePlan: String
@@ -124,6 +151,28 @@ public struct AppStrings {
     public var requestSponsorship: String
     public var requestFeatured: String
     public var manualPaymentNote: String
+    public var freeTierName: String
+    public var forever: String
+    public var perMonth: String
+    public var currentPlanButton: String
+    public var notAvailableDash: String
+    public var upgradeTitleTemplate: String
+    public var planFeatureNameCategory: String
+    public var planFeatureLocationOnMap: String
+    public var planFeature100CharDesc: String
+    public var planFeature1Photo: String
+    public var planFeatureEverythingPremium: String
+    public var planFeatureUp6Photos: String
+    public var planFeaturePhoneNumber: String
+    public var planFeatureEmailWebsite: String
+    public var planFeaturePremiumBadge: String
+    public var planFeatureUp10Photos: String
+    public var planFeatureFeaturedBadge: String
+    public var planFeatureFeaturedDiscoveryRow: String
+    public var planFeatureUp14Photos: String
+    public var planFeatureHighlightedMapPin: String
+    public var planFeatureTopSearchResults: String
+    public var planFeatureSponsoredBadge: String
     
     // Favorites
     public var myFavorites: String
@@ -180,6 +229,7 @@ public struct AppStrings {
     public var cityRequired: String
     public var locatingAddress: String
     public var geocodeFailed: String
+    public var failedToUploadPhoto: String
     public var latitude: String
     public var longitude: String
     public var pickLocationFromMap: String
@@ -189,8 +239,13 @@ public struct AppStrings {
     public var websiteOptional: String
     public var workingHoursSection: String
     public var open247: String
+    public var closedLabel: String
+    public var hoursOpenLabel: String
+    public var hoursCloseLabel: String
+    public var ok: String
     public var photoOptional: String
     public var photoAdded: String
+    public var uploadingPhoto: String
     public var registering: String
     public var registerBusinessButton: String
     public var businessNameRequired: String
@@ -204,6 +259,48 @@ public struct AppStrings {
     public var gallery: String
     public var camera: String
     public var choosePhotoSource: String
+    public var editBusinessTitle: String
+    public var basicInformationSection: String
+    public var locationSectionShort: String
+    public var saveChanges: String
+    public var businessUpdatedSuccess: String
+    public var categoryRequiredLabel: String
+    public var descriptionRequiredLabel: String
+    public var photoLimitReached: String
+    public var addJobPostingTitle: String
+    public var jobTitleLabel: String
+    public var jobTypeLabel: String
+    public var jobSalaryLabel: String
+    public var jobSalaryPlaceholder: String
+    public var addJobButton: String
+    public var jobTitleDescRequired: String
+    public var addPromotionTitle: String
+    public var promotionTitleLabel: String
+    public var savingLabel: String
+    public var promotionsEmptyTitle: String
+    public var unexpectedErrorPrefix: String
+    public var failedToUploadPhotos: String
+    public var failedToUpdateBusiness: String
+    public var promotionDiscountCodeLabel: String
+    public var promotionExpirySection: String
+    public var promotionInvalidExpiry: String
+    public var promotionCodePrefix: String
+    public var promotionExpiresPrefix: String
+    public var dayLabel: String
+    public var dayPlaceholder: String
+    public var monthLabel: String
+    public var monthPlaceholder: String
+    public var yearLabel: String
+    public var yearPlaceholder: String
+    public var noEventsYet: String
+    public var noEventsYetSubtitle: String
+    public var deleteEvent: String
+    public var deleteEventConfirmTitle: String
+    public var deleteEventConfirmMessage: String
+    public var eventDeleted: String
+    public var eventDeleteFailed: String
+    public var maxPhotosPerReview: String
+    public var loginRequiredForReview: String
     
     public static let english = AppStrings(
         appName: "MeTont",
@@ -255,11 +352,33 @@ public struct AppStrings {
         recentlyAdded: "Recently Added",
         topRated: "Top Rated",
         allBusinesses: "All Businesses",
+        allFilterOption: "All",
+        applyFilters: "Apply Filters",
         getDirections: "Get Directions",
         nearMe: "Near Me",
         recentReviews: "Recent Reviews",
         noReviewsYet: "No reviews yet. Be the first!",
         writeReview: "Review",
+        writeReplyPlaceholder: "Write a reply...",
+        reply: "Reply",
+        viewReplies: "View replies",
+        hideReplies: "Hide replies",
+        editReviewTitle: "Edit Review",
+        deleteReviewConfirmTitle: "Delete Review",
+        deleteReviewConfirmMessage: "Are you sure you want to delete this review? This can't be undone.",
+        deleteReviewButton: "Delete",
+        reviewUpdated: "Review updated",
+        reviewUpdateFailed: "Failed to update review",
+        reviewDeleted: "Review deleted",
+        reviewDeleteFailed: "Failed to delete review",
+        editReplyTitle: "Edit Reply",
+        replyUpdated: "Reply updated",
+        replyUpdateFailed: "Failed to update reply",
+        deleteReplyConfirmTitle: "Delete Reply",
+        deleteReplyConfirmMessage: "Are you sure you want to delete this reply? This can't be undone.",
+        deleteReplyButton: "Delete",
+        replyDeleted: "Reply deleted",
+        replyDeleteFailed: "Failed to delete reply",
         editBusiness: "Edit",
         upgradePremium: "Upgrade to Premium to unlock contact info, website, photos and more for just $2.99/month",
         viewPlans: "View Plans",
@@ -303,6 +422,11 @@ public struct AppStrings {
         shareExperience: "Share your experience...",
         submitReview: "Submit Review",
         submitting: "Submitting...",
+        addStoryTitle: "Add Story",
+        addPhotosButton: "Add Photos",
+        captionPlaceholder: "Write a caption...",
+        storyLocationPlaceholder: "e.g. Tirana, Albania",
+        postStory: "Post Story",
         choosePlan: "Choose Your Plan",
         upgradeYourListing: "Upgrade Your Listing",
         currentPlan: "CURRENT",
@@ -310,6 +434,28 @@ public struct AppStrings {
         requestSponsorship: "Request Sponsorship",
         requestFeatured: "Request Featured",
         manualPaymentNote: "Payments are currently processed manually. We will contact you within 24 hours of your request.",
+        freeTierName: "Free",
+        forever: "forever",
+        perMonth: "per month",
+        currentPlanButton: "Current Plan",
+        notAvailableDash: "—",
+        upgradeTitleTemplate: "Upgrade \"%@\"",
+        planFeatureNameCategory: "Business name & category",
+        planFeatureLocationOnMap: "Location on map",
+        planFeature100CharDesc: "100 character description",
+        planFeature1Photo: "1 photo",
+        planFeatureEverythingPremium: "Everything in Premium",
+        planFeatureUp6Photos: "Up to 6 photos",
+        planFeaturePhoneNumber: "Phone number",
+        planFeatureEmailWebsite: "Email & website",
+        planFeaturePremiumBadge: "Premium badge",
+        planFeatureUp10Photos: "Up to 10 photos",
+        planFeatureFeaturedBadge: "Featured badge",
+        planFeatureFeaturedDiscoveryRow: "Featured in discovery row",
+        planFeatureUp14Photos: "Up to 14 photos",
+        planFeatureHighlightedMapPin: "Highlighted map pin",
+        planFeatureTopSearchResults: "Top of search results",
+        planFeatureSponsoredBadge: "Sponsored badge",
         myFavorites: "My Favorites",
         noFavoritesYet: "You haven't saved any businesses yet.",
         myBusinesses: "My Businesses",
@@ -357,6 +503,7 @@ public struct AppStrings {
         cityRequired: "City is required",
         locatingAddress: "Finding coordinates…",
         geocodeFailed: "Couldn't find that address — please check it's correct",
+        failedToUploadPhoto: "Couldn't upload photo — please try again",
         latitude: "Latitude *",
         longitude: "Longitude *",
         pickLocationFromMap: "Pick Location from Map",
@@ -366,8 +513,13 @@ public struct AppStrings {
         websiteOptional: "Website (Optional)",
         workingHoursSection: "Working Hours",
         open247: "Open 24/7",
+        closedLabel: "Closed",
+        hoursOpenLabel: "Open",
+        hoursCloseLabel: "Close",
+        ok: "OK",
         photoOptional: "Photo (Optional)",
         photoAdded: "Photo Added (1/1)",
+        uploadingPhoto: "Uploading photo...",
         registering: "Registering...",
         registerBusinessButton: "Register Business",
         businessNameRequired: "Business name is required",
@@ -380,7 +532,49 @@ public struct AppStrings {
         cameraPermissionRequired: "Camera permission required",
         gallery: "Gallery",
         camera: "Camera",
-        choosePhotoSource: "Choose photo source"
+        choosePhotoSource: "Choose photo source",
+        editBusinessTitle: "Edit Business",
+        basicInformationSection: "Basic Information",
+        locationSectionShort: "Location",
+        saveChanges: "Save Changes",
+        businessUpdatedSuccess: "Business updated successfully!",
+        categoryRequiredLabel: "Category *",
+        descriptionRequiredLabel: "Description *",
+        photoLimitReached: "Photo limit reached for your plan",
+        addJobPostingTitle: "Add Job Posting",
+        jobTitleLabel: "Job Title *",
+        jobTypeLabel: "Job Type *",
+        jobSalaryLabel: "Salary (Optional)",
+        jobSalaryPlaceholder: "e.g. $1,500/month",
+        addJobButton: "Add Job",
+        jobTitleDescRequired: "Title and description are required",
+        addPromotionTitle: "Add Promotion",
+        promotionTitleLabel: "Promotion Title *",
+        savingLabel: "Saving...",
+        promotionsEmptyTitle: "No promotions yet.",
+        unexpectedErrorPrefix: "Unexpected error",
+        failedToUploadPhotos: "Failed to upload photos",
+        failedToUpdateBusiness: "Failed to update business",
+        promotionDiscountCodeLabel: "Discount Code (Optional)",
+        promotionExpirySection: "Expiry Date (Optional)",
+        promotionInvalidExpiry: "Please enter a valid expiry date",
+        promotionCodePrefix: "Code: ",
+        promotionExpiresPrefix: "Expires: ",
+        dayLabel: "Day",
+        dayPlaceholder: "DD",
+        monthLabel: "Month",
+        monthPlaceholder: "MM",
+        yearLabel: "Year",
+        yearPlaceholder: "YYYY",
+        noEventsYet: "You don't have any events yet",
+        noEventsYetSubtitle: "Submit an event to reach more people",
+        deleteEvent: "Delete Event",
+        deleteEventConfirmTitle: "Delete this event?",
+        deleteEventConfirmMessage: "This will permanently remove the event. This action cannot be undone.",
+        eventDeleted: "Event deleted",
+        eventDeleteFailed: "Failed to delete event",
+        maxPhotosPerReview: "Maximum 5 photos per review",
+        loginRequiredForReview: "You must be logged in to submit a review"
     )
     
     public static let albanian = AppStrings(
@@ -433,11 +627,33 @@ public struct AppStrings {
         recentlyAdded: "Shtuar Së Fundmi",
         topRated: "Më të Vlerësuarit",
         allBusinesses: "Të Gjitha Bizneset",
+        allFilterOption: "Të gjitha",
+        applyFilters: "Apliko Filtrat",
         getDirections: "Drejtimet",
         nearMe: "Pranë Meje",
         recentReviews: "Vlerësimet e Fundit",
         noReviewsYet: "Asnjë vlerësim ende. Bëhu i pari!",
         writeReview: "Vlerëso",
+        writeReplyPlaceholder: "Shkruaj një përgjigje...",
+        reply: "Përgjigju",
+        viewReplies: "Shiko përgjigjet",
+        hideReplies: "Fshih përgjigjet",
+        editReviewTitle: "Ndrysho Vlerësimin",
+        deleteReviewConfirmTitle: "Fshi Vlerësimin",
+        deleteReviewConfirmMessage: "A jeni i sigurt që doni ta fshini këtë vlerësim? Kjo nuk mund të zhbëhet.",
+        deleteReviewButton: "Fshij",
+        reviewUpdated: "Vlerësimi u përditësua",
+        reviewUpdateFailed: "Përditësimi i vlerësimit dështoi",
+        reviewDeleted: "Vlerësimi u fshi",
+        reviewDeleteFailed: "Fshirja e vlerësimit dështoi",
+        editReplyTitle: "Ndrysho Përgjigjen",
+        replyUpdated: "Përgjigja u përditësua",
+        replyUpdateFailed: "Përditësimi i përgjigjes dështoi",
+        deleteReplyConfirmTitle: "Fshi Përgjigjen",
+        deleteReplyConfirmMessage: "A jeni i sigurt që doni ta fshini këtë përgjigje? Kjo nuk mund të zhbëhet.",
+        deleteReplyButton: "Fshij",
+        replyDeleted: "Përgjigja u fshi",
+        replyDeleteFailed: "Fshirja e përgjigjes dështoi",
         editBusiness: "Ndrysho",
         upgradePremium: "Kaloni në Premium për të zhbllokuar kontaktet, faqen dhe fotot për vetëm $2.99/muaj",
         viewPlans: "Shiko Planet",
@@ -481,6 +697,11 @@ public struct AppStrings {
         shareExperience: "Ndani përvojën tuaj...",
         submitReview: "Dërgo Vlerësimin",
         submitting: "Duke dërguar...",
+        addStoryTitle: "Shto Histori",
+        addPhotosButton: "Shto Foto",
+        captionPlaceholder: "Shkruani një përshkrim...",
+        storyLocationPlaceholder: "p.sh. Tiranë, Shqipëri",
+        postStory: "Posto Historinë",
         choosePlan: "Zgjidhni Planin Tuaj",
         upgradeYourListing: "Përmirësoni Listimin Tuaj",
         currentPlan: "AKTUAL",
@@ -488,6 +709,28 @@ public struct AppStrings {
         requestSponsorship: "Kërkoni Sponsorizim",
         requestFeatured: "Kërkoni të Veçohet",
         manualPaymentNote: "Pagesat aktualisht procesohen manualisht. Do t'ju kontaktojmë brenda 24 orëve.",
+        freeTierName: "Falas",
+        forever: "përgjithmonë",
+        perMonth: "në muaj",
+        currentPlanButton: "Plani Aktual",
+        notAvailableDash: "—",
+        upgradeTitleTemplate: "Përmirëso \"%@\"",
+        planFeatureNameCategory: "Emri dhe kategoria e biznesit",
+        planFeatureLocationOnMap: "Vendndodhja në hartë",
+        planFeature100CharDesc: "Përshkrim 100 karaktere",
+        planFeature1Photo: "1 foto",
+        planFeatureEverythingPremium: "Gjithçka në Premium",
+        planFeatureUp6Photos: "Deri në 6 foto",
+        planFeaturePhoneNumber: "Numri i telefonit",
+        planFeatureEmailWebsite: "Email dhe faqja web",
+        planFeaturePremiumBadge: "Distinktivi Premium",
+        planFeatureUp10Photos: "Deri në 10 foto",
+        planFeatureFeaturedBadge: "Distinktivi i Veçuar",
+        planFeatureFeaturedDiscoveryRow: "I veçuar në rreshtin e zbulimit",
+        planFeatureUp14Photos: "Deri në 14 foto",
+        planFeatureHighlightedMapPin: "Shenjë e theksuar në hartë",
+        planFeatureTopSearchResults: "Në krye të rezultateve të kërkimit",
+        planFeatureSponsoredBadge: "Distinktivi Sponsorizuar",
         myFavorites: "Të Preferuarat e Mia",
         noFavoritesYet: "Nuk keni ruajtur asnjë biznes ende.",
         myBusinesses: "Bizneset e Mia",
@@ -535,6 +778,7 @@ public struct AppStrings {
         cityRequired: "Qyteti është i detyrueshëm",
         locatingAddress: "Duke gjetur koordinatat…",
         geocodeFailed: "Nuk u gjet ky adresë — ju lutem kontrolloni nëse është e saktë",
+        failedToUploadPhoto: "Nuk u ngarkua dot fotoja — provoni përsëri",
         latitude: "Gjerësia *",
         longitude: "Gjatësia *",
         pickLocationFromMap: "Zgjidhni Vendndodhjen nga Harta",
@@ -544,8 +788,13 @@ public struct AppStrings {
         websiteOptional: "Faqja Web (Opsionale)",
         workingHoursSection: "Orari i Punës",
         open247: "Hapur 24/7",
+        closedLabel: "Mbyllur",
+        hoursOpenLabel: "Hapet",
+        hoursCloseLabel: "Mbyllet",
+        ok: "Në rregull",
         photoOptional: "Foto (Opsionale)",
         photoAdded: "Foto u Shtua (1/1)",
+        uploadingPhoto: "Duke ngarkuar foton...",
         registering: "Duke Regjistruar...",
         registerBusinessButton: "Regjistro Biznesin",
         businessNameRequired: "Emri i biznesit është i detyrueshëm",
@@ -558,7 +807,49 @@ public struct AppStrings {
         cameraPermissionRequired: "Leja e kamerës është e nevojshme",
         gallery: "Galeria",
         camera: "Kamera",
-        choosePhotoSource: "Zgjidhni burimin e fotos"
+        choosePhotoSource: "Zgjidhni burimin e fotos",
+        editBusinessTitle: "Ndrysho Biznesin",
+        basicInformationSection: "Informacion Bazë",
+        locationSectionShort: "Vendndodhja",
+        saveChanges: "Ruaj Ndryshimet",
+        businessUpdatedSuccess: "Biznesi u përditësua me sukses!",
+        categoryRequiredLabel: "Kategoria *",
+        descriptionRequiredLabel: "Përshkrimi *",
+        photoLimitReached: "Limiti i fotove u arrit për planin tuaj",
+        addJobPostingTitle: "Shto Vend Pune",
+        jobTitleLabel: "Titulli i Punës *",
+        jobTypeLabel: "Lloji i Punës *",
+        jobSalaryLabel: "Paga (Opsionale)",
+        jobSalaryPlaceholder: "p.sh. 1,500$/muaj",
+        addJobButton: "Shto Punë",
+        jobTitleDescRequired: "Titulli dhe përshkrimi janë të detyrueshëm",
+        addPromotionTitle: "Shto Promocion",
+        promotionTitleLabel: "Titulli i Promocionit *",
+        savingLabel: "Duke ruajtur...",
+        promotionsEmptyTitle: "Ende nuk ka promocione.",
+        unexpectedErrorPrefix: "Gabim i papritur",
+        failedToUploadPhotos: "Ngarkimi i fotove dështoi",
+        failedToUpdateBusiness: "Përditësimi i biznesit dështoi",
+        promotionDiscountCodeLabel: "Kodi i Zbritjes (Opsionale)",
+        promotionExpirySection: "Data e Skadimit (Opsionale)",
+        promotionInvalidExpiry: "Ju lutemi vendosni një datë skadimi të vlefshme",
+        promotionCodePrefix: "Kodi: ",
+        promotionExpiresPrefix: "Skadon: ",
+        dayLabel: "Dita",
+        dayPlaceholder: "DD",
+        monthLabel: "Muaji",
+        monthPlaceholder: "MM",
+        yearLabel: "Viti",
+        yearPlaceholder: "VVVV",
+        noEventsYet: "Ende nuk keni asnjë event",
+        noEventsYetSubtitle: "Shtoni një event për të arritur më shumë njerëz",
+        deleteEvent: "Fshi Eventin",
+        deleteEventConfirmTitle: "Fshi këtë event?",
+        deleteEventConfirmMessage: "Kjo do ta heqë përgjithmonë eventin. Ky veprim nuk mund të zhbëhet.",
+        eventDeleted: "Eventi u fshi",
+        eventDeleteFailed: "Fshirja e eventit dështoi",
+        maxPhotosPerReview: "Maksimumi 5 foto për vlerësim",
+        loginRequiredForReview: "Duhet të jeni të kyçur për të dërguar një vlerësim"
     )
     
     public static func forLanguage(_ lang: AppLanguage) -> AppStrings {

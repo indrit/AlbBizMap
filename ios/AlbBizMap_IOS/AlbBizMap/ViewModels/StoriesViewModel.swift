@@ -14,9 +14,9 @@ public class StoriesViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    public func postStory(story: Story) async -> Bool {
+    public func postStory(story: Story, photoData: [Data] = []) async -> Bool {
         isLoading = true
-        let res = await StoriesRepository.shared.addStory(story)
+        let res = await StoriesRepository.shared.addStory(story, photoData: photoData)
         await MainActor.run {
             self.isLoading = false
         }

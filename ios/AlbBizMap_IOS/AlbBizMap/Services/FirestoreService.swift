@@ -1,173 +1,264 @@
 // Bismillah Hir Rahman Nir Raheem
 import Foundation
 import Combine
+import FirebaseFirestore
+import FirebaseStorage
+import FirebaseAuth
 
 public class FirestoreService: ObservableObject {
     public static let shared = FirestoreService()
-    
+
     @Published public var businesses: [Business] = []
-    @Published public var events: [Event] = []
     @Published public var claimRequests: [ClaimRequest] = []
     @Published public var favoriteIds: Set<String> = []
-    
-    public init() {
-        loadSampleData()
+
+    private let db = Firestore.firestore()
+    private lazy var businessesRef = db.collection("businesses")
+    private lazy var usersRef = db.collection("users")
+    private lazy var claimRequestsRef = db.collection("claim_requests")
+    private let storage = Storage.storage()
+
+    private var businessesListener: ListenerRegistration?
+    private var claimsListener: ListenerRegistration?
+
+    private init() {
+        startListening()
     }
-    
-    private func loadSampleData() {
-        // Default sample businesses matching Albanian Businesses sample seed
-        self.businesses = [
-            Business(
-                id: "biz_1",
-                name: "Sofra Shqiptare",
-                category: "Restaurant",
-                description: "Traditional Albanian cuisine, tavë kosi, and grilled meats in warm family setting.",
-                longDescription: "Welcome to Sofra Shqiptare! We bring authentic Albanian traditional taste to your table with freshly prepared flia, tavë kosi, fergesë, and fresh salads.",
-                address: "123 Main St",
-                city: "New York",
-                country: "USA",
-                phone: "+1 212-555-0199",
-                email: "info@sofrashqiptare.com",
-                website: "https://sofrashqiptare.com",
-                location: GeoPointLocation(latitude: 40.7128, longitude: -74.0060),
-                photos: ["https://images.unsplash.com/photo-1555396273-367ea4eb4db5"],
-                rating: 4.9,
-                reviewCount: 28,
-                isActive: true,
-                isSponsored: true,
-                isPremium: true,
-                isVerified: true,
-                isAlbanianOwned: true,
-                isFeatured: true,
-                likeCount: 45
-            ),
-            Business(
-                id: "biz_2",
-                name: "Peja Espresso Bar",
-                category: "Cafe",
-                description: "Authentic macchiato, Turkish coffee, and freshly baked pastries.",
-                address: "456 Grand Ave",
-                city: "Bronx",
-                country: "USA",
-                phone: "+1 718-555-0144",
-                location: GeoPointLocation(latitude: 40.8448, longitude: -73.8648),
-                photos: ["https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb"],
-                rating: 4.8,
-                reviewCount: 19,
-                isActive: true,
-                isSponsored: false,
-                isPremium: true,
-                isVerified: true,
-                isAlbanianOwned: true,
-                likeCount: 32
-            ),
-            Business(
-                id: "biz_3",
-                name: "Besa Construction & Remodeling",
-                category: "Contractor",
-                description: "General contractor specializing in modern home renovation, roofing, and tile work.",
-                address: "789 Broadway",
-                city: "Stamford",
-                country: "USA",
-                phone: "+1 203-555-0177",
-                location: GeoPointLocation(latitude: 41.0534, longitude: -73.5387),
-                photos: [],
-                rating: 4.7,
-                reviewCount: 12,
-                isActive: true,
-                isVerified: true,
-                isAlbanianOwned: true,
-                likeCount: 15
-            )
-        ]
-        
-        self.events = [
-            Event(
-                id: "evt_1",
-                title: "Albanian Independence Day Celebration",
-                description: "Join us for music, traditional dance, and Albanian food stall festival!",
-                locationName: "Manhattan Center, NYC",
-                date: Int64(Date().timeIntervalSince1970 * 1000 + 86400000 * 5),
-                category: "Cultural",
-                imageUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865",
-                isPromoted: true,
-                websiteUrl: "https://albanianfestival.org"
-            )
-        ]
+
+    private func startListening() {
+        businessesListener = businessesRef
+            .whereField("isActive", isEqualTo: true)
+            .addSnapshotListener { [weak self] snapshot, error in
+                if let error = error {
+                    print("Firestore: Error listening for businesses: \(error)")
+                    return
+                }
+                guard let snapshot = snapshot else { return }
+                let parsed = snapshot.documents.compactMap { doc -> Business? in
+                    Business.fromMap(id: doc.documentID, map: doc.data())
+                }
+                // Same precedence as Android's getActiveBusinesses: sponsored first, then rating.
+                let sorted = parsed.sorted { a, b in
+                    if a.isSponsored != b.isSponsored { return a.isSponsored && !b.isSponsored }
+                    return a.rating > b.rating
+                }
+                DispatchQueue.main.async { self?.businesses = sorted }
+            }
+
+        claimsListener = claimRequestsRef
+            .whereField("status", isEqualTo: "pending")
+            .addSnapshotListener { [weak self] snapshot, error in
+                if let error = error {
+                    print("Firestore: Error listening for claim requests: \(error)")
+                    return
+                }
+                guard let snapshot = snapshot else { return }
+                let parsed = snapshot.documents.compactMap { doc -> ClaimRequest? in
+                    ClaimRequest.fromMap(id: doc.documentID, map: doc.data())
+                }
+                DispatchQueue.main.async { self?.claimRequests = parsed }
+            }
     }
-    
+
+    // MARK: - Businesses
+
     public func addBusiness(_ business: Business) async -> Result<String, Error> {
-        var newBiz = business
-        if newBiz.id.isEmpty {
-            newBiz.id = "biz_" + UUID().uuidString.prefix(8)
+        // Mirrors Android's FirestoreService.addBusiness: requires a real signed-in
+        // user (Add Business is gated behind login at the UI level already), and the
+        // resulting document is always owned by that user regardless of whatever
+        // ownerId the caller passed in.
+        guard let currentUser = Auth.auth().currentUser else {
+            // FirestoreService is a plain singleton with no SwiftUI environment access,
+            // so (unlike view-level strings) this technical fallback message is not
+            // localized — Add Business is already gated behind login at the UI level,
+            // so this path should only ever be hit defensively.
+            return .failure(NSError(domain: "FirestoreService", code: -1, userInfo: [
+                NSLocalizedDescriptionKey: "You must be logged in to add a business"
+            ]))
         }
-        await MainActor.run {
-            self.businesses.append(newBiz)
+        let docRef = business.id.isEmpty ? businessesRef.document() : businessesRef.document(business.id)
+        var finalBusiness = business
+        finalBusiness.id = docRef.documentID
+        finalBusiness.ownerId = currentUser.uid
+        do {
+            try await docRef.setData(finalBusiness.toMap().compactMapValues { $0 })
+            return .success(docRef.documentID)
+        } catch {
+            return .failure(error)
         }
-        return .success(newBiz.id)
     }
-    
+
     public func updateBusiness(_ business: Business) async -> Result<String, Error> {
-        await MainActor.run {
-            if let idx = self.businesses.firstIndex(where: { $0.id == business.id }) {
-                self.businesses[idx] = business
-            }
+        do {
+            try await businessesRef.document(business.id).setData(business.toMap().compactMapValues { $0 })
+            return .success(business.id)
+        } catch {
+            return .failure(error)
         }
-        return .success(business.id)
     }
-    
+
+    public func updateBusinessPhotos(businessId: String, photos: [String]) async -> Result<Void, Error> {
+        do {
+            try await businessesRef.document(businessId).updateData(["photos": photos])
+            return .success(())
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    // MARK: - Storage (photo upload)
+
+    // Mirrors Android's FirestoreService.uploadImage: same storage path shape
+    // (businesses/{businessId}/image_{index}.jpg) so photos stay compatible across
+    // both platforms' buckets.
+    public func uploadImage(businessId: String, data: Data, index: Int) async throws -> String {
+        let filename = "businesses/\(businessId)/image_\(index).jpg"
+        let ref = storage.reference().child(filename)
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        _ = try await ref.putDataAsync(data, metadata: metadata)
+        let url = try await ref.downloadURL()
+        return url.absoluteString
+    }
+
+    public func testConnection() async -> Bool {
+        do {
+            _ = try await businessesRef.limit(to: 1).getDocuments()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - Favorites
+    // Mirrors Android's BusinessRepository (not FirestoreService's own dead
+    // subcollection variant): a single "favorites" array field on users/{uid},
+    // updated with arrayUnion/arrayRemove and falling back to creating the user
+    // document if it doesn't exist yet.
+
     public func toggleFavorite(userId: String, businessId: String) {
-        if favoriteIds.contains(businessId) {
-            favoriteIds.remove(businessId)
-        } else {
+        guard !userId.isEmpty else { return }
+        let willFavorite = !favoriteIds.contains(businessId)
+        // Optimistic local update so the heart icon responds instantly.
+        if willFavorite {
             favoriteIds.insert(businessId)
+        } else {
+            favoriteIds.remove(businessId)
+        }
+        let userRef = usersRef.document(userId)
+        Task {
+            do {
+                if willFavorite {
+                    try await userRef.updateData(["favorites": FieldValue.arrayUnion([businessId])])
+                } else {
+                    try await userRef.updateData(["favorites": FieldValue.arrayRemove([businessId])])
+                }
+            } catch {
+                do {
+                    try await userRef.setData([
+                        "favorites": willFavorite ? [businessId] : [],
+                        "isAdmin": false
+                    ], merge: true)
+                } catch {
+                    print("Firestore: Error toggling favorite: \(error)")
+                }
+            }
         }
     }
-    
+
+    // One-shot fetch (matches Android's suspend getFavoriteIds — not a live
+    // listener), called when a user logs in so their existing favorites show up.
+    public func loadFavorites(userId: String) async {
+        guard !userId.isEmpty else {
+            await MainActor.run { self.favoriteIds = [] }
+            return
+        }
+        do {
+            let doc = try await usersRef.document(userId).getDocument()
+            let favorites = (doc.data()?["favorites"] as? [String]) ?? []
+            await MainActor.run { self.favoriteIds = Set(favorites) }
+        } catch {
+            print("Firestore: Error loading favorites: \(error)")
+        }
+    }
+
+    // MARK: - Likes
+
     public func toggleBusinessLike(userId: String, businessId: String) {
-        if let idx = businesses.firstIndex(where: { $0.id == businessId }) {
-            var biz = businesses[idx]
-            if biz.likedBy.contains(userId) {
-                biz.likedBy.removeAll(where: { $0 == userId })
-                biz.likeCount = max(0, biz.likeCount - 1)
-            } else {
-                biz.likedBy.append(userId)
-                biz.likeCount += 1
+        let businessRef = businessesRef.document(businessId)
+        Task {
+            do {
+                _ = try await db.runTransaction { transaction, errorPointer in
+                    let snapshot: DocumentSnapshot
+                    do {
+                        snapshot = try transaction.getDocument(businessRef)
+                    } catch let fetchError as NSError {
+                        errorPointer?.pointee = fetchError
+                        return nil
+                    }
+                    let likedBy = (snapshot.get("likedBy") as? [String]) ?? []
+                    if likedBy.contains(userId) {
+                        transaction.updateData([
+                            "likedBy": FieldValue.arrayRemove([userId]),
+                            "likeCount": FieldValue.increment(Int64(-1))
+                        ], forDocument: businessRef)
+                    } else {
+                        transaction.updateData([
+                            "likedBy": FieldValue.arrayUnion([userId]),
+                            "likeCount": FieldValue.increment(Int64(1))
+                        ], forDocument: businessRef)
+                    }
+                    return nil
+                }
+            } catch {
+                print("Firestore: Error toggling like: \(error)")
             }
-            businesses[idx] = biz
         }
     }
-    
+
+    // MARK: - Claims / Admin
+
     public func submitClaimRequest(_ claim: ClaimRequest) async -> Result<String, Error> {
-        var newClaim = claim
-        if newClaim.id.isEmpty {
-            newClaim.id = "claim_" + UUID().uuidString.prefix(8)
+        let ref = claimRequestsRef.document()
+        var finalClaim = claim
+        finalClaim.id = ref.documentID
+        do {
+            try await ref.setData(finalClaim.toMap().compactMapValues { $0 })
+            return .success(ref.documentID)
+        } catch {
+            return .failure(error)
         }
-        await MainActor.run {
-            self.claimRequests.append(newClaim)
-        }
-        return .success(newClaim.id)
     }
-    
+
     public func approveClaim(_ claim: ClaimRequest) async -> Result<Void, Error> {
-        await MainActor.run {
-            if let idx = self.businesses.firstIndex(where: { $0.id == claim.businessId }) {
-                self.businesses[idx].ownerId = claim.userId
-                self.businesses[idx].isVerified = true
-            }
-            if let claimIdx = self.claimRequests.firstIndex(where: { $0.id == claim.id }) {
-                self.claimRequests[claimIdx].status = "approved"
-            }
+        do {
+            try await businessesRef.document(claim.businessId).updateData([
+                "ownerId": claim.userId,
+                "isVerified": true
+            ])
+            try await claimRequestsRef.document(claim.id).updateData(["status": "approved"])
+            return .success(())
+        } catch {
+            return .failure(error)
         }
-        return .success(())
     }
-    
+
     public func rejectClaim(claimId: String) async -> Result<Void, Error> {
-        await MainActor.run {
-            if let claimIdx = self.claimRequests.firstIndex(where: { $0.id == claimId }) {
-                self.claimRequests[claimIdx].status = "rejected"
-            }
+        do {
+            try await claimRequestsRef.document(claimId).updateData(["status": "rejected"])
+            return .success(())
+        } catch {
+            return .failure(error)
         }
-        return .success(())
+    }
+
+    public func isUserAdmin(userId: String) async -> Bool {
+        guard !userId.isEmpty else { return false }
+        do {
+            let doc = try await usersRef.document(userId).getDocument()
+            return doc.data()?["isAdmin"] as? Bool ?? false
+        } catch {
+            return false
+        }
     }
 }

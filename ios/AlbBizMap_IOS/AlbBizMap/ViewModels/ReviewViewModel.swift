@@ -3,20 +3,24 @@ import Foundation
 import Combine
 
 public class ReviewViewModel: ObservableObject {
-    @Published public var rating: Int = 5
+    @Published public var rating: Int = 0
     @Published public var comment: String = ""
     @Published public var isSubmitting: Bool = false
     @Published public var errorMessage: String? = nil
     
     public init() {}
     
-    public func submitReview(businessId: String, userId: String, userName: String) async -> Bool {
+    public func submitReview(businessId: String, userId: String, userName: String, photoData: [Data] = [], strings: AppStrings) async -> Bool {
         if rating < 1 {
-            errorMessage = "Please select a rating"
+            errorMessage = strings.pleaseSelectRating
             return false
         }
         if comment.trimmingCharacters(in: .whitespaces).isEmpty {
-            errorMessage = "Please write a review"
+            errorMessage = strings.pleaseWriteReview
+            return false
+        }
+        if userId.isEmpty {
+            errorMessage = strings.loginRequiredForReview
             return false
         }
         
@@ -25,11 +29,11 @@ public class ReviewViewModel: ObservableObject {
             userId: userId,
             userName: userName,
             rating: rating,
-            comment: comment
+            comment: comment.trimmingCharacters(in: .whitespaces)
         )
         
         await MainActor.run { self.isSubmitting = true; self.errorMessage = nil }
-        let res = await ReviewRepository.shared.addReview(businessId: businessId, review: review)
+        let res = await ReviewRepository.shared.addReview(businessId: businessId, review: review, photoData: photoData)
         await MainActor.run { self.isSubmitting = false }
         
         switch res {

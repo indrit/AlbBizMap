@@ -33,8 +33,9 @@ public struct UserProfile {
         self.firstName = parts.first.map(String.init) ?? ""
         self.lastName = parts.count > 1 ? String(parts[1]) : ""
         // isAdmin is a separate Firestore "users/{uid}" document field on Android
-        // (AdminViewModel.isUserAdmin), not part of Firebase Auth itself — not
-        // wired up yet, left false like the rest of admin tooling.
+        // (AdminViewModel.isUserAdmin), not part of Firebase Auth itself, so it
+        // isn't known yet at construction time — AuthManager.loadUserBackedState
+        // fetches and overwrites this right after login.
         self.isAdmin = false
     }
 }
@@ -51,6 +52,7 @@ public class AuthManager: ObservableObject {
         if let user = Auth.auth().currentUser {
             self.currentUser = UserProfile(firebaseUser: user)
             self.isLoggedIn = true
+            loadUserBackedState(uid: user.uid)
         }
         // Keeps currentUser/isLoggedIn in sync with Firebase's own session state —
         // same role as Android's _currentUser StateFlow tracking auth.currentUser.
@@ -59,9 +61,25 @@ public class AuthManager: ObservableObject {
             if let user = user {
                 self.currentUser = UserProfile(firebaseUser: user)
                 self.isLoggedIn = true
+                self.loadUserBackedState(uid: user.uid)
             } else {
                 self.currentUser = nil
                 self.isLoggedIn = false
+                Task { await FirestoreService.shared.loadFavorites(userId: "") }
+            }
+        }
+    }
+
+    // Firestore-backed state that isn't part of Firebase Auth itself: the user's
+    // saved favorites (users/{uid}.favorites) and their isAdmin flag
+    // (users/{uid}.isAdmin) — fetched once on login, mirroring Android's
+    // getFavoriteIds()/isUserAdmin() calls right after sign-in.
+    private func loadUserBackedState(uid: String) {
+        Task {
+            await FirestoreService.shared.loadFavorites(userId: uid)
+            let admin = await FirestoreService.shared.isUserAdmin(userId: uid)
+            await MainActor.run {
+                self.currentUser?.isAdmin = admin
             }
         }
     }
