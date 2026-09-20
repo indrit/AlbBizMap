@@ -71,7 +71,7 @@ fun EditBusinessScreen(
     var city by remember { mutableStateOf(business.city) }
     var country by remember { mutableStateOf(business.country) }
     var selectedCategory by remember {
-        mutableStateOf(BusinessCategory.entries.find { it.name == business.category })
+        mutableStateOf(BusinessCategory.fromStored(business.category))
     }
     var showCategoryDropdown by remember { mutableStateOf(false) }
     // Coordinates are re-resolved from Address+City+Country via GeocodingUtils on

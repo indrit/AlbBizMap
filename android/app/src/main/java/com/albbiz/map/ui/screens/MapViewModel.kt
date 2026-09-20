@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.albbiz.map.data.Business
+import com.albbiz.map.data.BusinessCategory
 import com.albbiz.map.data.BusinessRepository
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -186,8 +187,17 @@ class MapViewModel : ViewModel() {
                     business.name.contains(query, ignoreCase = true) ||
                     business.category.contains(query, ignoreCase = true) ||
                     business.address.contains(query, ignoreCase = true)
+            // Chip labels are always BusinessCategory.displayName ("Auto Shop"),
+            // but business.category on the record itself can be stored either as
+            // the raw enum name (Android's own writer, "AUTO_SHOP") or as the iOS
+            // app's rawValue (its own displayName, "Auto Shop") — a plain
+            // case-insensitive string compare only ever matches the second form,
+            // so every multi-word category silently matched nothing for
+            // Android-created businesses. Resolving both sides through the same
+            // enum lookup before comparing fixes that regardless of which format
+            // either side happens to be in.
             val matchesCategory = category.isEmpty() ||
-                    business.category.equals(category, ignoreCase = true)
+                    BusinessCategory.fromStored(business.category) == BusinessCategory.fromStored(category)
             matchesQuery && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
@@ -207,7 +217,7 @@ class MapViewModel : ViewModel() {
                     business.category.contains(query, ignoreCase = true) ||
                     business.address.contains(query, ignoreCase = true)
             val matchesCategory = categories.isEmpty() ||
-                    categories.any { business.category.equals(it, ignoreCase = true) }
+                    categories.any { BusinessCategory.fromStored(business.category) == BusinessCategory.fromStored(it) }
             val matchesCountry = countries.isEmpty() ||
                     countries.any { business.country.equals(it, ignoreCase = true) }
             val matchesCity = cities.isEmpty() ||
