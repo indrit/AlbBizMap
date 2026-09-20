@@ -6,7 +6,15 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.ownerId ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likeCount'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likeCount']) ||
+        // Admins approving a claim/verification request need to write
+        // ownerId/ownerEmail/ownerName/isVerified on a business that isn't
+        // theirs — the rule above only ever let the current owner (or a
+        // likedBy/likeCount change) touch the document, so approveClaim()
+        // was permission-denied for every business the approving admin
+        // didn't already own themselves. Same isAdmin lookup pattern already
+        // used below for claim_requests.
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
       );
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
 

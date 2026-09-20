@@ -79,6 +79,7 @@ fun AddBusinessScreen(
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var isOpen24Hours by remember { mutableStateOf(false) }
     var workingHours by remember { mutableStateOf(mapOf<String, String>()) }
+    var isAlbanianOwned by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -335,6 +336,29 @@ fun AddBusinessScreen(
                 }
             }
 
+            // ── ALBANIAN OWNED ────────────────────────────────────
+            SectionCard(title = strings.albanianOwned) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        strings.albanianOwnedQuestion,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                    Switch(
+                        checked = isAlbanianOwned,
+                        onCheckedChange = { isAlbanianOwned = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MeTontRed
+                        )
+                    )
+                }
+            }
+
             // ── PHOTO ─────────────────────────────────────────────
             SectionCard(title = strings.photoOptional) {
                 if (selectedImageUris.isNotEmpty()) {
@@ -403,6 +427,7 @@ fun AddBusinessScreen(
                                     location = GeoPoint(latLng.latitude, latLng.longitude),
                                     isOpen24Hours = isOpen24Hours,
                                     workingHours = if (isOpen24Hours) emptyMap() else workingHours,
+                                    isAlbanianOwned = isAlbanianOwned,
                                     isActive = true,
                                     rating = 0.0,
                                     reviewCount = 0

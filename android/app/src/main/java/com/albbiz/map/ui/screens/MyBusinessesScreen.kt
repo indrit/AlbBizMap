@@ -170,14 +170,37 @@ fun MyBusinessesScreen(
                             )
                         }
                         items(ownedBusinesses) { business ->
-                            BusinessListItem(
-                                business = business,
-                                userLocation = userLocation,
-                                isFavorite = favoriteIds.contains(business.id),
-                                onToggleFavorite = { viewModel.toggleFavorite(business.id) },
-                                onToggleLike = { viewModel.toggleFavorite(business.id) },
-                                onClick = { onBusinessClick(business.id) }
-                            )
+                            Box {
+                                BusinessListItem(
+                                    business = business,
+                                    userLocation = userLocation,
+                                    isFavorite = favoriteIds.contains(business.id),
+                                    onToggleFavorite = { viewModel.toggleFavorite(business.id) },
+                                    onToggleLike = { viewModel.toggleFavorite(business.id) },
+                                    onClick = { onBusinessClick(business.id) }
+                                )
+                                // Owner-only visibility cue — getActiveBusinesses()
+                                // already excludes inactive businesses from the
+                                // public map/list, so this only ever shows here,
+                                // on the owner's own management screen.
+                                if (!business.isActive) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(top = 8.dp, end = 20.dp),
+                                        color = Color(0xFFFFA726),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            strings.inactiveLabel,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            color = Color.White,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
                         }
                         item {
                             Spacer(modifier = Modifier.height(8.dp))

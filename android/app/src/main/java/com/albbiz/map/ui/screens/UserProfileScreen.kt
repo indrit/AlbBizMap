@@ -76,9 +76,9 @@ fun UserProfileScreen(
             businessRepository.getBusinessesByOwner(uid).collect { ownedBusinesses ->
                 ownedBusinessCount = ownedBusinesses.size
                 userTierIcon = when {
-                    ownedBusinesses.any { it.isSponsored } -> R.drawable.metont_gold
-                    ownedBusinesses.any { it.isFeatured } -> R.drawable.metont_silver
-                    ownedBusinesses.any { it.isPremium } -> R.drawable.metont_bronze
+                    ownedBusinesses.any { it.isEffectivelySponsored } -> R.drawable.metont_gold
+                    ownedBusinesses.any { it.isEffectivelyFeatured } -> R.drawable.metont_silver
+                    ownedBusinesses.any { it.isEffectivelyPremium } -> R.drawable.metont_bronze
                     else -> null
                 }
             }

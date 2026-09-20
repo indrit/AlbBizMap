@@ -27,6 +27,11 @@ data class Business(
     val isPremium: Boolean = false,
     val premiumUntil: Long? = null,
     val ownerId: String = "",
+    // Captured once at creation time from Firebase Auth (never updated after) —
+    // purely so admin tooling has something human-readable to show instead of a
+    // raw ownerId UID, which Firebase Auth's client SDK can't look up directly.
+    val ownerEmail: String = "",
+    val ownerName: String = "",
     val isVerified: Boolean = false,
     val isAlbanianOwned: Boolean = false,
     val isFeatured: Boolean = false,
@@ -35,17 +40,39 @@ data class Business(
     val likeCount: Int = 0,
     val likedBy: List<String> = emptyList()
 ) {
+    // True while the flag is set AND its matching expiry timestamp hasn't
+    // passed yet (a null timestamp means "no expiry recorded" — treated as
+    // still active rather than expired, so seed/dummy businesses and any
+    // pre-existing data without a timestamp aren't wrongly downgraded).
+    // Featured has no timestamp of its own — updateSubscription() writes
+    // premiumUntil for both the "premium" and "featured" purchase tiers, so
+    // isEffectivelyFeatured checks premiumUntil too, matching that.
+    // There's no automatic backend job (Cloud Function/RTDN) that flips
+    // isPremium/isFeatured/isSponsored off when a subscription actually
+    // lapses — these computed properties are the stopgap: they make the
+    // *display* correct immediately regardless of what's still sitting in
+    // Firestore. The Admin tab's "Clear Expired Plans" action is what
+    // eventually cleans up the stored flags themselves.
+    val isEffectivelyPremium: Boolean
+        get() = isPremium && (premiumUntil == null || premiumUntil > System.currentTimeMillis())
+    val isEffectivelyFeatured: Boolean
+        get() = isFeatured && (premiumUntil == null || premiumUntil > System.currentTimeMillis())
+    val isEffectivelySponsored: Boolean
+        get() = isSponsored && (sponsoredUntil == null || sponsoredUntil > System.currentTimeMillis())
+
     // Total photo cap per tier, INCLUDING the one required main photo every
     // business must have regardless of plan — not additional photos on top of
     // it. Checked highest tier first since a business can have multiple tier
     // flags set at once (e.g. isPremium + isSponsored), same precedence order
     // already used elsewhere (UserProfileScreen's tier badge, MapViewModel's
-    // topPicks sort).
+    // topPicks sort). Uses the effective (non-expired) flags so a lapsed
+    // subscription loses its extra photo slots immediately rather than
+    // keeping them until an admin manually cleans up the stored flag.
     val maxPhotos: Int
         get() = when {
-            isSponsored -> 14
-            isFeatured -> 10
-            isPremium -> 6
+            isEffectivelySponsored -> 14
+            isEffectivelyFeatured -> 10
+            isEffectivelyPremium -> 6
             else -> 1
         }
 
@@ -75,6 +102,8 @@ data class Business(
             "isPremium" to isPremium,
             "premiumUntil" to premiumUntil,
             "ownerId" to ownerId,
+            "ownerEmail" to ownerEmail,
+            "ownerName" to ownerName,
             "isVerified" to isVerified,
             "isAlbanianOwned" to isAlbanianOwned,
             "isFeatured" to isFeatured,
@@ -114,6 +143,8 @@ data class Business(
                 isPremium = map["isPremium"] as? Boolean ?: false,
                 premiumUntil = (map["premiumUntil"] as? Number)?.toLong(),
                 ownerId = map["ownerId"] as? String ?: "",
+                ownerEmail = map["ownerEmail"] as? String ?: "",
+                ownerName = map["ownerName"] as? String ?: "",
                 isVerified = map["isVerified"] as? Boolean ?: false,
                 isAlbanianOwned = map["isAlbanianOwned"] as? Boolean ?: false,
                 isFeatured = map["isFeatured"] as? Boolean ?: false,

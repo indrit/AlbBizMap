@@ -81,8 +81,131 @@ fun BusinessDetailScreen(
     val isFavorite = favoriteIds.contains(business.id)
     val currentBusiness = business
 
+    // ── CLAIM THIS BUSINESS ────────────────────────────────────────────
+    var showClaimDialog by remember { mutableStateOf(false) }
+    var claimReason by remember { mutableStateOf("") }
+    var claimSubmitting by remember { mutableStateOf(false) }
+    // Only tracks "submitted this screen visit" — not a persisted check against
+    // existing pending claims in Firestore, so it won't survive leaving and
+    // re-entering the screen. Good enough to stop an accidental double-submit
+    // in one sitting; a real duplicate-claim guard would need its own query.
+    var claimJustSubmitted by remember { mutableStateOf(false) }
+    // Distinguishes "claiming someone else's/unclaimed listing" from "I already
+    // own this, requesting the Verified badge for it" — same submitClaim/dialog
+    // machinery underneath (reassigning ownerId to yourself is a harmless no-op
+    // when you're already the owner), just different button/dialog copy.
+    var isOwnerVerificationRequest by remember { mutableStateOf(false) }
+    val claimCoroutineScope = rememberCoroutineScope()
+    val businessRepository = remember { com.albbiz.map.data.BusinessRepository() }
+
     LaunchedEffect(business.id) {
         reviewViewModel.loadReviews(business.id)
+    }
+
+    if (showClaimDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!claimSubmitting) showClaimDialog = false },
+            title = {
+                Text(
+                    if (isOwnerVerificationRequest) strings.requestVerification else strings.claimThisBusiness,
+                    fontWeight = FontWeight.Bold,
+                    color = MeTontRed
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        if (isOwnerVerificationRequest) strings.requestVerificationDialogDescription
+                        else strings.claimBusinessDialogDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                    OutlinedTextField(
+                        value = claimReason,
+                        onValueChange = { claimReason = it },
+                        label = { Text(strings.claimReasonLabel) },
+                        placeholder = { Text(strings.claimReasonPlaceholder) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 5,
+                        enabled = !claimSubmitting,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MeTontRed,
+                            cursorColor = MeTontRed
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (claimReason.isBlank()) {
+                            Toast.makeText(context, strings.claimReasonRequired, Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        val firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                        if (firebaseUser == null) {
+                            showClaimDialog = false
+                            onNavigateToAuth {}
+                            return@Button
+                        }
+                        claimSubmitting = true
+                        claimCoroutineScope.launch {
+                            val claim = com.albbiz.map.data.ClaimRequest(
+                                businessId = business.id,
+                                businessName = business.name,
+                                userId = firebaseUser.uid,
+                                userName = firebaseUser.displayName ?: "",
+                                userEmail = firebaseUser.email ?: "",
+                                reason = claimReason.trim(),
+                                type = if (isOwnerVerificationRequest) "verification" else "claim"
+                            )
+                            val result = businessRepository.submitClaim(claim)
+                            claimSubmitting = false
+                            result.fold(
+                                onSuccess = {
+                                    val successMsg = if (isOwnerVerificationRequest)
+                                        strings.verificationRequestSubmitted else strings.claimSubmittedSuccess
+                                    Toast.makeText(context, successMsg, Toast.LENGTH_LONG).show()
+                                    showClaimDialog = false
+                                    claimReason = ""
+                                    claimJustSubmitted = true
+                                },
+                                onFailure = { e ->
+                                    Toast.makeText(
+                                        context,
+                                        "${strings.claimSubmitFailed}: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            )
+                        }
+                    },
+                    enabled = !claimSubmitting,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MeTontRed)
+                ) {
+                    if (claimSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(strings.submitClaimButton, color = Color.White)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showClaimDialog = false },
+                    enabled = !claimSubmitting
+                ) {
+                    Text(strings.cancel, color = MeTontGrey)
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -175,7 +298,7 @@ fun BusinessDetailScreen(
 
                         // Badges
                         if (business.isVerified || business.isAlbanianOwned ||
-                            business.isPremium || business.isFeatured || business.isSponsored
+                            business.isEffectivelyPremium || business.isEffectivelyFeatured || business.isEffectivelySponsored
                         ) {
                             Row(
                                 modifier = Modifier
@@ -195,9 +318,9 @@ fun BusinessDetailScreen(
                                 // Sponsored stacked together, which read as confusing/redundant
                                 // rather than "this business is Sponsored."
                                 when {
-                                    business.isSponsored -> DetailBadgeChip(strings.sponsored, TierGold, Icons.Default.Campaign)
-                                    business.isFeatured -> DetailBadgeChip(strings.featured2, TierSilver, Icons.Default.LocalFireDepartment)
-                                    business.isPremium -> DetailBadgeChip(strings.premium, TierBronze, Icons.Default.Star)
+                                    business.isEffectivelySponsored -> DetailBadgeChip(strings.sponsored, TierGold, Icons.Default.Campaign)
+                                    business.isEffectivelyFeatured -> DetailBadgeChip(strings.featured2, TierSilver, Icons.Default.LocalFireDepartment)
+                                    business.isEffectivelyPremium -> DetailBadgeChip(strings.premium, TierBronze, Icons.Default.Star)
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
@@ -242,7 +365,7 @@ fun BusinessDetailScreen(
                         // itself set to true never showed its extended description, even
                         // though Featured/Sponsored are supposed to include everything
                         // Premium has.
-                        if ((business.isPremium || business.isFeatured || business.isSponsored) &&
+                        if ((business.isEffectivelyPremium || business.isEffectivelyFeatured || business.isEffectivelySponsored) &&
                             business.longDescription.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -421,7 +544,7 @@ fun BusinessDetailScreen(
             // everything Premium has. Same highest-tier-wins flags used
             // elsewhere (Business.maxPhotos, UserProfileScreen's badge).
             item {
-                if (business.isPremium || business.isFeatured || business.isSponsored) {
+                if (business.isEffectivelyPremium || business.isEffectivelyFeatured || business.isEffectivelySponsored) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -551,7 +674,7 @@ fun BusinessDetailScreen(
             // of the Contact card's isPremium check, so a business already on
             // Premium (or Featured) had no way to see this at all, meaning no
             // way to upgrade further to Featured/Sponsored from this screen.
-            if (!business.isSponsored) {
+            if (!business.isEffectivelySponsored) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -593,6 +716,73 @@ fun BusinessDetailScreen(
                                 )
                             ) {
                                 Text(strings.viewPlans, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── GET VERIFIED CARD ──────────────────────────────────
+            // Only the owner sees this — it's how you earn the Verified badge
+            // on a business you already added yourself, as opposed to the
+            // Claim This Business button (elsewhere, non-owners only), which
+            // is for taking over a listing that isn't linked to your account
+            // yet. Same submit flow underneath, different entry point/wording.
+            if (currentUserId == business.ownerId && !business.isVerified) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
+                        border = BorderStroke(1.dp, Color(0xFF2196F3))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    null,
+                                    tint = Color(0xFF2196F3),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    strings.getVerifiedTitle,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1565C0)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                strings.requestVerificationDescription,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MeTontGrey
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            if (claimJustSubmitted) {
+                                Text(
+                                    strings.verificationAlreadySubmitted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1565C0)
+                                )
+                            } else {
+                                Button(
+                                    onClick = {
+                                        claimReason = ""
+                                        isOwnerVerificationRequest = true
+                                        showClaimDialog = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF2196F3),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text(strings.requestVerification, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -674,6 +864,34 @@ fun BusinessDetailScreen(
                             Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(strings.editBusiness, fontWeight = FontWeight.Bold)
+                        }
+                    } else if (!business.isVerified) {
+                        OutlinedButton(
+                            onClick = {
+                                val claimAction: () -> Unit = {
+                                    claimReason = ""
+                                    isOwnerVerificationRequest = false
+                                    showClaimDialog = true
+                                }
+                                com.albbiz.map.utils.AuthGate.requireLogin(
+                                    onNotLoggedIn = { onNavigateToAuth(claimAction) },
+                                    action = claimAction
+                                )
+                            },
+                            enabled = !claimJustSubmitted,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                            border = BorderStroke(1.dp, MeTontRed)
+                        ) {
+                            Icon(Icons.Default.Verified, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (claimJustSubmitted) strings.claimAlreadySubmitted else strings.claimThisBusiness,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                     Button(

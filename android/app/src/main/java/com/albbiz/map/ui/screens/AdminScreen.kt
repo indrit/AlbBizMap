@@ -17,13 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.albbiz.map.data.Business
 import com.albbiz.map.data.ClaimRequest
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
 import com.albbiz.map.ui.MeTontRed
+import com.albbiz.map.ui.theme.TierBronze
+import com.albbiz.map.ui.theme.TierGold
+import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.viewmodel.AdminViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -35,7 +40,9 @@ fun AdminScreen(
     onBackClick: () -> Unit,
     viewModel: AdminViewModel = viewModel()
 ) {
-    val claimRequests by viewModel.claimRequests.collectAsState()
+    val businessClaims by viewModel.businessClaims.collectAsState()
+    val verificationRequests by viewModel.verificationRequests.collectAsState()
+    val businessesWithPlans by viewModel.businessesWithPlans.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isAdmin by viewModel.isAdmin.collectAsState()
     val message by viewModel.message.collectAsState()
@@ -208,78 +215,86 @@ fun AdminScreen(
                 }
             }
 
-            // ── CLAIMS HEADER ─────────────────────────────────────
+            // ── BUSINESS CLAIMS SECTION ────────────────────────────
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        strings.pendingClaimRequests,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Surface(
-                        color = if (claimRequests.isEmpty()) Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        else MeTontRed.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            "${claimRequests.size} ${strings.pendingCountLabel}",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            color = if (claimRequests.isEmpty()) Color(0xFF4CAF50) else MeTontRed,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                AdminSectionHeader(
+                    title = strings.adminBusinessClaims,
+                    count = businessClaims.size
+                )
             }
-
-            // ── EMPTY CLAIMS ──────────────────────────────────────
-            if (claimRequests.isEmpty()) {
+            if (businessClaims.isEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                null,
-                                modifier = Modifier.size(48.dp),
-                                tint = Color(0xFF4CAF50)
-                            )
-                            Text(
-                                strings.noPendingClaims,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF4CAF50)
-                            )
-                            Text(
-                                strings.allClaimsProcessed,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MeTontGrey
-                            )
-                        }
-                    }
+                    AdminEmptyState(
+                        title = strings.noPendingClaims,
+                        subtitle = strings.allClaimsProcessed
+                    )
                 }
             } else {
-                items(claimRequests) { claim ->
+                items(businessClaims, key = { "claim_${it.id}" }) { claim ->
                     ClaimRequestCard(
                         claim = claim,
+                        typeLabel = strings.adminBusinessClaims,
                         onApprove = { viewModel.approveClaim(claim) },
                         onReject = { viewModel.rejectClaim(claim.id) }
                     )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // ── VERIFICATION REQUESTS SECTION ──────────────────────
+            item {
+                AdminSectionHeader(
+                    title = strings.adminVerificationRequests,
+                    count = verificationRequests.size
+                )
+            }
+            if (verificationRequests.isEmpty()) {
+                item {
+                    AdminEmptyState(
+                        title = strings.adminNoPendingVerification,
+                        subtitle = strings.adminAllVerificationProcessed
+                    )
+                }
+            } else {
+                items(verificationRequests, key = { "verify_${it.id}" }) { claim ->
+                    ClaimRequestCard(
+                        claim = claim,
+                        typeLabel = strings.adminVerificationRequests,
+                        onApprove = { viewModel.approveClaim(claim) },
+                        onReject = { viewModel.rejectClaim(claim.id) }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // ── BUSINESSES & PLANS SECTION ─────────────────────────
+            item {
+                AdminSectionHeader(
+                    title = strings.adminBusinessesAndPlans,
+                    count = businessesWithPlans.size
+                )
+            }
+            item {
+                BusinessesPlansTable(businesses = businessesWithPlans, strings = strings)
+            }
+            item {
+                // Stopgap for the missing RTDN/Cloud-Function pipeline (see
+                // Business.isEffectivelyPremium etc.) — this table deliberately
+                // shows raw stored flags so stale ones are visible; this button
+                // is what actually clears them out of Firestore once spotted.
+                OutlinedButton(
+                    onClick = { viewModel.clearExpiredPlans() },
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MeTontRed),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MeTontRed)
+                ) {
+                    Icon(Icons.Default.CleaningServices, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(strings.clearExpiredPlansButton, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -289,8 +304,204 @@ fun AdminScreen(
 }
 
 @Composable
+private fun AdminSectionHeader(title: String, count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+        Surface(
+            color = if (count == 0) Color(0xFF4CAF50).copy(alpha = 0.1f)
+            else MeTontRed.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                "$count",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                color = if (count == 0) Color(0xFF4CAF50) else MeTontRed,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdminEmptyState(title: String, subtitle: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                null,
+                modifier = Modifier.size(48.dp),
+                tint = Color(0xFF4CAF50)
+            )
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4CAF50)
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MeTontGrey
+            )
+        }
+    }
+}
+
+// ── BUSINESSES & PLANS TABLE ────────────────────────────────────────
+@Composable
+private fun BusinessesPlansTable(businesses: List<Business>, strings: com.albbiz.map.ui.AppStrings) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (businesses.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        strings.adminNoActivePlans,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                }
+                return@Column
+            }
+
+            // Header row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFAFAFA))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    strings.adminTableBusinessColumn,
+                    modifier = Modifier.weight(2f),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MeTontGrey
+                )
+                Text(
+                    strings.adminTableTierColumn,
+                    modifier = Modifier.weight(1.2f),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MeTontGrey
+                )
+                Text(
+                    strings.adminTableExpiresColumn,
+                    modifier = Modifier.weight(1.3f),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MeTontGrey
+                )
+            }
+            HorizontalDivider(color = Color(0xFFF0F0F0))
+
+            businesses.forEachIndexed { index, business ->
+                BusinessPlanRow(business = business, strings = strings)
+                if (index < businesses.lastIndex) {
+                    HorizontalDivider(color = Color(0xFFF5F5F5))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BusinessPlanRow(business: Business, strings: com.albbiz.map.ui.AppStrings) {
+    val (tierLabel, tierColor, expiry) = when {
+        business.isSponsored -> Triple(strings.sponsored, TierGold, business.sponsoredUntil)
+        business.isFeatured -> Triple(strings.featured2, TierSilver, business.premiumUntil)
+        business.isPremium -> Triple(strings.premium, TierBronze, business.premiumUntil)
+        else -> Triple("", MeTontGrey, null)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            business.name,
+            modifier = Modifier.weight(2f),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Box(modifier = Modifier.weight(1.2f)) {
+            Surface(
+                color = tierColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    tierLabel,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = tierColor
+                )
+            }
+        }
+        val isExpired = expiry != null && expiry < System.currentTimeMillis()
+        Column(modifier = Modifier.weight(1.3f)) {
+            Text(
+                expiry?.let {
+                    SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(it))
+                } ?: strings.adminNoExpiry,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (isExpired) FontWeight.Bold else FontWeight.Normal,
+                color = if (isExpired) MeTontRed else MeTontGrey
+            )
+            // Raw stored flag is still true even though the date's passed —
+            // that's exactly what "Clear Expired Plans" above targets, and
+            // what the effective-tier checks elsewhere already hide from
+            // regular users regardless of whether this gets cleaned up.
+            if (isExpired) {
+                Text(
+                    strings.expiredLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MeTontRed
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ClaimRequestCard(
     claim: ClaimRequest,
+    typeLabel: String,
     onApprove: () -> Unit,
     onReject: () -> Unit
 ) {
@@ -393,7 +604,7 @@ private fun ClaimRequestCard(
                         color = Color.Black
                     )
                     Text(
-                        "Business Claim",
+                        typeLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = MeTontRed
                     )

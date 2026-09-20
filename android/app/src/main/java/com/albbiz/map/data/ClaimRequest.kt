@@ -10,6 +10,11 @@ data class ClaimRequest(
     val userEmail: String = "",
     val reason: String = "",
     val status: String = "pending", // pending, approved, rejected
+    // "claim": user doesn't yet own this listing, wants ownerId reassigned to them.
+    // "verification": user already owns this listing, just wants isVerified set —
+    // approving still calls the same ownerId-reassign code, but it's a no-op since
+    // userId already equals the business's current ownerId.
+    val type: String = "claim",
     val createdAt: Long = System.currentTimeMillis()
 ) {
     fun toMap(): Map<String, Any?> {
@@ -22,6 +27,7 @@ data class ClaimRequest(
             "userEmail" to userEmail,
             "reason" to reason,
             "status" to status,
+            "type" to type,
             "createdAt" to createdAt
         )
     }

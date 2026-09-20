@@ -95,7 +95,12 @@ class FirestoreService {
                 ?: return Result.failure(Exception(CurrentLanguage.strings().mustBeLoggedInToAddBusiness))
 
             val docRef = if (business.id.isEmpty()) businessesRef.document() else businessesRef.document(business.id)
-            val finalBusiness = business.copy(id = docRef.id, ownerId = currentUser.uid)
+            val finalBusiness = business.copy(
+                id = docRef.id,
+                ownerId = currentUser.uid,
+                ownerEmail = currentUser.email ?: "",
+                ownerName = currentUser.displayName ?: ""
+            )
 
             docRef.set(finalBusiness.toMap()).await()
             Result.success(docRef.id)
@@ -211,6 +216,40 @@ class FirestoreService {
         }
     }
 
+    // Stopgap for the missing RTDN/Cloud-Function subscription-expiry pipeline —
+    // see Business.isEffectivelyPremium/Featured/Sponsored, which already hide
+    // expired perks everywhere they're displayed regardless of this. This is
+    // what actually cleans up the stored flags themselves, so the Admin tab's
+    // Businesses & Plans table (which deliberately shows raw, un-masked state)
+    // stops listing them. Takes the already-loaded list rather than re-querying,
+    // since AdminViewModel already has it live via getActiveBusinesses().
+    suspend fun clearExpiredPlans(businesses: List<Business>): Result<Int> {
+        return try {
+            val now = System.currentTimeMillis()
+            var clearedCount = 0
+            for (business in businesses) {
+                val updates = mutableMapOf<String, Any?>()
+                if (business.isPremium && business.premiumUntil != null && business.premiumUntil < now) {
+                    updates["isPremium"] = false
+                }
+                if (business.isFeatured && business.premiumUntil != null && business.premiumUntil < now) {
+                    updates["isFeatured"] = false
+                }
+                if (business.isSponsored && business.sponsoredUntil != null && business.sponsoredUntil < now) {
+                    updates["isSponsored"] = false
+                }
+                if (updates.isNotEmpty()) {
+                    businessesRef.document(business.id).update(updates).await()
+                    clearedCount++
+                }
+            }
+            Result.success(clearedCount)
+        } catch (e: Exception) {
+            Log.e(TAG, "Firestore: Error clearing expired plans", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun submitClaimRequest(claim: ClaimRequest): Result<String> {
         return try {
             val ref = db.collection("claim_requests").document()
@@ -298,6 +337,7 @@ class FirestoreService {
                             userEmail = it["userEmail"] as? String ?: "",
                             reason = it["reason"] as? String ?: "",
                             status = it["status"] as? String ?: "pending",
+                            type = it["type"] as? String ?: "claim",
                             createdAt = (it["createdAt"] as? Number)?.toLong() ?: 0L
                         )
                     }
@@ -309,10 +349,15 @@ class FirestoreService {
 
     suspend fun approveClaim(claim: ClaimRequest): Result<Unit> {
         return try {
-            // Update business ownerId and set isVerified
+            // Update business ownerId and set isVerified. Also refreshes
+            // ownerEmail/ownerName to the claimant's — otherwise a claim that
+            // actually transfers ownership (type == "claim") would leave the
+            // business's stored owner contact info pointing at the old owner.
             businessesRef.document(claim.businessId).update(
                 mapOf(
                     "ownerId" to claim.userId,
+                    "ownerEmail" to claim.userEmail,
+                    "ownerName" to claim.userName,
                     "isVerified" to true
                 )
             ).await()

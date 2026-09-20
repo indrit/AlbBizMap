@@ -80,6 +80,8 @@ fun EditBusinessScreen(
     val coroutineScope = rememberCoroutineScope()
     var isOpen24Hours by remember { mutableStateOf(business.isOpen24Hours) }
     var workingHours by remember { mutableStateOf(business.workingHours) }
+    var isAlbanianOwned by remember { mutableStateOf(business.isAlbanianOwned) }
+    var isBusinessActive by remember { mutableStateOf(business.isActive) }
     var jobs by remember { mutableStateOf(business.jobs.toMutableList()) }
     var showAddJobDialog by remember { mutableStateOf(false) }
     var promotions by remember { mutableStateOf(business.promotions.toMutableList()) }
@@ -438,6 +440,52 @@ fun EditBusinessScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // ── ACTIVE STATUS ─────────────────────────────────────
+            // Reuses the existing isActive field (already what
+            // getActiveBusinesses() filters the map/list on) as a reversible
+            // "hide my listing" toggle — deliberately not a delete button, see
+            // the business-deletion conversation this came out of. Placed
+            // first/most prominent since it affects whether the business is
+            // visible at all, unlike everything else on this screen.
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isBusinessActive) Color.White else Color(0xFFFFF3E0)
+                ),
+                border = if (isBusinessActive) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFA726)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            strings.businessActiveStatus,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isBusinessActive) Color.Black else Color(0xFFE65100)
+                        )
+                        Switch(
+                            checked = isBusinessActive,
+                            onCheckedChange = { isBusinessActive = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = MeTontRed
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        if (isBusinessActive) strings.businessActiveDescription
+                        else strings.businessInactiveDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MeTontGrey
+                    )
+                }
+            }
+
             // ── BASIC INFO ────────────────────────────────────────
             SectionCard(title = strings.basicInformationSection) {
                 RedOutlinedTextField(
@@ -603,6 +651,29 @@ fun EditBusinessScreen(
                 }
                 if (!isOpen24Hours) {
                     WorkingHoursEditor(hours = workingHours, onHoursChanged = { workingHours = it })
+                }
+            }
+
+            // ── ALBANIAN OWNED ────────────────────────────────────
+            SectionCard(title = strings.albanianOwned) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        strings.albanianOwnedQuestion,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                    Switch(
+                        checked = isAlbanianOwned,
+                        onCheckedChange = { isAlbanianOwned = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MeTontRed
+                        )
+                    )
                 }
             }
 
@@ -837,6 +908,8 @@ fun EditBusinessScreen(
                                     location = GeoPoint(latLng.latitude, latLng.longitude),
                                     isOpen24Hours = isOpen24Hours,
                                     workingHours = if (isOpen24Hours) emptyMap() else workingHours,
+                                    isAlbanianOwned = isAlbanianOwned,
+                                    isActive = isBusinessActive,
                                     jobs = jobs,
                                     promotions = promotions
                                 )

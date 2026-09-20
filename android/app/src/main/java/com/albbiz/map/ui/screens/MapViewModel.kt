@@ -96,7 +96,7 @@ class MapViewModel : ViewModel() {
 
     // ── DISCOVERY FLOWS ───────────────────────────────────────────
     val featured: StateFlow<List<Business>> = _businesses
-        .mapLatest { list -> list.filter { it.isFeatured || it.isSponsored }.take(5) }
+        .mapLatest { list -> list.filter { it.isEffectivelyFeatured || it.isEffectivelySponsored }.take(5) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     val recentlyAdded: StateFlow<List<Business>> = _businesses
@@ -137,8 +137,8 @@ class MapViewModel : ViewModel() {
             list.map { business -> business to repository.calculateDistance(userPoint, business.location ?: GeoPoint(0.0, 0.0)) }
                 .filter { (_, distance) -> distance <= 50.0 }
                 .sortedWith(
-                    compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
-                        .thenByDescending { it.first.isFeatured }
+                    compareByDescending<Pair<Business, Double>> { it.first.isEffectivelySponsored }
+                        .thenByDescending { it.first.isEffectivelyFeatured }
                         .thenBy { it.second }
                 ).take(10).map { it.first }
         }
@@ -162,7 +162,7 @@ class MapViewModel : ViewModel() {
         _businesses, _userLocation
     ) { list: List<Business>, location: LatLng? ->
         val userPoint = location?.let { GeoPoint(it.latitude, it.longitude) }
-        list.filter { it.isSponsored || it.isFeatured }
+        list.filter { it.isEffectivelySponsored || it.isEffectivelyFeatured }
             .map { business ->
                 val distance = userPoint?.let {
                     repository.calculateDistance(it, business.location ?: GeoPoint(0.0, 0.0))
@@ -170,8 +170,8 @@ class MapViewModel : ViewModel() {
                 business to distance
             }
             .sortedWith(
-                compareByDescending<Pair<Business, Double>> { it.first.isSponsored }
-                    .thenByDescending { it.first.isFeatured }
+                compareByDescending<Pair<Business, Double>> { it.first.isEffectivelySponsored }
+                    .thenByDescending { it.first.isEffectivelyFeatured }
                     .thenBy { it.second }
             ).take(10).map { it.first }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())

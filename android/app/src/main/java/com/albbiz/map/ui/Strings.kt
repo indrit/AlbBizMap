@@ -68,6 +68,47 @@ interface AppStrings {
     val category: String
     val verified: String
     val albanianOwned: String
+    val albanianOwnedQuestion: String
+    val claimThisBusiness: String
+    val claimBusinessDialogDescription: String
+    val claimReasonLabel: String
+    val claimReasonPlaceholder: String
+    val submitClaimButton: String
+    val claimSubmittedSuccess: String
+    val claimSubmitFailed: String
+    val claimReasonRequired: String
+    val claimAlreadySubmitted: String
+    val getVerifiedTitle: String
+    val requestVerification: String
+    val requestVerificationDescription: String
+    val requestVerificationDialogDescription: String
+    val verificationRequestSubmitted: String
+    val verificationAlreadySubmitted: String
+    // Admin tab
+    val adminBusinessClaims: String
+    val adminVerificationRequests: String
+    val adminBusinessesAndPlans: String
+    val adminNoPendingVerification: String
+    val adminAllVerificationProcessed: String
+    val adminNoActivePlans: String
+    val adminTableBusinessColumn: String
+    val adminTableTierColumn: String
+    val adminTableExpiresColumn: String
+    val adminNoExpiry: String
+    val businessActiveStatus: String
+    val businessActiveDescription: String
+    val businessInactiveDescription: String
+    val inactiveLabel: String
+    val clearExpiredPlansButton: String
+    val clearExpiredPlansNoneFound: String
+    val clearExpiredPlansSuccessTemplate: String
+    val clearExpiredPlansFailedPrefix: String
+    val expiredLabel: String
+    val subscriptionActivatedSuccess: String
+    val purchaseAckFailedTemplate: String
+    val purchaseLostBusinessError: String
+    val purchaseUnknownProductError: String
+    val purchaseActivationFailedTemplate: String
     val premium: String
     val featured2: String
     val sponsored: String
@@ -443,6 +484,46 @@ object EnglishStrings : AppStrings {
     override val category = "Category"
     override val verified = "Verified"
     override val albanianOwned = "Albanian Owned"
+    override val albanianOwnedQuestion = "Is this business Albanian-owned?"
+    override val claimThisBusiness = "Claim This Business"
+    override val claimBusinessDialogDescription = "Tell us why you're the owner of this business. Our team will review your request."
+    override val claimReasonLabel = "Reason"
+    override val claimReasonPlaceholder = "e.g. I run this business, here's how you can verify it..."
+    override val submitClaimButton = "Submit Claim"
+    override val claimSubmittedSuccess = "Claim request submitted! We'll review it soon."
+    override val claimSubmitFailed = "Failed to submit claim"
+    override val claimReasonRequired = "Please enter a reason"
+    override val claimAlreadySubmitted = "Claim submitted — pending review"
+    override val getVerifiedTitle = "Get Verified"
+    override val requestVerification = "Request Verification"
+    override val requestVerificationDescription = "Get a Verified badge on your business so customers know it's the real deal."
+    override val requestVerificationDialogDescription = "Tell us a bit about your business — this helps our team verify it faster."
+    override val verificationRequestSubmitted = "Verification request submitted! We'll review it soon."
+    override val verificationAlreadySubmitted = "Verification requested — pending review"
+    override val adminBusinessClaims = "Business Claims"
+    override val adminVerificationRequests = "Verification Requests"
+    override val adminBusinessesAndPlans = "Businesses & Plans"
+    override val adminNoPendingVerification = "No pending verification requests"
+    override val adminAllVerificationProcessed = "All verification requests processed"
+    override val adminNoActivePlans = "No businesses on a paid plan yet"
+    override val adminTableBusinessColumn = "Business"
+    override val adminTableTierColumn = "Tier"
+    override val adminTableExpiresColumn = "Expires"
+    override val adminNoExpiry = "—"
+    override val businessActiveStatus = "Business is Active"
+    override val businessActiveDescription = "Your business is visible on the map and in search."
+    override val businessInactiveDescription = "Your business is hidden from the map and search. Turn this back on anytime."
+    override val inactiveLabel = "Inactive"
+    override val clearExpiredPlansButton = "Clear Expired Plans"
+    override val clearExpiredPlansNoneFound = "No expired plans to clear."
+    override val clearExpiredPlansSuccessTemplate = "Cleared %d expired plan(s)."
+    override val clearExpiredPlansFailedPrefix = "Failed to clear expired plans"
+    override val expiredLabel = "Expired"
+    override val subscriptionActivatedSuccess = "Subscription activated!"
+    override val purchaseAckFailedTemplate = "Purchase could not be confirmed with Google Play (%s). Please contact support with your receipt."
+    override val purchaseLostBusinessError = "Payment confirmed, but we lost track of which business it was for. Please contact support with your receipt so we can apply it manually."
+    override val purchaseUnknownProductError = "Payment confirmed, but the product wasn't recognized. Please contact support with your receipt."
+    override val purchaseActivationFailedTemplate = "Payment confirmed, but activating your plan failed (%s). Please contact support with your receipt."
     override val premium = "Premium"
     override val featured2 = "Featured"
     override val sponsored = "Sponsored"
@@ -811,6 +892,46 @@ object AlbanianStrings : AppStrings {
     override val category = "Kategoria"
     override val verified = "Verifikuar"
     override val albanianOwned = "Pronë Shqiptare"
+    override val albanianOwnedQuestion = "A është ky biznes në pronësi shqiptare?"
+    override val claimThisBusiness = "Kërko Pronësinë e Biznesit"
+    override val claimBusinessDialogDescription = "Na tregoni pse jeni pronari i këtij biznesi. Ekipi ynë do ta shqyrtojë kërkesën tuaj."
+    override val claimReasonLabel = "Arsyeja"
+    override val claimReasonPlaceholder = "p.sh. unë e drejtoj këtë biznes, ja si mund ta verifikoni..."
+    override val submitClaimButton = "Dërgo Kërkesën"
+    override val claimSubmittedSuccess = "Kërkesa u dërgua! Do ta shqyrtojmë së shpejti."
+    override val claimSubmitFailed = "Dërgimi i kërkesës dështoi"
+    override val claimReasonRequired = "Ju lutemi shkruani një arsye"
+    override val claimAlreadySubmitted = "Kërkesa u dërgua — në pritje të shqyrtimit"
+    override val getVerifiedTitle = "Bëhu i Verifikuar"
+    override val requestVerification = "Kërko Verifikim"
+    override val requestVerificationDescription = "Merr distinktivin Verifikuar për biznesin tënd që klientët ta dinë se është i vërtetë."
+    override val requestVerificationDialogDescription = "Na tregoni pak për biznesin tuaj — kjo na ndihmon ta verifikojmë më shpejt."
+    override val verificationRequestSubmitted = "Kërkesa për verifikim u dërgua! Do ta shqyrtojmë së shpejti."
+    override val verificationAlreadySubmitted = "Verifikimi u kërkua — në pritje të shqyrtimit"
+    override val adminBusinessClaims = "Kërkesa për Pronësi"
+    override val adminVerificationRequests = "Kërkesa për Verifikim"
+    override val adminBusinessesAndPlans = "Bizneset & Planet"
+    override val adminNoPendingVerification = "Nuk ka kërkesa verifikimi në pritje"
+    override val adminAllVerificationProcessed = "Të gjitha kërkesat për verifikim janë shqyrtuar"
+    override val adminNoActivePlans = "Ende asnjë biznes me plan me pagesë"
+    override val adminTableBusinessColumn = "Biznesi"
+    override val adminTableTierColumn = "Plani"
+    override val adminTableExpiresColumn = "Skadon"
+    override val adminNoExpiry = "—"
+    override val businessActiveStatus = "Biznesi Aktiv"
+    override val businessActiveDescription = "Biznesi juaj është i dukshëm në hartë dhe në kërkim."
+    override val businessInactiveDescription = "Biznesi juaj është i fshehur nga harta dhe kërkimi. Mund ta riaktivizoni kur të doni."
+    override val inactiveLabel = "Joaktiv"
+    override val clearExpiredPlansButton = "Pastro Planet e Skaduara"
+    override val clearExpiredPlansNoneFound = "Nuk ka plane të skaduara për të pastruar."
+    override val clearExpiredPlansSuccessTemplate = "U pastruan %d plan(e) të skaduara."
+    override val clearExpiredPlansFailedPrefix = "Pastrimi i planeve të skaduara dështoi"
+    override val expiredLabel = "Skaduar"
+    override val subscriptionActivatedSuccess = "Abonimi u aktivizua!"
+    override val purchaseAckFailedTemplate = "Blerja nuk u konfirmua dot me Google Play (%s). Ju lutemi kontaktoni suportin me faturën tuaj."
+    override val purchaseLostBusinessError = "Pagesa u konfirmua, por humbëm gjurmët se për cilin biznes ishte. Ju lutemi kontaktoni suportin me faturën tuaj që ta aplikojmë manualisht."
+    override val purchaseUnknownProductError = "Pagesa u konfirmua, por produkti nuk u njoh. Ju lutemi kontaktoni suportin me faturën tuaj."
+    override val purchaseActivationFailedTemplate = "Pagesa u konfirmua, por aktivizimi i planit dështoi (%s). Ju lutemi kontaktoni suportin me faturën tuaj."
     override val premium = "Premium"
     override val featured2 = "I Veçuar"
     override val sponsored = "Sponsorizuar"

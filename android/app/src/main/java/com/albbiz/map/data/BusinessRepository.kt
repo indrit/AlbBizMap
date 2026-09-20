@@ -143,6 +143,10 @@ class BusinessRepository {
         return firestoreService.seedBusinessesFromJson(context)
     }
 
+    suspend fun clearExpiredPlans(businesses: List<Business>): Result<Int> {
+        return firestoreService.clearExpiredPlans(businesses)
+    }
+
     suspend fun updateSubscription(businessId: String, tier: String): Result<Unit> {
         return try {
             val updateData = when (tier) {

@@ -4,6 +4,7 @@ package com.albbiz.map.ui.screens
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -34,6 +35,7 @@ import com.albbiz.map.ui.theme.TierBronze
 import com.albbiz.map.ui.theme.TierGold
 import com.albbiz.map.ui.theme.TierSilver
 import com.albbiz.map.viewmodel.BillingViewModel
+import com.albbiz.map.viewmodel.SubscriptionUpdateState
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,10 +51,29 @@ fun SubscriptionScreen(
     val userEmail = user?.email ?: ""
 
     val currentTier = when {
-        business.isSponsored -> "Sponsored"
-        business.isFeatured -> "Featured"
-        business.isPremium -> "Premium"
+        business.isEffectivelySponsored -> "Sponsored"
+        business.isEffectivelyFeatured -> "Featured"
+        business.isEffectivelyPremium -> "Premium"
         else -> "Free"
+    }
+
+    // Surfaces every purchase-confirmation failure BillingViewModel now tracks
+    // (acknowledge failure, lost business, unrecognized product, or the
+    // Firestore write itself failing after retries) instead of the user just
+    // seeing nothing happen after paying — see handlePurchase()'s comments.
+    val subscriptionUpdateState by billingViewModel.subscriptionUpdateState.collectAsState()
+    LaunchedEffect(subscriptionUpdateState) {
+        when (val state = subscriptionUpdateState) {
+            is SubscriptionUpdateState.Success -> {
+                Toast.makeText(context, strings.subscriptionActivatedSuccess, Toast.LENGTH_LONG).show()
+                billingViewModel.clearSubscriptionUpdateState()
+            }
+            is SubscriptionUpdateState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                billingViewModel.clearSubscriptionUpdateState()
+            }
+            is SubscriptionUpdateState.Idle -> {}
+        }
     }
 
     Scaffold(

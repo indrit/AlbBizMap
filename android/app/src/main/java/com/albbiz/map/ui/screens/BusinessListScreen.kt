@@ -161,7 +161,7 @@ fun BusinessListScreen(
                     item {
                         DiscoveryRow(
                             title = strings.featured,
-                            businesses = allBusinesses.filter { it.isFeatured || it.isSponsored },
+                            businesses = allBusinesses.filter { it.isEffectivelyFeatured || it.isEffectivelySponsored },
                             onBusinessClick = onBusinessClick
                         )
                     }
@@ -658,7 +658,7 @@ fun BusinessListItem(
                 )
 
                 if (business.isVerified || business.isAlbanianOwned ||
-                    business.isSponsored || business.isFeatured || business.isPremium
+                    business.isEffectivelySponsored || business.isEffectivelyFeatured || business.isEffectivelyPremium
                 ) {
                     Row(
                         modifier = Modifier
@@ -669,9 +669,9 @@ fun BusinessListItem(
                         if (business.isVerified) BadgeChip(strings.verified, Color(0xFF2196F3))
                         if (business.isAlbanianOwned) BadgeChip(strings.albanianOwned, MeTontRed)
                         when {
-                            business.isSponsored -> BadgeChip(strings.sponsored, TierGold)
-                            business.isFeatured -> BadgeChip(strings.featured2, TierSilver)
-                            business.isPremium -> BadgeChip(strings.premium, TierBronze)
+                            business.isEffectivelySponsored -> BadgeChip(strings.sponsored, TierGold)
+                            business.isEffectivelyFeatured -> BadgeChip(strings.featured2, TierSilver)
+                            business.isEffectivelyPremium -> BadgeChip(strings.premium, TierBronze)
                         }
                     }
                 }

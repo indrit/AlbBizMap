@@ -833,9 +833,9 @@ fun MapScreen(
                             clusterItemContent = { item ->
                                 val business = item.business
                                 val icon = when {
-                                    business.isSponsored -> markerSponsored
-                                    business.isFeatured -> markerFeatured
-                                    business.isPremium -> markerPremium
+                                    business.isEffectivelySponsored -> markerSponsored
+                                    business.isEffectivelyFeatured -> markerFeatured
+                                    business.isEffectivelyPremium -> markerPremium
                                     else -> markerFree
                                 }
                                 // Clustering doesn't directly take BitmapDescriptor for content,
@@ -844,9 +844,9 @@ fun MapScreen(
                                 // For custom tier markers, it's best to handle them in Clustering renderer
                                 // or use custom clusterItemContent with Image.
                                 val iconRes = when {
-                                    business.isSponsored -> R.drawable.metont_gold
-                                    business.isFeatured -> R.drawable.metont_silver
-                                    business.isPremium -> R.drawable.metont_bronze
+                                    business.isEffectivelySponsored -> R.drawable.metont_gold
+                                    business.isEffectivelyFeatured -> R.drawable.metont_silver
+                                    business.isEffectivelyPremium -> R.drawable.metont_bronze
                                     else -> null
                                 }
                                 
@@ -1086,15 +1086,15 @@ private fun FeaturedPickCard(
                     }
                 }
                 val tierColor = when {
-                    business.isSponsored -> TierGold
-                    business.isFeatured -> TierSilver
-                    business.isPremium -> TierBronze
+                    business.isEffectivelySponsored -> TierGold
+                    business.isEffectivelyFeatured -> TierSilver
+                    business.isEffectivelyPremium -> TierBronze
                     else -> null
                 }
                 val tierLabel = when {
-                    business.isSponsored -> strings.sponsored
-                    business.isFeatured -> strings.featured2
-                    business.isPremium -> strings.premium
+                    business.isEffectivelySponsored -> strings.sponsored
+                    business.isEffectivelyFeatured -> strings.featured2
+                    business.isEffectivelyPremium -> strings.premium
                     else -> null
                 }
                 if (tierColor != null && tierLabel != null) {
