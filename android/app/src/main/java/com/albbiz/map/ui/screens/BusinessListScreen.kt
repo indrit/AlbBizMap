@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.albbiz.map.data.Business
+import com.albbiz.map.data.BusinessCategory
 import com.albbiz.map.data.BusinessRepository
 import com.albbiz.map.ui.LocalAppStrings
 import com.albbiz.map.ui.MeTontGrey
@@ -253,10 +254,12 @@ fun BusinessListScreen(
                 // each other chip toggles independently so e.g. Restaurant + Cafe
                 // can both be active at once.
                 item {
-                    val categories = listOf(
-                        "Restaurant", "Cafe", "Market",
-                        "Lawyer", "Contractor", "Other"
-                    )
+                    // Was a hand-written list that had drifted from
+                    // BusinessCategory — missing Dentist, Barber, Beauty Salon
+                    // and Auto Shop entirely, so those four categories could
+                    // never be filtered to here. Deriving it from the enum
+                    // keeps this list complete automatically.
+                    val categories = BusinessCategory.entries.map { it.displayName }
 
                     Row(
                         modifier = Modifier

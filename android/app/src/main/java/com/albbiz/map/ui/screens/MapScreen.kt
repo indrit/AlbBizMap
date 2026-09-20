@@ -287,11 +287,11 @@ fun MapScreen(
     }
 
     var selectedCategoryLabel by remember { mutableStateOf("All") }
-    val categories = listOf(
-        "All", "Restaurant", "Cafe", "Market",
-        "Contractor", "Lawyer", "Dentist",
-        "Barber", "Auto Shop", "Other"
-    )
+    // Was a hand-written list that silently fell out of sync with
+    // BusinessCategory — it was missing "Beauty Salon" entirely, so that
+    // category could never be filtered to on the map. Deriving it from the
+    // enum means a future category is automatically filterable here too.
+    val categories = listOf("All") + BusinessCategory.entries.map { it.displayName }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -1079,9 +1079,8 @@ private fun FeaturedPickCard(
                         modifier = Modifier.fillMaxSize().background(Color(0xFFFBEAEA)),
                         contentAlignment = Alignment.Center
                     ) {
-                        val categoryIcon = BusinessCategory.entries
-                            .find { it.name.equals(business.category, ignoreCase = true) }
-                            ?.icon ?: Icons.Default.Business
+                        val categoryIcon = BusinessCategory.fromStored(business.category)?.icon
+                            ?: Icons.Default.Business
                         Icon(categoryIcon, null, tint = MeTontRed, modifier = Modifier.size(36.dp))
                     }
                 }
@@ -1165,9 +1164,8 @@ private fun MapBusinessCard(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                val categoryIcon = BusinessCategory.entries
-                    .find { it.name.equals(business.category, ignoreCase = true) }
-                    ?.icon ?: Icons.Default.Business
+                val categoryIcon = BusinessCategory.fromStored(business.category)?.icon
+                    ?: Icons.Default.Business
                 Surface(
                     modifier = Modifier.size(44.dp),
                     shape = RoundedCornerShape(10.dp),
