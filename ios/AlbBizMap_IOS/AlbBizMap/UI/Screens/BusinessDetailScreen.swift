@@ -166,8 +166,23 @@ public struct BusinessDetailScreen: View {
 
                     // Contact Info
                     VStack(alignment: .leading, spacing: 10) {
+                        // Tappable for turn-by-turn directions — mirrors Android's
+                        // tappable address row (its google.navigation: intent).
+                        // This was the one place a business's address showed up
+                        // without any way to act on it.
                         if !business.address.isEmpty {
-                            infoRow(icon: "mappin.circle.fill", text: "\(business.address), \(business.city)")
+                            Button(action: openDirections) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .foregroundColor(.meTontRed)
+                                        .frame(width: 20)
+                                    Text("\(business.address), \(business.city)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.meTontGrey)
+                                        .underline()
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         if !business.phone.isEmpty {
                             infoRow(icon: "phone.fill", text: business.phone)
@@ -461,6 +476,21 @@ public struct BusinessDetailScreen: View {
                 .frame(width: 20)
             Text(text)
                 .font(.subheadline)
+        }
+    }
+
+    // Hands the business's coordinates to Maps.app for turn-by-turn directions.
+    // Android targets the Google Maps app specifically (google.navigation:),
+    // but that's not guaranteed to be installed on iOS the way it effectively
+    // is on Android — Apple Maps ships on every iOS device, so this does the
+    // same job (tap address, get directions) without an "app not installed"
+    // fallback ever being needed. maps.apple.com is a regular https URL, so it
+    // opens Maps.app directly with no custom URL scheme or Info.plist entry.
+    private func openDirections() {
+        guard let coordinate = business.location?.coordinate else { return }
+        let urlString = "http://maps.apple.com/?daddr=\(coordinate.latitude),\(coordinate.longitude)&dirflg=d"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
         }
     }
 }
