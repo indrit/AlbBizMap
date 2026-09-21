@@ -65,8 +65,15 @@ public struct MapScreen: View {
             ZStack(alignment: .top) {
                 // Native MapKit Map (iOS 17+ MapContentBuilder API)
                 Map(position: $cameraPosition) {
-                    ForEach(viewModel.filteredBusinesses) { biz in
-                        Annotation(biz.name, coordinate: biz.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)) {
+                    // Businesses without a location used to fall back to a
+                    // hardcoded NYC coordinate, so every business missing one
+                    // (which, before Business.swift's GeoPoint fix, was every
+                    // single Android-created business) silently piled up on
+                    // top of each other in New York instead of not showing a
+                    // pin at all. Skipping them here is the correct fallback
+                    // now that a real fix exists for why location was nil.
+                    ForEach(viewModel.filteredBusinesses.filter { $0.location != nil }) { biz in
+                        Annotation(biz.name, coordinate: biz.location!.coordinate) {
                             Button(action: {
                                 onBusinessClick(biz.id)
                             }) {

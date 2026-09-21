@@ -1,6 +1,7 @@
 // Bismillah Hir Rahman Nir Raheem
 import Foundation
 import CoreLocation
+import FirebaseFirestore
 
 public struct Promotion: Identifiable, Codable, Hashable {
     public var id: String { title + (discountCode ?? "") }
@@ -246,18 +247,31 @@ public struct Business: Identifiable, Codable, Hashable {
             "likedBy": likedBy
         ]
         
+        // Android writes this as a single native Firestore GeoPoint field
+        // called "location" (see Business.kt's toMap: "location" to location).
+        // This used to write separate top-level "latitude"/"longitude" fields
+        // instead — a completely different shape Android never reads — which
+        // meant every business created on Android had no location iOS could
+        // see (nil pin coordinate, address-to-directions silently doing
+        // nothing) and vice versa. Writing the same "location" GeoPoint field
+        // Android uses is what makes a business created on either platform
+        // show up correctly on both.
         if let location = location {
-            map["latitude"] = location.latitude
-            map["longitude"] = location.longitude
+            map["location"] = GeoPoint(latitude: location.latitude, longitude: location.longitude)
         }
-        
+
         return map
     }
-    
+
     public static func fromMap(id: String, map: [String: Any?]) -> Business {
         var loc: GeoPointLocation? = nil
-        if let lat = (map["latitude"] as? NSNumber)?.doubleValue,
-           let lng = (map["longitude"] as? NSNumber)?.doubleValue {
+        if let geoPoint = map["location"] as? GeoPoint {
+            loc = GeoPointLocation(latitude: geoPoint.latitude, longitude: geoPoint.longitude)
+        } else if let lat = (map["latitude"] as? NSNumber)?.doubleValue,
+                  let lng = (map["longitude"] as? NSNumber)?.doubleValue {
+            // Legacy fallback for any business written before this fix, back
+            // when iOS wrote separate latitude/longitude fields instead of a
+            // native GeoPoint.
             loc = GeoPointLocation(latitude: lat, longitude: lng)
         }
         
