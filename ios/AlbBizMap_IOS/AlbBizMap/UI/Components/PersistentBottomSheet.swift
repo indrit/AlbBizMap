@@ -10,13 +10,20 @@ import SwiftUI
 // The sheet snaps between three heights — peek / medium / large — matching Android's
 // peekHeight + expand behavior. Drag the handle to resize; the content below scrolls
 // independently once expanded.
+//
+// PERFORMANCE NOTE: the sheet's outer frame is fixed at `largeHeight` at all times.
+// Dragging only changes a GPU-composited `.offset(y:)` transform, never `.frame(height:)`.
+// Animating frame/height forces SwiftUI to re-layout the entire content subtree on every
+// touch-move event (expensive, and the cause of the previous janky/hard-to-drag feel).
+// Offset is a pure compositor operation — no layout pass — which is what makes Android's
+// BottomSheetScaffold (itself offset-driven internally) feel smooth, and now matches here.
 public struct PersistentBottomSheet<Content: View>: View {
     public let peekHeight: CGFloat
     public let mediumFraction: CGFloat
     public let largeFraction: CGFloat
     @ViewBuilder public let content: () -> Content
 
-    @State private var settledHeight: CGFloat
+    @State private var settledOffset: CGFloat? = nil
     @GestureState private var dragTranslation: CGFloat = 0
 
     public init(
@@ -29,14 +36,21 @@ public struct PersistentBottomSheet<Content: View>: View {
         self.mediumFraction = mediumFraction
         self.largeFraction = largeFraction
         self.content = content
-        _settledHeight = State(initialValue: peekHeight)
     }
 
     public var body: some View {
         GeometryReader { geo in
-            let mediumHeight = geo.size.height * mediumFraction
             let largeHeight = geo.size.height * largeFraction
-            let liveHeight = min(largeHeight, max(peekHeight, settledHeight - dragTranslation))
+            let mediumHeight = geo.size.height * mediumFraction
+
+            // Offset is measured from the sheet's "large" (fully expanded) position.
+            // 0 = fully expanded; larger values push the sheet further down.
+            let peekOffset = largeHeight - peekHeight
+            let mediumOffset = largeHeight - mediumHeight
+            let largeOffset: CGFloat = 0
+
+            let currentSettled = settledOffset ?? peekOffset
+            let liveOffset = min(peekOffset, max(largeOffset, currentSettled - dragTranslation))
 
             VStack(spacing: 0) {
                 Capsule()
@@ -48,14 +62,16 @@ public struct PersistentBottomSheet<Content: View>: View {
                     .gesture(
                         DragGesture()
                             .updating($dragTranslation) { value, state, _ in
-                                state = value.translation.height
+                                // Drag DOWN (positive translation) should increase offset (collapse);
+                                // drag UP (negative translation) should decrease offset (expand).
+                                state = -value.translation.height
                             }
                             .onEnded { value in
-                                let proposed = settledHeight - value.translation.height
-                                let snapPoints = [peekHeight, mediumHeight, largeHeight]
-                                let nearest = snapPoints.min(by: { abs($0 - proposed) < abs($1 - proposed) }) ?? peekHeight
+                                let proposed = currentSettled - (-value.translation.height)
+                                let snapPoints = [largeOffset, mediumOffset, peekOffset]
+                                let nearest = snapPoints.min(by: { abs($0 - proposed) < abs($1 - proposed) }) ?? peekOffset
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                    settledHeight = nearest
+                                    settledOffset = nearest
                                 }
                             }
                     )
@@ -63,14 +79,20 @@ public struct PersistentBottomSheet<Content: View>: View {
                 content()
             }
             .frame(maxWidth: .infinity)
-            .frame(height: liveHeight, alignment: .top)
+            .frame(height: largeHeight, alignment: .top)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(Color.white)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: -2)
             )
+            .offset(y: liveOffset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .edgesIgnoringSafeArea(.bottom)
+            .onAppear {
+                if settledOffset == nil {
+                    settledOffset = peekOffset
+                }
+            }
         }
     }
 }

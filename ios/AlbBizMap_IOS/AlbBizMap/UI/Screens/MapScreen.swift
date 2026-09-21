@@ -65,15 +65,8 @@ public struct MapScreen: View {
             ZStack(alignment: .top) {
                 // Native MapKit Map (iOS 17+ MapContentBuilder API)
                 Map(position: $cameraPosition) {
-                    // Businesses without a location used to fall back to a
-                    // hardcoded NYC coordinate, so every business missing one
-                    // (which, before Business.swift's GeoPoint fix, was every
-                    // single Android-created business) silently piled up on
-                    // top of each other in New York instead of not showing a
-                    // pin at all. Skipping them here is the correct fallback
-                    // now that a real fix exists for why location was nil.
-                    ForEach(viewModel.filteredBusinesses.filter { $0.location != nil }) { biz in
-                        Annotation(biz.name, coordinate: biz.location!.coordinate) {
+                    ForEach(viewModel.filteredBusinesses) { biz in
+                        Annotation(biz.name, coordinate: biz.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)) {
                             Button(action: {
                                 onBusinessClick(biz.id)
                             }) {
@@ -126,42 +119,60 @@ public struct MapScreen: View {
 
                 // FAB buttons — matches Android's Add Business + My Location FABs,
                 // stacked above the bottom sheet's peek height (140).
-                VStack(spacing: 12) {
-                    Button(action: onAddBusinessClick) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 52, height: 52)
-                            .background(Color.meTontRed)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
-                    }
-                    Button(action: {
-                        // Falls back to Tirana when location isn't available yet,
-                        // matching Android's TIRANA_LOCATION fallback.
-                        let target = LocationManager.shared.userLocation
-                            ?? CLLocationCoordinate2D(latitude: 41.3275, longitude: 19.8187)
-                        withAnimation {
-                            cameraPosition = .region(
-                                MKCoordinateRegion(
-                                    center: target,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                                )
-                            )
+                //
+                // IMPORTANT: this used to be a VStack directly given
+                // `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)`.
+                // That expanded the VStack's own frame to the ENTIRE screen, and in practice
+                // that full expanded frame was intercepting touches everywhere on screen (not
+                // just where the two visible circular buttons are drawn) because it sits above
+                // the bottom sheet in z-order — this was silently swallowing every tap on the
+                // story bar, business cards, and the sheet's drag handle, with zero errors or
+                // logs, which matches exactly what was being reported.
+                //
+                // Fix: use a hit-testing-disabled Color.clear to claim the layout space, and
+                // place the buttons in a `.overlay` on top of it. `.overlay` content is a
+                // separate layer that does NOT inherit `.allowsHitTesting(false)` from its
+                // base view, so only the two actual button circles remain tappable — the rest
+                // of the screen is no longer blocked by this layer at all.
+                Color.clear
+                    .allowsHitTesting(false)
+                    .overlay(alignment: .bottomTrailing) {
+                        VStack(spacing: 12) {
+                            Button(action: onAddBusinessClick) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 52, height: 52)
+                                    .background(Color.meTontRed)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                            }
+                            Button(action: {
+                                // Falls back to Tirana when location isn't available yet,
+                                // matching Android's TIRANA_LOCATION fallback.
+                                let target = LocationManager.shared.userLocation
+                                    ?? CLLocationCoordinate2D(latitude: 41.3275, longitude: 19.8187)
+                                withAnimation {
+                                    cameraPosition = .region(
+                                        MKCoordinateRegion(
+                                            center: target,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                        )
+                                    )
+                                }
+                            }) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.meTontRed)
+                                    .frame(width: 52, height: 52)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                            }
                         }
-                    }) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.meTontRed)
-                            .frame(width: 52, height: 52)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 140)
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, 16)
-                .padding(.bottom, 140)
             }
         }
         .edgesIgnoringSafeArea(.bottom)
