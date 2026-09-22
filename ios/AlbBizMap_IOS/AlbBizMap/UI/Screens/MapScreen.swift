@@ -8,7 +8,6 @@ public struct MapScreen: View {
     @ObservedObject public var viewModel: MapViewModel
     @ObservedObject public var storiesViewModel: StoriesViewModel
     @ObservedObject public var authViewModel: AuthViewModel
-    @ObservedObject private var locationManager = LocationManager.shared
     
     public let onOpenDrawer: () -> Void
     public let onListClick: (String) -> Void
@@ -189,11 +188,11 @@ public struct MapScreen: View {
             }
         }
         .edgesIgnoringSafeArea(.bottom)
-        .onChange(of: locationManager.userLocation) { _, newLocation in
+        .onReceive(LocationManager.shared.$userLocation) { newLocation in
             recenterOnUserLocationIfNeeded(newLocation)
         }
         .onAppear {
-            recenterOnUserLocationIfNeeded(locationManager.userLocation)
+            recenterOnUserLocationIfNeeded(LocationManager.shared.userLocation)
         }
     }
 
