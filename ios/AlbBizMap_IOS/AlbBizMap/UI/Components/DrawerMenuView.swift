@@ -10,7 +10,12 @@ public struct DrawerMenuView: View {
     public let currentLanguage: AppLanguage
     public let currentUserName: String
     public let onLogout: () -> Void
-    
+
+    // Logout used to fire immediately on tap, with no way to back out of an
+    // accidental hit — a single confirmation step first is a small, common
+    // safety net.
+    @State private var showLogoutConfirm = false
+
     public init(isOpen: Bool, onClose: @escaping () -> Void, onNavigate: @escaping (String) -> Void, currentLanguage: AppLanguage, currentUserName: String = "User", onLogout: @escaping () -> Void) {
         self.isOpen = isOpen
         self.onClose = onClose
@@ -102,7 +107,7 @@ public struct DrawerMenuView: View {
                     
                     Divider()
                     drawerItem(icon: "rectangle.portrait.and.arrow.right", title: strings.logout, iconColor: .meTontRed, textColor: .meTontRed, bold: true) {
-                        onLogout()
+                        showLogoutConfirm = true
                     }
 
                     // Matches Android's drawer footer, but reads the app's real
@@ -121,6 +126,14 @@ public struct DrawerMenuView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: isOpen)
+        .alert(strings.logoutConfirmTitle, isPresented: $showLogoutConfirm) {
+            Button(strings.cancel, role: .cancel) {}
+            Button(strings.logout, role: .destructive) {
+                onLogout()
+            }
+        } message: {
+            Text(strings.logoutConfirmMessage)
+        }
     }
     
     private func drawerItem(icon: String, title: String, iconColor: Color = .meTontRed, textColor: Color = .meTontBlack, bold: Bool = false, action: @escaping () -> Void) -> some View {

@@ -34,6 +34,8 @@ public struct AppStrings {
     public var password: String
     public var confirmPassword: String
     public var logout: String
+    public var logoutConfirmTitle: String
+    public var logoutConfirmMessage: String
     public var noAccount: String
     public var haveAccount: String
     public var forgotPassword: String
@@ -375,6 +377,8 @@ public struct AppStrings {
         password: "Password",
         confirmPassword: "Confirm Password",
         logout: "Logout",
+        logoutConfirmTitle: "Log out?",
+        logoutConfirmMessage: "You'll need to sign in again to access your account.",
         noAccount: "Don't have an account? Sign Up",
         haveAccount: "Already have an account? Sign In",
         forgotPassword: "Forgot password?",
@@ -694,6 +698,8 @@ public struct AppStrings {
         password: "Fjalëkalimi",
         confirmPassword: "Konfirmo Fjalëkalimin",
         logout: "Dil",
+        logoutConfirmTitle: "Të dalësh?",
+        logoutConfirmMessage: "Do të duhet të hysh përsëri për të hyrë në llogarinë tënde.",
         noAccount: "Nuk keni llogari? Regjistrohu",
         haveAccount: "Keni llogari? Hyr",
         forgotPassword: "Keni harruar fjalëkalimin?",

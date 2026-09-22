@@ -175,6 +175,11 @@ fun MapScreen(
 
     var selectedSheetBusiness by remember { mutableStateOf<Business?>(null) }
     var showSearch by remember { mutableStateOf(false) }
+    // Logout used to fire immediately on tap, with no way to back out of an
+    // accidental hit — a single confirmation step first is a small, common
+    // safety net (matches the same pattern already used for deleting an
+    // event elsewhere in the app).
+    var showLogoutConfirm by remember { mutableStateOf(false) }
     
     // TIER MARKERS
     var markerFree by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -414,7 +419,7 @@ fun MapScreen(
                 NavigationDrawerItem(
                     label = { Text(strings.logout, fontWeight = FontWeight.Bold, color = MeTontRed) },
                     selected = false,
-                    onClick = { closeDrawer(); if (mapReady) onLogout() },
+                    onClick = { closeDrawer(); if (mapReady) showLogoutConfirm = true },
                     icon = { Icon(Icons.Default.Logout, null, tint = MeTontRed) },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -1010,6 +1015,24 @@ fun MapScreen(
                 }
             }
         }
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(strings.logoutConfirmTitle, fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(strings.logoutConfirmMessage, color = MeTontGrey) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutConfirm = false
+                    onLogout()
+                }) { Text(strings.logout, color = MeTontRed, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) { Text(strings.cancel) }
+            }
+        )
     }
 }
 

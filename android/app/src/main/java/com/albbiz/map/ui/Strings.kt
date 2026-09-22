@@ -161,6 +161,8 @@ interface AppStrings {
     val deleteEvent: String
     val deleteEventConfirmTitle: String
     val deleteEventConfirmMessage: String
+    val logoutConfirmTitle: String
+    val logoutConfirmMessage: String
     val eventDeleted: String
     val eventDeleteFailed: String
     val noSearchResults: String
@@ -576,6 +578,8 @@ object EnglishStrings : AppStrings {
     override val deleteEvent = "Delete Event"
     override val deleteEventConfirmTitle = "Delete this event?"
     override val deleteEventConfirmMessage = "This will permanently remove the event. This action cannot be undone."
+    override val logoutConfirmTitle = "Log out?"
+    override val logoutConfirmMessage = "You'll need to sign in again to access your account."
     override val eventDeleted = "Event deleted"
     override val eventDeleteFailed = "Failed to delete event"
     override val noSearchResults = "No results found"
@@ -984,6 +988,8 @@ object AlbanianStrings : AppStrings {
     override val deleteEvent = "Fshi Eventin"
     override val deleteEventConfirmTitle = "Fshi këtë event?"
     override val deleteEventConfirmMessage = "Kjo do ta heqë përgjithmonë eventin. Ky veprim nuk mund të zhbëhet."
+    override val logoutConfirmTitle = "Të dalësh?"
+    override val logoutConfirmMessage = "Do të duhet të hysh përsëri për të hyrë në llogarinë tënde."
     override val eventDeleted = "Eventi u fshi"
     override val eventDeleteFailed = "Fshirja e eventit dështoi"
     override val noSearchResults = "Nuk u gjetën rezultate"
