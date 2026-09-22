@@ -42,25 +42,36 @@ public struct MapBottomSheetContent: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                StoryBarView(
-                    stories: storiesViewModel.stories,
-                    currentUserId: authViewModel.currentUser?.uid ?? "",
-                    onAddStoryClick: onAddStoryClick,
-                    onStoryClick: onStoryClick
-                )
-
-                Divider().padding(.horizontal, 16)
-
-                topRecommendedSection
-                nearYouSection
-                communityAnnouncementsSection
-                mostFavoritedSection
-
-                Spacer(minLength: 24)
-            }
+        // StoryBarView is deliberately OUTSIDE the ScrollView below, as a fixed
+        // (non-scrolling) header — not nested inside it. SwiftUI's ScrollView is
+        // backed by UIScrollView, and a horizontal ScrollView (the story row) nested
+        // inside a vertical one silently swallows taps on real devices (confirmed by
+        // testing an identical row rendered outside any scroll nesting elsewhere on
+        // this screen: taps worked instantly there, and nowhere inside this ScrollView).
+        // Keeping it as a fixed header sidesteps that nested-scroll problem entirely,
+        // and also matches Android's layout, which pins the story bar above the
+        // scrollable carousels rather than scrolling it with them.
+        VStack(spacing: 0) {
+            StoryBarView(
+                stories: storiesViewModel.stories,
+                currentUserId: authViewModel.currentUser?.uid ?? "",
+                onAddStoryClick: onAddStoryClick,
+                onStoryClick: onStoryClick
+            )
             .padding(.top, 8)
+
+            Divider().padding(.horizontal, 16)
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    topRecommendedSection
+                    nearYouSection
+                    communityAnnouncementsSection
+                    mostFavoritedSection
+
+                    Spacer(minLength: 24)
+                }
+            }
         }
     }
 
