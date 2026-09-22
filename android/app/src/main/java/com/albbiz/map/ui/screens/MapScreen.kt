@@ -74,6 +74,10 @@ import kotlinx.coroutines.launch
 
 val TIRANA_LOCATION = LatLng(41.3275, 19.8187)
 
+// Sentinel grouping key for the story bar's shared "Community" circle — chosen
+// to never collide with a real Firestore document id (businessId/userId).
+const val COMMUNITY_STORY_GROUP_KEY = "__community__"
+
 fun loadMarkerFromAssets(context: Context, fileName: String): BitmapDescriptor? {
     return try {
         MapsInitializer.initialize(context)
@@ -156,8 +160,17 @@ fun MapScreen(
     val announcements by eventsFlow.collectAsState(initial = emptyList())
 
     val stories by storiesViewModel.stories.collectAsState()
+    // Community stories used to group under whoever posted them — the same
+    // person's "user" story and an unrelated "community" announcement would
+    // silently collapse into one circle, with no visual sign that circle
+    // held a mix of both. Since the story types are already meant to be
+    // distinct (see AddStoryScreen's User/Business/Community picker),
+    // community stories now group under one shared circle of their own
+    // instead, like a dedicated channel, regardless of who posted them.
     val groupedStories = remember(stories) {
-        stories.groupBy { it.businessId ?: it.userId }
+        stories.groupBy {
+            if (it.type == "community") COMMUNITY_STORY_GROUP_KEY else (it.businessId ?: it.userId)
+        }
     }
 
     var selectedSheetBusiness by remember { mutableStateOf<Business?>(null) }
@@ -587,10 +600,15 @@ fun MapScreen(
                                     }
                                 }
 
-                                items(groupedStories.entries.toList()) { (_, storyGroup) ->
+                                items(groupedStories.entries.toList()) { (groupKey, storyGroup) ->
                                     val hasViewed = storiesViewModel.hasViewedAllStories(storyGroup)
                                     val firstStory = storyGroup.first()
-                                    val displayName = firstStory.businessName ?: firstStory.userName
+                                    val isCommunityGroup = groupKey == COMMUNITY_STORY_GROUP_KEY
+                                    val displayName = if (isCommunityGroup) {
+                                        "Community"
+                                    } else {
+                                        firstStory.businessName ?: firstStory.userName
+                                    }
 
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -624,16 +642,23 @@ fun MapScreen(
                                                 }
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
-                                                    Text(
-                                                        displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                                        fontSize = 22.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = when (firstStory.type) {
-                                                            "community" -> Color(0xFF2196F3)
-                                                            "business" -> MeTontRed
-                                                            else -> MeTontGrey
-                                                        }
-                                                    )
+                                                    if (isCommunityGroup) {
+                                                        // A megaphone reads as "this is a shared
+                                                        // channel", not "this is a person" — same
+                                                        // emoji already used for this type in
+                                                        // AddStoryScreen's type picker.
+                                                        Text("📢", fontSize = 20.sp)
+                                                    } else {
+                                                        Text(
+                                                            displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                                            fontSize = 22.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = when (firstStory.type) {
+                                                                "business" -> MeTontRed
+                                                                else -> MeTontGrey
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
