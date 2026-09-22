@@ -74,9 +74,27 @@ public struct AddBusinessScreen: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 TextEditor(text: $viewModel.description)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(height: 80)
                     .padding(8)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))
+                    // TextEditor has no built-in placeholder (unlike TextField), so an
+                    // empty one showed as a plain, unlabeled box -- worse in Dark Mode,
+                    // where its default system colors made it render as a solid black
+                    // rectangle with no hint of what to type. Explicit colors above fix
+                    // the visibility; this overlay gives it the same placeholder text
+                    // every other required field already has.
+                    .overlay(alignment: .topLeading) {
+                        if viewModel.description.isEmpty {
+                            Text(strings.descriptionRequiredLabel)
+                                .foregroundColor(.meTontGrey)
+                                .padding(.horizontal, 13)
+                                .padding(.vertical, 16)
+                                .allowsHitTesting(false)
+                        }
+                    }
                     .onChange(of: viewModel.description) { _, newValue in
                         if newValue.count > 100 {
                             viewModel.description = String(newValue.prefix(100))

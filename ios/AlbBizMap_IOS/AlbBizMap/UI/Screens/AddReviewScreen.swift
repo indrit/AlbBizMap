@@ -118,6 +118,9 @@ public struct AddReviewScreen: View {
     private var commentCard: some View {
         SectionCard(title: strings.writeReviewLabel) {
             TextEditor(text: $viewModel.comment)
+                .foregroundColor(.meTontBlack)
+                .scrollContentBackground(.hidden)
+                .background(Color.white)
                 .frame(minHeight: 140)
                 .padding(8)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))

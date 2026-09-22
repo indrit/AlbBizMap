@@ -236,6 +236,9 @@ public struct AddStoryScreen: View {
         cardContainer {
             Text("Caption").font(.subheadline).fontWeight(.bold).foregroundColor(.black)
             TextEditor(text: $text)
+                .foregroundColor(.black)
+                .scrollContentBackground(.hidden)
+                .background(Color.white)
                 .frame(height: 90)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3)))
         }

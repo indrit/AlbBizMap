@@ -222,9 +222,21 @@ public struct EditBusinessScreen: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 TextEditor(text: $description)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(height: 80)
                     .padding(8)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))
+                    .overlay(alignment: .topLeading) {
+                        if description.isEmpty {
+                            Text(strings.descriptionRequiredLabel)
+                                .foregroundColor(.meTontGrey)
+                                .padding(.horizontal, 13)
+                                .padding(.vertical, 16)
+                                .allowsHitTesting(false)
+                        }
+                    }
                     .onChange(of: description) { _, newValue in
                         if newValue.count > 100 {
                             description = String(newValue.prefix(100))
@@ -685,6 +697,9 @@ private struct AddJobSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(strings.descriptionRequiredLabel).font(.caption).foregroundColor(.meTontGrey)
                 TextEditor(text: $description)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(height: 80)
                     .padding(8)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))
@@ -751,6 +766,9 @@ private struct AddPromotionSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(strings.descriptionRequiredLabel).font(.caption).foregroundColor(.meTontGrey)
                 TextEditor(text: $description)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(height: 80)
                     .padding(8)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.meTontRed.opacity(0.4), lineWidth: 1))

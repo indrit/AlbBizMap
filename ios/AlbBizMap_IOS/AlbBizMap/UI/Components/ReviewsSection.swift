@@ -362,6 +362,9 @@ private struct ReviewItemView: View {
                     }
                 }
                 TextEditor(text: $editComment)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(minHeight: 120)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
                 Spacer()
@@ -387,6 +390,9 @@ private struct ReviewItemView: View {
         NavigationView {
             VStack(alignment: .leading, spacing: 16) {
                 TextEditor(text: $editReplyComment)
+                    .foregroundColor(.meTontBlack)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.white)
                     .frame(minHeight: 100)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
                 Spacer()
