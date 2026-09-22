@@ -4,8 +4,6 @@ package com.albbiz.map.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -23,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +50,20 @@ fun StoryViewerScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val strings = LocalAppStrings.current
+    // These zones only ever meant to detect a stationary tap (left = previous,
+    // right = next) — they were never meant to also catch a real swipe/drag.
+    // detectTapGestures has no built-in movement cancellation the way a drag
+    // detector does, so a genuine swipe (finger moves noticeably before
+    // lifting) was still resolving as a tap keyed on wherever the finger
+    // first went down, regardless of which way it was actually dragged —
+    // e.g. a right-to-left swipe starting on the left half fired "previous"
+    // instead of doing nothing, which is what made it feel like navigation
+    // only worked in one direction. Comparing the down/up offsets and
+    // ignoring anything that moved more than a small threshold fixes that:
+    // real taps still navigate exactly as before, a real swipe is now a
+    // no-op instead of misfiring.
+    val density = LocalDensity.current
+    val tapMoveThresholdPx = with(density) { 24.dp.toPx() }
 
     // Current story index
     var currentStoryIndex by remember { mutableStateOf(initialIndex) }
@@ -60,20 +73,32 @@ fun StoryViewerScreen(
     var currentPhotoIndex by remember { mutableStateOf(0) }
     val photos = currentStory?.photos ?: emptyList()
 
-    // Progress for current photo (0f to 1f)
+    // Progress for current photo (0f to 1f). Used to be driven by
+    // animateFloatAsState's own 5000ms tween, entirely independent of the
+    // advance-timer delay(5000) below it — pausing the timer alone would've
+    // left the bar visibly still animating to completion (and sitting full)
+    // while nothing actually advanced, which looks broken rather than
+    // "paused". Ticking it ourselves in small steps, only while not held,
+    // keeps the bar and the actual advance perfectly in sync either way.
     var progress by remember { mutableStateOf(0f) }
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = tween(durationMillis = 5000),
-        label = "story_progress"
-    )
+    // True for as long as the user is pressing down on either tap zone below —
+    // Instagram-style hold to pause. Read by the LaunchedEffect below to
+    // freeze both the progress bar and the advance countdown while held.
+    var isPaused by remember { mutableStateOf(false) }
 
-    // Auto advance every 5 seconds
+    // Auto advance every 5 seconds, pausable via isPaused.
     LaunchedEffect(currentStoryIndex, currentPhotoIndex) {
         progress = 0f
-        delay(100)
-        progress = 1f
-        delay(5000)
+        val totalDurationMs = 5000
+        val tickMs = 50
+        var elapsedMs = 0
+        while (elapsedMs < totalDurationMs) {
+            delay(tickMs.toLong())
+            if (!isPaused) {
+                elapsedMs += tickMs
+                progress = elapsedMs / totalDurationMs.toFloat()
+            }
+        }
         // Move to next photo or next story
         if (currentPhotoIndex < photos.size - 1) {
             currentPhotoIndex++
@@ -151,7 +176,16 @@ fun StoryViewerScreen(
                 )
         )
 
-        // ── TAP LEFT/RIGHT TO NAVIGATE ────────────────────────────────
+        // ── TAP LEFT/RIGHT TO NAVIGATE, HOLD TO PAUSE ──────────────────
+        // onPress fires the instant a finger touches down and suspends on
+        // tryAwaitRelease() until it lifts — exactly the window we want
+        // isPaused true for. A quick tap's press/release happens fast enough
+        // that the pause is imperceptible and onTap still fires normally to
+        // navigate; a genuine hold keeps isPaused true (freezing the
+        // progress bar and advance timer above) for as long as it's held,
+        // and Compose's own tap-vs-long-press recognition means onTap simply
+        // doesn't fire for a long press, so releasing a hold resumes right
+        // where it paused instead of jumping to the next story.
         Row(modifier = Modifier.fillMaxSize()) {
             // Tap left → previous
             Box(
@@ -159,14 +193,28 @@ fun StoryViewerScreen(
                     .weight(1f)
                     .fillMaxHeight()
                     .pointerInput(Unit) {
-                        detectTapGestures {
-                            if (currentPhotoIndex > 0) {
-                                currentPhotoIndex--
-                            } else if (currentStoryIndex > 0) {
-                                currentStoryIndex--
-                                currentPhotoIndex = 0
+                        var pressStartOffset: androidx.compose.ui.geometry.Offset? = null
+                        detectTapGestures(
+                            onPress = { offset ->
+                                pressStartOffset = offset
+                                isPaused = true
+                                tryAwaitRelease()
+                                isPaused = false
+                            },
+                            onTap = { offset ->
+                                val start = pressStartOffset
+                                val movedTooFar = start != null &&
+                                    (kotlin.math.abs(offset.x - start.x) > tapMoveThresholdPx ||
+                                        kotlin.math.abs(offset.y - start.y) > tapMoveThresholdPx)
+                                if (movedTooFar) return@detectTapGestures
+                                if (currentPhotoIndex > 0) {
+                                    currentPhotoIndex--
+                                } else if (currentStoryIndex > 0) {
+                                    currentStoryIndex--
+                                    currentPhotoIndex = 0
+                                }
                             }
-                        }
+                        )
                     }
             )
             // Tap right → next
@@ -175,16 +223,30 @@ fun StoryViewerScreen(
                     .weight(1f)
                     .fillMaxHeight()
                     .pointerInput(Unit) {
-                        detectTapGestures {
-                            if (currentPhotoIndex < photos.size - 1) {
-                                currentPhotoIndex++
-                            } else if (currentStoryIndex < stories.size - 1) {
-                                currentStoryIndex++
-                                currentPhotoIndex = 0
-                            } else {
-                                onClose()
+                        var pressStartOffset: androidx.compose.ui.geometry.Offset? = null
+                        detectTapGestures(
+                            onPress = { offset ->
+                                pressStartOffset = offset
+                                isPaused = true
+                                tryAwaitRelease()
+                                isPaused = false
+                            },
+                            onTap = { offset ->
+                                val start = pressStartOffset
+                                val movedTooFar = start != null &&
+                                    (kotlin.math.abs(offset.x - start.x) > tapMoveThresholdPx ||
+                                        kotlin.math.abs(offset.y - start.y) > tapMoveThresholdPx)
+                                if (movedTooFar) return@detectTapGestures
+                                if (currentPhotoIndex < photos.size - 1) {
+                                    currentPhotoIndex++
+                                } else if (currentStoryIndex < stories.size - 1) {
+                                    currentStoryIndex++
+                                    currentPhotoIndex = 0
+                                } else {
+                                    onClose()
+                                }
                             }
-                        }
+                        )
                     }
             )
         }
@@ -215,7 +277,7 @@ fun StoryViewerScreen(
                                 .fillMaxWidth(
                                     when {
                                         index < currentPhotoIndex -> 1f
-                                        index == currentPhotoIndex -> animatedProgress
+                                        index == currentPhotoIndex -> progress
                                         else -> 0f
                                     }
                                 )
@@ -235,7 +297,7 @@ fun StoryViewerScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
-                                .fillMaxWidth(animatedProgress)
+                                .fillMaxWidth(progress)
                                 .background(Color.White)
                         )
                     }

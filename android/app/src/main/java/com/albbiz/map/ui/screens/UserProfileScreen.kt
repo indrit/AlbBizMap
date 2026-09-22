@@ -59,6 +59,7 @@ fun UserProfileScreen(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
     val adminViewModel: AdminViewModel = viewModel()
     val isAdmin by adminViewModel.isAdmin.collectAsState()
@@ -522,10 +523,7 @@ fun UserProfileScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 OutlinedButton(
-                    onClick = {
-                        viewModel.logout()
-                        onLogout()
-                    },
+                    onClick = { showLogoutConfirm = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -544,5 +542,24 @@ fun UserProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(strings.logoutConfirmTitle, fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(strings.logoutConfirmMessage, color = MeTontGrey) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutConfirm = false
+                    viewModel.logout()
+                    onLogout()
+                }) { Text(strings.logout, color = MeTontRed, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) { Text(strings.cancel) }
+            }
+        )
     }
 }

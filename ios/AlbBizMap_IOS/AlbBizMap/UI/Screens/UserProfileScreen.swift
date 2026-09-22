@@ -18,6 +18,7 @@ public struct UserProfileScreen: View {
     @State private var lastName: String = ""
     @State private var isSaving: Bool = false
     @State private var saveMessage: String? = nil
+    @State private var showLogoutConfirm: Bool = false
 
     public init(
         viewModel: AuthViewModel,
@@ -131,6 +132,15 @@ public struct UserProfileScreen: View {
                 firstName = viewModel.currentUser?.firstName ?? ""
                 lastName = viewModel.currentUser?.lastName ?? ""
             }
+        }
+        .alert(strings.logoutConfirmTitle, isPresented: $showLogoutConfirm) {
+            Button(strings.cancel, role: .cancel) {}
+            Button(strings.logout, role: .destructive) {
+                viewModel.logout()
+                onLogout()
+            }
+        } message: {
+            Text(strings.logoutConfirmMessage)
         }
     }
 
@@ -280,8 +290,7 @@ public struct UserProfileScreen: View {
 
     private var logoutButton: some View {
         Button(action: {
-            viewModel.logout()
-            onLogout()
+            showLogoutConfirm = true
         }) {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
