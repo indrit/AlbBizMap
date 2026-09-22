@@ -8,6 +8,7 @@ public struct MapScreen: View {
     @ObservedObject public var viewModel: MapViewModel
     @ObservedObject public var storiesViewModel: StoriesViewModel
     @ObservedObject public var authViewModel: AuthViewModel
+    @ObservedObject private var locationManager = LocationManager.shared
     
     public let onOpenDrawer: () -> Void
     public let onListClick: (String) -> Void
@@ -22,11 +23,16 @@ public struct MapScreen: View {
     
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
+            center: CLLocationCoordinate2D(latitude: 41.3275, longitude: 19.8187),
             span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
         )
     )
     @State private var showSearch: Bool = false
+    // Recenters the camera on the user's real location the first time it
+    // becomes available, then leaves it alone -- same one-shot behavior as
+    // Android's `hasMovedToInitialLocation` flag, so panning around the map
+    // afterward doesn't keep getting yanked back to the user's position.
+    @State private var hasMovedToInitialLocation: Bool = false
     
     public init(
         viewModel: MapViewModel,
@@ -183,6 +189,36 @@ public struct MapScreen: View {
             }
         }
         .edgesIgnoringSafeArea(.bottom)
+        .onChange(of: locationManager.userLocation) { _, newLocation in
+            recenterOnUserLocationIfNeeded(newLocation)
+        }
+        .onAppear {
+            recenterOnUserLocationIfNeeded(locationManager.userLocation)
+        }
+    }
+
+    // Moves the camera to the user's real location the first time it's known,
+    // matching Android's MapScreen LaunchedEffect(userLocation) behavior: only
+    // acts once (guarded by hasMovedToInitialLocation) so it doesn't fight the
+    // user panning the map afterward, and ignores the Simulator's default
+    // "Apple" preset location (Apple Park) the same way Android ignores the
+    // Android Emulator's default Google HQ location -- neither is a real
+    // tester location, so recentering on it isn't useful.
+    private func recenterOnUserLocationIfNeeded(_ location: CLLocationCoordinate2D?) {
+        guard !hasMovedToInitialLocation, let location else { return }
+        let isAppleParkSimulatorDefault = (37.32...37.35).contains(location.latitude)
+            && (-122.02...(-122.00)).contains(location.longitude)
+        guard !isAppleParkSimulatorDefault else { return }
+
+        hasMovedToInitialLocation = true
+        withAnimation {
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: location,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+            )
+        }
     }
     
     // Solid red top app bar, matching Android's TopAppBar (hamburger, title, search toggle).
