@@ -275,8 +275,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
+				INFOPLIST_KEY_CFBundleDisplayName = MeTont;
+				INFOPLIST_KEY_NSCameraUsageDescription = "MeTont uses your camera so you can take a photo for your business listing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MeTont uses your location to show nearby Albanian businesses.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -314,8 +315,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "AlbBizMap-IOS-Info.plist";
-				INFOPLIST_KEY_NSCameraUsageDescription = "AlbBizMap uses your camera so you can take a photo for your business listing.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "AlbBizMap uses your location to show nearby Albanian businesses.";
+				INFOPLIST_KEY_CFBundleDisplayName = MeTont;
+				INFOPLIST_KEY_NSCameraUsageDescription = "MeTont uses your camera so you can take a photo for your business listing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MeTont uses your location to show nearby Albanian businesses.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
