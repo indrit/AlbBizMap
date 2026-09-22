@@ -115,6 +115,21 @@ data class Business(
     }
 
     companion object {
+        // Prefers the native Firestore GeoPoint field ("location"), written by
+        // both platforms' current save path. Falls back to old-style separate
+        // top-level "latitude"/"longitude" fields for businesses created before
+        // that field was unified (iOS used to write coordinates that way) --
+        // mirrors the same legacy fallback Business.swift's fromMap already has,
+        // so a business created before the fix shows up on both platforms
+        // instead of only the one that wrote it, and instead of silently
+        // falling back to (0.0, 0.0) on the map.
+        private fun resolveLocation(map: Map<String, Any?>): GeoPoint? {
+            (map["location"] as? GeoPoint)?.let { return it }
+            val lat = (map["latitude"] as? Number)?.toDouble()
+            val lng = (map["longitude"] as? Number)?.toDouble()
+            return if (lat != null && lng != null) GeoPoint(lat, lng) else null
+        }
+
         fun fromMap(id: String, map: Map<String, Any?>): Business {
             return Business(
                 id = id,
@@ -133,7 +148,7 @@ data class Business(
                     ?.entries
                     ?.associate { it.key.toString() to it.value.toString() }
                     ?: emptyMap(),
-                location = map["location"] as? GeoPoint,
+                location = resolveLocation(map),
                 photos = (map["photos"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 rating = (map["rating"] as? Number)?.toDouble() ?: 0.0,
                 reviewCount = (map["reviewCount"] as? Number)?.toInt() ?: 0,

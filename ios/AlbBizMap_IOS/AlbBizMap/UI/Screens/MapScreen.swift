@@ -65,8 +65,15 @@ public struct MapScreen: View {
             ZStack(alignment: .top) {
                 // Native MapKit Map (iOS 17+ MapContentBuilder API)
                 Map(position: $cameraPosition) {
-                    ForEach(viewModel.filteredBusinesses) { biz in
-                        Annotation(biz.name, coordinate: biz.location?.coordinate ?? CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)) {
+                    // Businesses with no resolved location are skipped rather than
+                    // pinned at a fallback coordinate -- a fallback like Apple Park
+                    // or NYC looks like a real, legitimate pin instead of the "this
+                    // business has no location" signal it should be. Matches
+                    // Android's MapScreen, which builds its cluster items from
+                    // `businesses.mapNotNull { it.location?.let { ... } }` -- i.e.
+                    // it never renders a marker for a business with no location either.
+                    ForEach(viewModel.filteredBusinesses.filter { $0.location != nil }) { biz in
+                        Annotation(biz.name, coordinate: biz.location!.coordinate) {
                             Button(action: {
                                 onBusinessClick(biz.id)
                             }) {
