@@ -63,7 +63,7 @@ public struct MapBottomSheetContent: View {
             Divider().padding(.horizontal, 16)
 
             ScrollView {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     topRecommendedSection
                     nearYouSection
                     communityAnnouncementsSection
@@ -153,7 +153,7 @@ public struct MapBottomSheetContent: View {
                 .padding(.horizontal, 16)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                LazyHStack(spacing: 12) {
                     ForEach(Array(announcements.prefix(6))) { event in
                         EventAnnouncementCard(event: event) { onEventsClick() }
                     }
@@ -178,7 +178,7 @@ public struct MapBottomSheetContent: View {
                 .padding(.horizontal, 16)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                LazyHStack(spacing: 12) {
                     ForEach(Array(mostFavorited.prefix(6))) { business in
                         MapBusinessCard(business: business) { onBusinessClick(business.id) }
                     }
