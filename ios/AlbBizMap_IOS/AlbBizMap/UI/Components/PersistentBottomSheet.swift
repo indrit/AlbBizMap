@@ -74,7 +74,18 @@ public struct PersistentBottomSheet<Content: View>: View {
                                 // Drag DOWN (positive translation) should increase offset (collapse);
                                 // drag UP (negative translation) should decrease offset (expand).
                                 // No animation here -- this needs to track the finger 1:1 every frame.
-                                dragTranslation = -value.translation.height
+                                let raw = -value.translation.height
+                                // Clamp the translation itself, not just the offset derived from
+                                // it -- liveOffset was already clamped for display, but
+                                // dragTranslation itself kept growing past what's needed to reach
+                                // either end (very easy to do near the top, since there's no
+                                // physical resistance once the sheet is fully expanded). That left
+                                // a "dead zone" on reversal: after overshooting, moving the finger
+                                // back the other way did nothing visible until it had retraced the
+                                // whole overshot distance -- exactly a stuck/glitchy feel, worst
+                                // near full expansion. Clamping here means the sheet always starts
+                                // responding the instant the finger reverses.
+                                dragTranslation = min(currentSettled - largeOffset, max(currentSettled - peekOffset, raw))
                             }
                             .onEnded { value in
                                 let proposed = currentSettled - (-value.translation.height)
