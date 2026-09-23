@@ -313,7 +313,7 @@ fun EventItem(event: Event) {
                 )
 
                 // ── WEBSITE BUTTON ────────────────────────────────
-                if (event.websiteUrl != null) {
+                if (!event.websiteUrl.isNullOrBlank()) {
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
