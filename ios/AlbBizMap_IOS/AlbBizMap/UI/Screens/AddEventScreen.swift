@@ -46,7 +46,7 @@ public struct AddEventScreen: View {
                         locationName: locationName,
                         category: category,
                         organizerId: AuthManager.shared.currentUser?.uid ?? "",
-                        websiteUrl: websiteUrl
+                        websiteUrl: websiteUrl.trimmingCharacters(in: .whitespaces).isEmpty ? nil : websiteUrl.trimmingCharacters(in: .whitespaces)
                     )
                     isSubmitting = true
                     Task {

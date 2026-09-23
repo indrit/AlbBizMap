@@ -186,7 +186,7 @@ private struct EventItemCard: View {
                     .padding(.top, 4)
                     .onTapGesture { expanded.toggle() }
 
-                if let websiteUrl = event.websiteUrl, !websiteUrl.isEmpty {
+                if let websiteUrl = event.websiteUrl, !websiteUrl.trimmingCharacters(in: .whitespaces).isEmpty {
                     Spacer().frame(height: 8)
                     Button(action: {
                         var urlString = websiteUrl
