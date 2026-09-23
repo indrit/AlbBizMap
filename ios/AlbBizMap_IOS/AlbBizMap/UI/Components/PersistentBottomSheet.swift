@@ -17,23 +17,24 @@ import SwiftUI
 // touch-move event (expensive, and the cause of the previous janky/hard-to-drag feel).
 // Offset is a pure compositor operation — no layout pass — which is what makes Android's
 // BottomSheetScaffold (itself offset-driven internally) feel smooth, and now matches here.
+//
+// STRUCTURE NOTE: the drag state (settledOffset/dragTranslation) lives in the private
+// `DraggableSheet` below, NOT in this public wrapper. `content()` is called exactly once
+// here and handed down as an already-built value, not a closure DraggableSheet re-invokes.
+// Previously this struct owned the drag state itself, which meant every single touch-move
+// frame re-ran this whole body -- including re-calling `content()` and reconstructing the
+// entire MapBottomSheetContent view tree (all four sections, every card) 60 times a
+// second, just to reposition it. SwiftUI still has to diff all of that on every frame even
+// when nothing in it actually changed, which is wasted work piling on top of the real
+// per-frame cost of the drag itself. Isolating the fast-changing state in a small child
+// view that only ever needs to reposition an already-built value keeps that diffing scope
+// to the minimum -- this wrapper's own body now only re-runs when MapScreen itself
+// re-renders, which is unrelated to dragging.
 public struct PersistentBottomSheet<Content: View>: View {
     public let peekHeight: CGFloat
     public let mediumFraction: CGFloat
     public let largeFraction: CGFloat
     @ViewBuilder public let content: () -> Content
-
-    @State private var settledOffset: CGFloat? = nil
-    // Plain @State, not @GestureState -- @GestureState resets to its initial
-    // value (0) the instant the gesture ends, OUTSIDE of any animation and
-    // before `.onEnded` even runs. That produced a one-frame "snap back to
-    // start, then animate to the target" flicker on every single drag release
-    // (the live offset briefly recomputes with dragTranslation=0 before
-    // settledOffset catches up), which is exactly what read as "glitchy."
-    // With plain @State, both the drag delta and the settled offset are only
-    // ever changed by our own code, inside the same explicit transaction, so
-    // there's no gap for SwiftUI to render an intermediate, wrong frame.
-    @State private var dragTranslation: CGFloat = 0
 
     public init(
         peekHeight: CGFloat = 140,
@@ -48,6 +49,34 @@ public struct PersistentBottomSheet<Content: View>: View {
     }
 
     public var body: some View {
+        DraggableSheet(
+            peekHeight: peekHeight,
+            mediumFraction: mediumFraction,
+            largeFraction: largeFraction,
+            content: content()
+        )
+    }
+}
+
+private struct DraggableSheet<Content: View>: View {
+    let peekHeight: CGFloat
+    let mediumFraction: CGFloat
+    let largeFraction: CGFloat
+    let content: Content
+
+    @State private var settledOffset: CGFloat? = nil
+    // Plain @State, not @GestureState -- @GestureState resets to its initial
+    // value (0) the instant the gesture ends, OUTSIDE of any animation and
+    // before `.onEnded` even runs. That produced a one-frame "snap back to
+    // start, then animate to the target" flicker on every single drag release
+    // (the live offset briefly recomputes with dragTranslation=0 before
+    // settledOffset catches up), which is exactly what read as "glitchy."
+    // With plain @State, both the drag delta and the settled offset are only
+    // ever changed by our own code, inside the same explicit transaction, so
+    // there's no gap for SwiftUI to render an intermediate, wrong frame.
+    @State private var dragTranslation: CGFloat = 0
+
+    var body: some View {
         GeometryReader { geo in
             let largeHeight = geo.size.height * largeFraction
             let mediumHeight = geo.size.height * mediumFraction
@@ -103,7 +132,7 @@ public struct PersistentBottomSheet<Content: View>: View {
                             }
                     )
 
-                content()
+                content
             }
             .frame(maxWidth: .infinity)
             .frame(height: largeHeight, alignment: .top)
