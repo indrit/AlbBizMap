@@ -24,7 +24,16 @@ public struct PersistentBottomSheet<Content: View>: View {
     @ViewBuilder public let content: () -> Content
 
     @State private var settledOffset: CGFloat? = nil
-    @GestureState private var dragTranslation: CGFloat = 0
+    // Plain @State, not @GestureState -- @GestureState resets to its initial
+    // value (0) the instant the gesture ends, OUTSIDE of any animation and
+    // before `.onEnded` even runs. That produced a one-frame "snap back to
+    // start, then animate to the target" flicker on every single drag release
+    // (the live offset briefly recomputes with dragTranslation=0 before
+    // settledOffset catches up), which is exactly what read as "glitchy."
+    // With plain @State, both the drag delta and the settled offset are only
+    // ever changed by our own code, inside the same explicit transaction, so
+    // there's no gap for SwiftUI to render an intermediate, wrong frame.
+    @State private var dragTranslation: CGFloat = 0
 
     public init(
         peekHeight: CGFloat = 140,
@@ -61,17 +70,24 @@ public struct PersistentBottomSheet<Content: View>: View {
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture()
-                            .updating($dragTranslation) { value, state, _ in
+                            .onChanged { value in
                                 // Drag DOWN (positive translation) should increase offset (collapse);
                                 // drag UP (negative translation) should decrease offset (expand).
-                                state = -value.translation.height
+                                // No animation here -- this needs to track the finger 1:1 every frame.
+                                dragTranslation = -value.translation.height
                             }
                             .onEnded { value in
                                 let proposed = currentSettled - (-value.translation.height)
                                 let snapPoints = [largeOffset, mediumOffset, peekOffset]
                                 let nearest = snapPoints.min(by: { abs($0 - proposed) < abs($1 - proposed) }) ?? peekOffset
+                                // Folding the drag-delta reset into the SAME withAnimation block
+                                // that sets the new settledOffset is what eliminates the flicker:
+                                // liveOffset is a function of (settledOffset, dragTranslation), and
+                                // both operands now change together, in one animated transaction,
+                                // instead of dragTranslation jumping to 0 on its own first.
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                     settledOffset = nearest
+                                    dragTranslation = 0
                                 }
                             }
                     )
