@@ -228,30 +228,41 @@ public class MapViewModel: ObservableObject {
             .map { $0.business }
     }
 
-    // "Top Recommended" — Sponsored/Featured only, restricted to a 200 km radius
-    // (same pattern as nearMe's 50 km, just a wider net since these are paid
-    // placements). No user location yet means the radius can't be evaluated, so
-    // this returns empty until a location fix lands, same as nearMe. Within that
-    // radius, ranked by plan tier first (Sponsored > Featured), then by like
-    // count, with distance only as the final tiebreaker.
+    // "Top Recommended" — Sponsored/Featured only (free-plan businesses never
+    // qualify here, no matter their like count — this is the paid-placement
+    // row). Primarily restricted to a 200 km radius (same pattern as nearMe's
+    // 50 km, just a wider net since these are paid placements). No user
+    // location yet means the radius can't be evaluated, so this returns empty
+    // until a location fix lands, same as nearMe. If fewer than 10 qualify
+    // within 200 km, the remaining slots are backfilled with the next-closest
+    // sponsored/featured businesses beyond that radius (no outer limit) — a
+    // paying business should never end up with zero visibility just because
+    // the local market is thin. Ranked throughout by plan tier first
+    // (Sponsored > Featured), then by like count, with distance only as the
+    // final tiebreaker.
     public var topPicks: [Business] {
         guard let userLoc = LocationManager.shared.userLocation else { return [] }
-        let withDistance: [(business: Business, distance: Double)] = businesses
+        let eligible: [(business: Business, distance: Double)] = businesses
             .filter { $0.isActive && ($0.isEffectivelySponsored || $0.isEffectivelyFeatured) }
             .compactMap { biz in
                 guard let d = distanceKm(from: userLoc, to: biz.location) else { return nil }
                 return (biz, d)
             }
-        return withDistance
-            .filter { $0.distance <= 200.0 }
-            .sorted { a, b in
-                if a.business.isEffectivelySponsored != b.business.isEffectivelySponsored { return a.business.isEffectivelySponsored }
-                if a.business.isEffectivelyFeatured != b.business.isEffectivelyFeatured { return a.business.isEffectivelyFeatured }
-                if a.business.likeCount != b.business.likeCount { return a.business.likeCount > b.business.likeCount }
-                return a.distance < b.distance
-            }
-            .prefix(10)
-            .map { $0.business }
+        let rank: ((business: Business, distance: Double), (business: Business, distance: Double)) -> Bool = { a, b in
+            if a.business.isEffectivelySponsored != b.business.isEffectivelySponsored { return a.business.isEffectivelySponsored }
+            if a.business.isEffectivelyFeatured != b.business.isEffectivelyFeatured { return a.business.isEffectivelyFeatured }
+            if a.business.likeCount != b.business.likeCount { return a.business.likeCount > b.business.likeCount }
+            return a.distance < b.distance
+        }
+        let nearby = eligible.filter { $0.distance <= 200.0 }.sorted(by: rank)
+        let result: [(business: Business, distance: Double)]
+        if nearby.count >= 10 {
+            result = nearby
+        } else {
+            let farther = eligible.filter { $0.distance > 200.0 }.sorted(by: rank)
+            result = nearby + farther
+        }
+        return result.prefix(10).map { $0.business }
     }
 
 }
