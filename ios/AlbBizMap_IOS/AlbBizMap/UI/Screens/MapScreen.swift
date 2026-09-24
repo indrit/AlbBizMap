@@ -113,22 +113,6 @@ public struct MapScreen: View {
                     }
                 }
 
-                // Lives inside this screen's own view hierarchy (not a system `.sheet`),
-                // so it only ever shows on the map/home screen, never floating above
-                // other tabs or overlays like login.
-                PersistentBottomSheet {
-                    MapBottomSheetContent(
-                        viewModel: viewModel,
-                        storiesViewModel: storiesViewModel,
-                        authViewModel: authViewModel,
-                        onAddStoryClick: onAddStoryClick,
-                        onStoryClick: onStoryClick,
-                        onBusinessClick: onBusinessClick,
-                        onEventsClick: onEventsClick,
-                        onMostFavoritedSeeMore: { onListClick("mostFavorited") }
-                    )
-                }
-
                 // FAB buttons — matches Android's Add Business + My Location FABs,
                 // stacked above the bottom sheet's peek height (140).
                 //
@@ -188,6 +172,39 @@ public struct MapScreen: View {
             }
         }
         .edgesIgnoringSafeArea(.bottom)
+        // Switched from a hand-rolled DragGesture + .offset() sheet to the system's
+        // own native sheet with presentationDetents (the same mechanism Apple Maps
+        // itself uses for its bottom card). After several rounds of chasing distinct
+        // custom-gesture bugs one at a time in that implementation (drag-release
+        // flicker, per-frame render cost, a dead zone on reversal) and still not
+        // getting a fully smooth feel, this replaces the whole class of problems at
+        // once: dragging, snapping and the handle are all implemented natively in
+        // UIKit, not hand-tuned SwiftUI gesture code.
+        //
+        // isPresented: .constant(true) keeps it permanently shown (never dismissible)
+        // -- matches the old sheet's behavior of always being present on this screen.
+        // presentationBackgroundInteraction(.enabled) is what keeps the map and FAB
+        // buttons tappable/pannable regardless of the sheet's current height, same as
+        // before. Heights (140 / 45% / 92%) match the old peekHeight/mediumFraction/
+        // largeFraction exactly, so the snap behavior itself is unchanged.
+        .sheet(isPresented: .constant(true)) {
+            MapBottomSheetContent(
+                viewModel: viewModel,
+                storiesViewModel: storiesViewModel,
+                authViewModel: authViewModel,
+                onAddStoryClick: onAddStoryClick,
+                onStoryClick: onStoryClick,
+                onBusinessClick: onBusinessClick,
+                onEventsClick: onEventsClick,
+                onMostFavoritedSeeMore: { onListClick("mostFavorited") }
+            )
+            .presentationDetents([.height(140), .fraction(0.45), .fraction(0.92)])
+            .presentationDragIndicator(.visible)
+            .presentationBackgroundInteraction(.enabled)
+            .presentationCornerRadius(20)
+            .presentationBackground(Color.white)
+            .interactiveDismissDisabled(true)
+        }
         .onReceive(LocationManager.shared.$userLocation) { newLocation in
             recenterOnUserLocationIfNeeded(newLocation)
         }
