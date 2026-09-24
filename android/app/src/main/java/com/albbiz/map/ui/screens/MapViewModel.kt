@@ -150,28 +150,39 @@ class MapViewModel : ViewModel() {
     // ONLY (not Premium: per the actual plan copy in SubscriptionScreen.kt,
     // Premium's benefits are profile fields like phone/email/hours, not
     // placement — Featured and Sponsored are the two tiers that explicitly
-    // promise "featured in discovery row" / "top of search results").
-    // Restricted to a 200 km radius (same pattern as nearMe's 50 km, just a
-    // wider net since these are paid placements) — no user location yet
+    // promise "featured in discovery row" / "top of search results"). Free-plan
+    // businesses never qualify for this section, no matter how many likes they
+    // have — this is the paid-placement row.
+    // Primarily restricted to a 200 km radius (same pattern as nearMe's 50 km,
+    // just a wider net since these are paid placements). No user location yet
     // means we can't evaluate the radius, so the section is empty until a
-    // location fix lands, same as nearMe. Within that radius, ranked by
-    // plan tier first (Sponsored > Featured), then by like count, with
-    // distance only as the final tiebreaker.
+    // location fix lands, same as nearMe. If fewer than 10 qualify within
+    // 200 km, the remaining slots are backfilled with the next-closest
+    // sponsored/featured businesses beyond that radius (no outer limit) —
+    // a paying business should never end up with zero visibility just
+    // because the local market is thin. Ranked throughout by plan tier
+    // first (Sponsored > Featured), then by like count, with distance only
+    // as the final tiebreaker.
     val topPicks = combine(
         _businesses, _userLocation
     ) { list: List<Business>, location: LatLng? ->
         if (location == null) emptyList<Business>()
         else {
             val userPoint = GeoPoint(location.latitude, location.longitude)
-            list.filter { it.isEffectivelySponsored || it.isEffectivelyFeatured }
+            val ranked = compareByDescending<Pair<Business, Double>> { it.first.isEffectivelySponsored }
+                .thenByDescending { it.first.isEffectivelyFeatured }
+                .thenByDescending { it.first.likeCount }
+                .thenBy { it.second }
+            val eligible = list.filter { it.isEffectivelySponsored || it.isEffectivelyFeatured }
                 .map { business -> business to repository.calculateDistance(userPoint, business.location ?: GeoPoint(0.0, 0.0)) }
-                .filter { (_, distance) -> distance <= 200.0 }
-                .sortedWith(
-                    compareByDescending<Pair<Business, Double>> { it.first.isEffectivelySponsored }
-                        .thenByDescending { it.first.isEffectivelyFeatured }
-                        .thenByDescending { it.first.likeCount }
-                        .thenBy { it.second }
-                ).take(10).map { it.first }
+            val nearby = eligible.filter { (_, distance) -> distance <= 200.0 }.sortedWith(ranked)
+            val result = if (nearby.size >= 10) {
+                nearby
+            } else {
+                val farther = eligible.filter { (_, distance) -> distance > 200.0 }.sortedWith(ranked)
+                nearby + farther
+            }
+            result.take(10).map { it.first }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<Business>())
 
