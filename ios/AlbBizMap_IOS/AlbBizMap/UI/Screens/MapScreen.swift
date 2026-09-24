@@ -167,7 +167,13 @@ public struct MapScreen: View {
                             }
                         }
                         .padding(.trailing, 16)
-                        .padding(.bottom, 140)
+                        // Was 140, matching the old custom sheet's peekHeight exactly.
+                        // The native .sheet's peek detent renders with a bit of extra
+                        // system chrome (the grab-indicator area) on top of that same
+                        // 140pt content height, so the sheet's actual visible top edge
+                        // now sits a little higher than before -- enough to cover the
+                        // bottom (location) button in this stack. Bumped for clearance.
+                        .padding(.bottom, 175)
                     }
             }
         }
